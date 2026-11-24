@@ -1,0 +1,3410 @@
+{
+  "generatedBy": "native/Packages/HRTEngine/Scripts/generate-golden.mjs",
+  "fixedNowMs": 1796083200000,
+  "T0H": 498192,
+  "fixtures": [
+    {
+      "name": "patch_2x50ug_q48h",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e1",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e2",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e3",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e4",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e5",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e6",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e7",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e8",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e9",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e10",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e11",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e12",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e13",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e14",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        }
+      ],
+      "gridLen": 2079,
+      "auc": 24390.3569363,
+      "samples": [
+        {
+          "offsetH": 1,
+          "exactE2": 24.4156322491,
+          "exactCPA": 0,
+          "simE2": 24.4156322491,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 6,
+          "exactE2": 66.3882875314,
+          "exactCPA": 0,
+          "simE2": 66.3882875314,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 12,
+          "exactE2": 72.0601676215,
+          "exactCPA": 0,
+          "simE2": 72.0601676215,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 72.5861442138,
+          "exactCPA": 0,
+          "simE2": 72.5861442138,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 47,
+          "exactE2": 72.5900113039,
+          "exactCPA": 0,
+          "simE2": 72.5900113033,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 48.5,
+          "exactE2": 72.5900114465,
+          "exactCPA": 0,
+          "simE2": 72.5900114465,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 72,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900114084,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900114084,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 312,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 335,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.590011303,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900114084,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 360,
+          "exactE2": 0.00386740063288,
+          "exactCPA": 0,
+          "simE2": 0.00387940164371,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 400,
+          "exactE2": 2.91735755963e-10,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_100ug_q84h",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e15",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e16",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498276,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e17",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498360,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e18",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498444,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e19",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498528,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e20",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498612,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e21",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498696,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e22",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498780,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        }
+      ],
+      "gridLen": 2097,
+      "auc": 48779.895782,
+      "samples": [
+        {
+          "offsetH": 2,
+          "exactE2": 40.6190726985,
+          "exactCPA": 0,
+          "simE2": 40.6190726985,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 12,
+          "exactE2": 72.0601676215,
+          "exactCPA": 0,
+          "simE2": 72.0601676215,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 72.5861442138,
+          "exactCPA": 0,
+          "simE2": 72.5861442138,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 84,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 600,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 72.5900116144,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 672,
+          "exactE2": 72.5900116144,
+          "exactCPA": 0,
+          "simE2": 69.3853322368,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 700,
+          "exactE2": 0.000750198538322,
+          "exactCPA": 0,
+          "simE2": 0.000753439683456,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 800,
+          "exactE2": 1.17247193401e-21,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_apply_remove_pairing",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e23",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50
+          }
+        },
+        {
+          "id": "e24",
+          "route": "patchRemove",
+          "ester": "E2",
+          "timeH": 498264,
+          "doseMG": 0,
+          "extras": {}
+        },
+        {
+          "id": "e25",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498264,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50
+          }
+        },
+        {
+          "id": "e26",
+          "route": "patchRemove",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2026,
+      "auc": 5226.52988775,
+      "samples": [
+        {
+          "offsetH": 6,
+          "exactE2": 33.1941437657,
+          "exactCPA": 0,
+          "simE2": 33.1941437657,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 36.2930721069,
+          "exactCPA": 0,
+          "simE2": 36.2930721069,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 71,
+          "exactE2": 36.2950058072,
+          "exactCPA": 0,
+          "simE2": 36.2950058072,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 73,
+          "exactE2": 36.2950058072,
+          "exactCPA": 0,
+          "simE2": 36.2950058072,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 100,
+          "exactE2": 36.2950058072,
+          "exactCPA": 0,
+          "simE2": 36.2950058072,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 143,
+          "exactE2": 36.2950058072,
+          "exactCPA": 0,
+          "simE2": 36.2950058072,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 145,
+          "exactE2": 24.0871896826,
+          "exactCPA": 0,
+          "simE2": 24.1190864333,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 170,
+          "exactE2": 0.000851662829688,
+          "exactCPA": 0,
+          "simE2": 0.000852132104817,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 200,
+          "exactE2": 3.87655156945e-9,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_total_dose_mode",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e27",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 1.44,
+          "extras": {
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e28",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 1.44,
+          "extras": {
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e29",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 1.44,
+          "extras": {
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e30",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 1.44,
+          "extras": {
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e31",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 1.44,
+          "extras": {
+            "patchWearH": 48
+          }
+        }
+      ],
+      "gridLen": 2057,
+      "auc": 37921.3465317,
+      "samples": [
+        {
+          "offsetH": 6,
+          "exactE2": 166.851381248,
+          "exactCPA": 0,
+          "simE2": 166.851381248,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 160.07706989,
+          "exactCPA": 0,
+          "simE2": 160.07706989,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 48,
+          "exactE2": 133.716136485,
+          "exactCPA": 0,
+          "simE2": 133.716136485,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96,
+          "exactE2": 133.716136864,
+          "exactCPA": 0,
+          "simE2": 133.716136485,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 192,
+          "exactE2": 133.716136864,
+          "exactCPA": 0,
+          "simE2": 133.716136485,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 133.716136864,
+          "exactCPA": 0,
+          "simE2": 133.716136485,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 260,
+          "exactE2": 0.0367256143526,
+          "exactCPA": 0,
+          "simE2": 0.0367999068227,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_age_1992",
+      "weight": 70,
+      "birthYear": 1992,
+      "pk": null,
+      "events": [
+        {
+          "id": "e32",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e33",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e34",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e35",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e36",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e37",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e38",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e39",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e40",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e41",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e42",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e43",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e44",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e45",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        }
+      ],
+      "gridLen": 2079,
+      "auc": 21877.9124059,
+      "samples": [
+        {
+          "offsetH": 24,
+          "exactE2": 65.1054380579,
+          "exactCPA": 0,
+          "simE2": 65.1054380579,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96,
+          "exactE2": 65.1085297903,
+          "exactCPA": 0,
+          "simE2": 65.108529771,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 65.1124743129,
+          "exactCPA": 0,
+          "simE2": 65.1124743129,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 312,
+          "exactE2": 65.1183921541,
+          "exactCPA": 0,
+          "simE2": 65.1183921541,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 65.1183925608,
+          "exactCPA": 0,
+          "simE2": 65.1183925415,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 400,
+          "exactE2": 1.28903229351e-11,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_weight_55kg",
+      "weight": 55,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e46",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e47",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498276,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e48",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498360,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e49",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498444,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        }
+      ],
+      "gridLen": 2049,
+      "auc": 29225.9556667,
+      "samples": [
+        {
+          "offsetH": 24,
+          "exactE2": 86.9792834317,
+          "exactCPA": 0,
+          "simE2": 86.9792834317,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 84,
+          "exactE2": 86.9817976116,
+          "exactCPA": 0,
+          "simE2": 86.9817976116,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 86.9817976116,
+          "exactCPA": 0,
+          "simE2": 86.9817976116,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 300,
+          "exactE2": 86.9817976116,
+          "exactCPA": 0,
+          "simE2": 86.9817975389,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 86.9817976116,
+          "exactCPA": 0,
+          "simE2": 86.5750861578,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 360,
+          "exactE2": 0.00251417989405,
+          "exactCPA": 0,
+          "simE2": 0.00252298210663,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "patch_plus_cpa_6_25",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e50",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e51",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e52",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e53",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e54",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e55",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e56",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e57",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e58",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e59",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e60",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e61",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e62",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e63",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 50,
+            "patchWearH": 48
+          }
+        },
+        {
+          "id": "e64",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498200,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e65",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498224,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e66",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498248,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e67",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498272,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e68",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498296,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e69",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498320,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e70",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498344,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e71",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498368,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e72",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498392,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e73",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498416,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e74",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498440,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e75",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498464,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e76",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498488,
+          "doseMG": 6.25,
+          "extras": {}
+        },
+        {
+          "id": "e77",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498512,
+          "doseMG": 6.25,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2207,
+      "auc": 24390.3594927,
+      "samples": [
+        {
+          "offsetH": 9,
+          "exactE2": 70.7772936961,
+          "exactCPA": 11.781677836,
+          "simE2": 70.7772936961,
+          "simCPA": 11.781677836,
+          "simT": 0
+        },
+        {
+          "offsetH": 12,
+          "exactE2": 72.0601676215,
+          "exactCPA": 17.1270900411,
+          "simE2": 72.0601676215,
+          "simCPA": 17.1270900411,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 72.5861442138,
+          "exactCPA": 4.30155793887,
+          "simE2": 72.5861442138,
+          "simCPA": 4.30155793887,
+          "simT": 0
+        },
+        {
+          "offsetH": 100,
+          "exactE2": 72.5900116144,
+          "exactCPA": 7.91725361172,
+          "simE2": 72.5900115744,
+          "simCPA": 7.91725361172,
+          "simT": 0
+        },
+        {
+          "offsetH": 200,
+          "exactE2": 72.5900116144,
+          "exactCPA": 8.75709784863,
+          "simE2": 72.5900116066,
+          "simCPA": 8.75709784863,
+          "simT": 0
+        },
+        {
+          "offsetH": 320,
+          "exactE2": 72.5900116144,
+          "exactCPA": 9.12790283881,
+          "simE2": 72.5900116144,
+          "simCPA": 9.12790283881,
+          "simT": 0
+        },
+        {
+          "offsetH": 330,
+          "exactE2": 72.5900116144,
+          "exactCPA": 15.6769396524,
+          "simE2": 72.5900091955,
+          "simCPA": 15.6805237674,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 72.5900116144,
+          "exactCPA": 11.2803578904,
+          "simE2": 72.5900114084,
+          "simCPA": 11.2803578904,
+          "simT": 0
+        },
+        {
+          "offsetH": 360,
+          "exactE2": 0.00386740063288,
+          "exactCPA": 6.99487741017,
+          "simE2": 0.00387940164371,
+          "simCPA": 6.99491268167,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "cpa_12_5_daily",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e78",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498192,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e79",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498216,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e80",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498240,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e81",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498264,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e82",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498288,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e83",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498312,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e84",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498336,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e85",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498360,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e86",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498384,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e87",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498408,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e88",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498432,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e89",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498456,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e90",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498480,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e91",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498504,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e92",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498528,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e93",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498552,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e94",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498576,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e95",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498600,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e96",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498624,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e97",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498648,
+          "doseMG": 12.5,
+          "extras": {}
+        },
+        {
+          "id": "e98",
+          "route": "oral",
+          "ester": "CPA",
+          "timeH": 498672,
+          "doseMG": 12.5,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2213,
+      "auc": 0,
+      "samples": [
+        {
+          "offsetH": 1,
+          "exactE2": 0,
+          "exactCPA": 23.5633556721,
+          "simE2": 0,
+          "simCPA": 23.5633556721,
+          "simT": 0
+        },
+        {
+          "offsetH": 2,
+          "exactE2": 0,
+          "exactCPA": 33.2903840546,
+          "simE2": 0,
+          "simCPA": 33.2903840546,
+          "simT": 0
+        },
+        {
+          "offsetH": 4,
+          "exactE2": 0,
+          "exactCPA": 34.2541800822,
+          "simE2": 0,
+          "simCPA": 34.2541800822,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 0,
+          "exactCPA": 5.99985910622,
+          "simE2": 0,
+          "simCPA": 5.99985910622,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 0,
+          "exactCPA": 17.9779803084,
+          "simE2": 0,
+          "simCPA": 17.9779803084,
+          "simT": 0
+        },
+        {
+          "offsetH": 482,
+          "exactE2": 0,
+          "exactCPA": 50.9906710692,
+          "simE2": 0,
+          "simCPA": 50.9906710692,
+          "simT": 0
+        },
+        {
+          "offsetH": 484,
+          "exactE2": 0,
+          "exactCPA": 51.3397033272,
+          "simE2": 0,
+          "simCPA": 51.3397033272,
+          "simT": 0
+        },
+        {
+          "offsetH": 504,
+          "exactE2": 0,
+          "exactCPA": 18.380718621,
+          "simE2": 0,
+          "simCPA": 18.380718621,
+          "simT": 0
+        },
+        {
+          "offsetH": 600,
+          "exactE2": 0,
+          "exactCPA": 3.97263459702,
+          "simE2": 0,
+          "simCPA": 3.97263702896,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "ev_inj_5mg_q7d",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e99",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 498192,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e100",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 498360,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e101",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 498528,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e102",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 498696,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e103",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 498864,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e104",
+          "route": "injection",
+          "ester": "EV",
+          "timeH": 499032,
+          "doseMG": 5,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2072,
+      "auc": 248239.480889,
+      "samples": [
+        {
+          "offsetH": 6,
+          "exactE2": 28.0716324197,
+          "exactCPA": 0,
+          "simE2": 28.0716324197,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 213.987853006,
+          "exactCPA": 0,
+          "simE2": 213.987853006,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 48,
+          "exactE2": 337.144730461,
+          "exactCPA": 0,
+          "simE2": 337.144730461,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 89.3877213151,
+          "exactCPA": 0,
+          "simE2": 89.3877213151,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 500,
+          "exactE2": 103.164791805,
+          "exactCPA": 0,
+          "simE2": 103.165179591,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 840,
+          "exactE2": 97.1034695407,
+          "exactCPA": 0,
+          "simE2": 97.1034695407,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 864,
+          "exactE2": 281.129097745,
+          "exactCPA": 0,
+          "simE2": 281.129097745,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1000,
+          "exactE2": 109.739620402,
+          "exactCPA": 0,
+          "simE2": 109.740285685,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1100,
+          "exactE2": 23.7919265731,
+          "exactCPA": 0,
+          "simE2": 23.7920011455,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "ec_inj_5mg_q14d",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e105",
+          "route": "injection",
+          "ester": "EC",
+          "timeH": 498192,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e106",
+          "route": "injection",
+          "ester": "EC",
+          "timeH": 498528,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e107",
+          "route": "injection",
+          "ester": "EC",
+          "timeH": 498864,
+          "doseMG": 5,
+          "extras": {}
+        },
+        {
+          "id": "e108",
+          "route": "injection",
+          "ester": "EC",
+          "timeH": 499200,
+          "doseMG": 5,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2048,
+      "auc": 257081.513327,
+      "samples": [
+        {
+          "offsetH": 24,
+          "exactE2": 85.7058833346,
+          "exactCPA": 0,
+          "simE2": 85.7058833346,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96,
+          "exactE2": 230.613863842,
+          "exactCPA": 0,
+          "simE2": 230.612286261,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 86.0818992292,
+          "exactCPA": 0,
+          "simE2": 86.0818992292,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 700,
+          "exactE2": 195.965073012,
+          "exactCPA": 0,
+          "simE2": 195.964470562,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1008,
+          "exactE2": 108.194326724,
+          "exactCPA": 0,
+          "simE2": 108.194326724,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1100,
+          "exactE2": 301.634817323,
+          "exactCPA": 0,
+          "simE2": 301.632937458,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1300,
+          "exactE2": 133.610246908,
+          "exactCPA": 0,
+          "simE2": 133.610385172,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "eb_inj_1mg_q3d",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e109",
+          "route": "injection",
+          "ester": "EB",
+          "timeH": 498192,
+          "doseMG": 1,
+          "extras": {}
+        },
+        {
+          "id": "e110",
+          "route": "injection",
+          "ester": "EB",
+          "timeH": 498264,
+          "doseMG": 1,
+          "extras": {}
+        },
+        {
+          "id": "e111",
+          "route": "injection",
+          "ester": "EB",
+          "timeH": 498336,
+          "doseMG": 1,
+          "extras": {}
+        },
+        {
+          "id": "e112",
+          "route": "injection",
+          "ester": "EB",
+          "timeH": 498408,
+          "doseMG": 1,
+          "extras": {}
+        },
+        {
+          "id": "e113",
+          "route": "injection",
+          "ester": "EB",
+          "timeH": 498480,
+          "doseMG": 1,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2061,
+      "auc": 68815.7108215,
+      "samples": [
+        {
+          "offsetH": 2,
+          "exactE2": 11.9523542728,
+          "exactCPA": 0,
+          "simE2": 11.9523542728,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 8,
+          "exactE2": 112.310903378,
+          "exactCPA": 0,
+          "simE2": 112.310903378,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 263.121161095,
+          "exactCPA": 0,
+          "simE2": 263.121161095,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 72,
+          "exactE2": 72.1325213886,
+          "exactCPA": 0,
+          "simE2": 72.1325213886,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 290,
+          "exactE2": 82.6631828973,
+          "exactCPA": 0,
+          "simE2": 82.6631828973,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 300,
+          "exactE2": 226.600768965,
+          "exactCPA": 0,
+          "simE2": 226.600768965,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 400,
+          "exactE2": 15.5488231665,
+          "exactCPA": 0,
+          "simE2": 15.5491562019,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "oral_e2_2mg_bid",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e114",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e115",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498204,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e116",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498216,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e117",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498228,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e118",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e119",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498252,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e120",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498264,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e121",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498276,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e122",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e123",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498300,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e124",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498312,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e125",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498324,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e126",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e127",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498348,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e128",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498360,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e129",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498372,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e130",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e131",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498396,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e132",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498408,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e133",
+          "route": "oral",
+          "ester": "E2",
+          "timeH": 498420,
+          "doseMG": 2,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2185,
+      "auc": 20905.1710051,
+      "samples": [
+        {
+          "offsetH": 1,
+          "exactE2": 2.56121031746,
+          "exactCPA": 0,
+          "simE2": 2.56121031746,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 3,
+          "exactE2": 14.0589104945,
+          "exactCPA": 0,
+          "simE2": 14.0511607343,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 12,
+          "exactE2": 33.4028275762,
+          "exactCPA": 0,
+          "simE2": 33.4028275762,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 120,
+          "exactE2": 81.1166446281,
+          "exactCPA": 0,
+          "simE2": 81.1166446281,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 228,
+          "exactE2": 81.3770757276,
+          "exactCPA": 0,
+          "simE2": 81.3770757276,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 230,
+          "exactE2": 83.4286932586,
+          "exactCPA": 0,
+          "simE2": 83.4286932586,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 81.3777025986,
+          "exactCPA": 0,
+          "simE2": 81.3777025986,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 300,
+          "exactE2": 4.74073224365,
+          "exactCPA": 0,
+          "simE2": 4.74081515419,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "oral_ev_2mg_daily",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e134",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498192,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e135",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498216,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e136",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498240,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e137",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498264,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e138",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498288,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e139",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498312,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e140",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498336,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e141",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498360,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e142",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498384,
+          "doseMG": 2,
+          "extras": {}
+        },
+        {
+          "id": "e143",
+          "route": "oral",
+          "ester": "EV",
+          "timeH": 498408,
+          "doseMG": 2,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2103,
+      "auc": 7985.16187953,
+      "samples": [
+        {
+          "offsetH": 2,
+          "exactE2": 21.120490528,
+          "exactCPA": 0,
+          "simE2": 21.120490528,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 6,
+          "exactE2": 29.8058663936,
+          "exactCPA": 0,
+          "simE2": 29.8058663936,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 13.6954464314,
+          "exactCPA": 0,
+          "simE2": 13.6954464314,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 216,
+          "exactE2": 19.5990029426,
+          "exactCPA": 0,
+          "simE2": 19.5990029426,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 220,
+          "exactE2": 44.4605629782,
+          "exactCPA": 0,
+          "simE2": 44.4605629782,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 19.5992823724,
+          "exactCPA": 0,
+          "simE2": 19.5992823724,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 280,
+          "exactE2": 2.65280236222,
+          "exactCPA": 0,
+          "simE2": 2.65286092031,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "sl_e2_2mg_tiers",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e144",
+          "route": "sublingual",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 0
+          }
+        },
+        {
+          "id": "e145",
+          "route": "sublingual",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 1
+          }
+        },
+        {
+          "id": "e146",
+          "route": "sublingual",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 2
+          }
+        },
+        {
+          "id": "e147",
+          "route": "sublingual",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 3
+          }
+        },
+        {
+          "id": "e148",
+          "route": "sublingual",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTheta": 0.3
+          }
+        }
+      ],
+      "gridLen": 2057,
+      "auc": 12118.7022865,
+      "samples": [
+        {
+          "offsetH": 0.25,
+          "exactE2": 44.4162897297,
+          "exactCPA": 0,
+          "simE2": 44.4162897297,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 0.5,
+          "exactE2": 61.6809241172,
+          "exactCPA": 0,
+          "simE2": 61.6809241172,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1,
+          "exactE2": 60.7764512245,
+          "exactCPA": 0,
+          "simE2": 60.7764512245,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 2,
+          "exactE2": 35.0651220462,
+          "exactCPA": 0,
+          "simE2": 35.0651220462,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 6,
+          "exactE2": 28.1309917178,
+          "exactCPA": 0,
+          "simE2": 28.1309917178,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 48.5,
+          "exactE2": 250.957316256,
+          "exactCPA": 0,
+          "simE2": 250.957316256,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 49,
+          "exactE2": 241.684865112,
+          "exactCPA": 0,
+          "simE2": 241.684865112,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96.5,
+          "exactE2": 678.070353084,
+          "exactCPA": 0,
+          "simE2": 678.070353084,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 97,
+          "exactE2": 649.619128626,
+          "exactCPA": 0,
+          "simE2": 649.619128626,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 144.5,
+          "exactE2": 1104.33491264,
+          "exactCPA": 0,
+          "simE2": 1104.33491264,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 145,
+          "exactE2": 1056.72514719,
+          "exactCPA": 0,
+          "simE2": 1056.72514719,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 192.5,
+          "exactE2": 1835.28369994,
+          "exactCPA": 0,
+          "simE2": 1835.28369994,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 193,
+          "exactE2": 1754.82572498,
+          "exactCPA": 0,
+          "simE2": 1754.82572498,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 200,
+          "exactE2": 27.7556307517,
+          "exactCPA": 0,
+          "simE2": 27.7556307517,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 5.24791631067,
+          "exactCPA": 0,
+          "simE2": 5.24791631067,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "sl_ev_2mg",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e149",
+          "route": "sublingual",
+          "ester": "EV",
+          "timeH": 498192,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 2
+          }
+        },
+        {
+          "id": "e150",
+          "route": "sublingual",
+          "ester": "EV",
+          "timeH": 498216,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 2
+          }
+        },
+        {
+          "id": "e151",
+          "route": "sublingual",
+          "ester": "EV",
+          "timeH": 498240,
+          "doseMG": 2,
+          "extras": {
+            "sublingualTier": 2
+          }
+        }
+      ],
+      "gridLen": 2033,
+      "auc": 10916.0412564,
+      "samples": [
+        {
+          "offsetH": 0.5,
+          "exactE2": 19.6558516258,
+          "exactCPA": 0,
+          "simE2": 19.6558516258,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 1,
+          "exactE2": 49.4071592815,
+          "exactCPA": 0,
+          "simE2": 49.4071592815,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 3,
+          "exactE2": 138.203097724,
+          "exactCPA": 0,
+          "simE2": 137.975705888,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 60.1056117843,
+          "exactCPA": 0,
+          "simE2": 60.1056117843,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 49,
+          "exactE2": 117.506490112,
+          "exactCPA": 0,
+          "simE2": 117.506490112,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 52,
+          "exactE2": 213.585086771,
+          "exactCPA": 0,
+          "simE2": 213.585086771,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 72,
+          "exactE2": 75.4820404821,
+          "exactCPA": 0,
+          "simE2": 75.4820404821,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 96,
+          "exactE2": 16.0198458636,
+          "exactCPA": 0,
+          "simE2": 16.0198458636,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "gel_e2_1_5mg_arm",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e152",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e153",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498216,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e154",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498240,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e155",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498264,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e156",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498288,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e157",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498312,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e158",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498336,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e159",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498360,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e160",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498384,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e161",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498408,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 0
+          }
+        },
+        {
+          "id": "e162",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498432,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 2
+          }
+        },
+        {
+          "id": "e163",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498456,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 2
+          }
+        },
+        {
+          "id": "e164",
+          "route": "gel",
+          "ester": "E2",
+          "timeH": 498480,
+          "doseMG": 1.5,
+          "extras": {
+            "gelSite": 2
+          }
+        }
+      ],
+      "gridLen": 2133,
+      "auc": 32661.1818352,
+      "samples": [
+        {
+          "offsetH": 4,
+          "exactE2": 19.3639883281,
+          "exactCPA": 0,
+          "simE2": 19.3639883281,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 12,
+          "exactE2": 20.7993570007,
+          "exactCPA": 0,
+          "simE2": 20.7993570007,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 24,
+          "exactE2": 16.6511851567,
+          "exactCPA": 0,
+          "simE2": 16.6511851567,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 216,
+          "exactE2": 44.2216711525,
+          "exactCPA": 0,
+          "simE2": 44.2216711525,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 240,
+          "exactE2": 44.4793003527,
+          "exactCPA": 0,
+          "simE2": 44.4793003527,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 250,
+          "exactE2": 143.574020509,
+          "exactCPA": 0,
+          "simE2": 143.570654582,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 300,
+          "exactE2": 225.580940769,
+          "exactCPA": 0,
+          "simE2": 225.580940769,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 320,
+          "exactE2": 153.999568398,
+          "exactCPA": 0,
+          "simE2": 154.000569857,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "custom_pk_params",
+      "weight": 70,
+      "birthYear": null,
+      "pk": {
+        "e2_kClear": 0.3
+      },
+      "events": [
+        {
+          "id": "e165",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498192,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e166",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498276,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e167",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498360,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        },
+        {
+          "id": "e168",
+          "route": "patchApply",
+          "ester": "E2",
+          "timeH": 498444,
+          "doseMG": 0,
+          "extras": {
+            "releaseRateUGPerDay": 100,
+            "patchWearH": 84
+          }
+        }
+      ],
+      "gridLen": 2049,
+      "auc": 33333.3640403,
+      "samples": [
+        {
+          "offsetH": 24,
+          "exactE2": 99.1322831539,
+          "exactCPA": 0,
+          "simE2": 99.1322831539,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 84,
+          "exactE2": 99.2063492052,
+          "exactCPA": 0,
+          "simE2": 99.2063492052,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 99.2063492063,
+          "exactCPA": 0,
+          "simE2": 99.2063492052,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 300,
+          "exactE2": 99.2063492063,
+          "exactCPA": 0,
+          "simE2": 99.2062939097,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 336,
+          "exactE2": 99.2063492063,
+          "exactCPA": 0,
+          "simE2": 98.8788194915,
+          "simCPA": 0,
+          "simT": 0
+        },
+        {
+          "offsetH": 360,
+          "exactE2": 0.0740660524183,
+          "exactCPA": 0,
+          "simE2": 0.0741890761114,
+          "simCPA": 0,
+          "simT": 0
+        }
+      ]
+    },
+    {
+      "name": "tc_inj_100mg_q7d",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e169",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 498192,
+          "doseMG": 100,
+          "extras": {}
+        },
+        {
+          "id": "e170",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 498360,
+          "doseMG": 100,
+          "extras": {}
+        },
+        {
+          "id": "e171",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 498528,
+          "doseMG": 100,
+          "extras": {}
+        },
+        {
+          "id": "e172",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 498696,
+          "doseMG": 100,
+          "extras": {}
+        },
+        {
+          "id": "e173",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 498864,
+          "doseMG": 100,
+          "extras": {}
+        },
+        {
+          "id": "e174",
+          "route": "injection",
+          "ester": "TC",
+          "timeH": 499032,
+          "doseMG": 100,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2072,
+      "auc": 0,
+      "samples": [
+        {
+          "offsetH": 12,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 299.049099281
+        },
+        {
+          "offsetH": 48,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 714.786951321
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 256.063568614
+        },
+        {
+          "offsetH": 840,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 408.041744817
+        },
+        {
+          "offsetH": 900,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 962.14617305
+        },
+        {
+          "offsetH": 1008,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 411.131173341
+        },
+        {
+          "offsetH": 1100,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 233.30835355
+        }
+      ]
+    }
+  ],
+  "calibration": [
+    {
+      "name": "mipd_retro_1lab",
+      "baseFixture": "patch_2x50ug_q48h",
+      "method": "mipd",
+      "historyMode": "retrospective",
+      "labs": [
+        {
+          "id": "l1",
+          "timeH": 498527,
+          "concValue": 110,
+          "unit": "pg/ml"
+        }
+      ],
+      "scale": 1.47599753565,
+      "kMul": 1,
+      "halfLifeDeltaPct": 0,
+      "fitErrPct": null,
+      "points": [
+        {
+          "offsetH": 335,
+          "obs": 110,
+          "pred": 72.590011303,
+          "ratio": 1.5153600065
+        }
+      ],
+      "at": [
+        {
+          "offsetH": 100,
+          "factor": 1.47599753565,
+          "calibratedE2": 107.142678197
+        },
+        {
+          "offsetH": 220,
+          "factor": 1.47599753565,
+          "calibratedE2": 107.142678256
+        },
+        {
+          "offsetH": 336,
+          "factor": 1.47599753565,
+          "calibratedE2": 107.142677951
+        },
+        {
+          "offsetH": 400,
+          "factor": 1.47599753565,
+          "calibratedE2": 0
+        }
+      ]
+    },
+    {
+      "name": "mipd_retro_3labs",
+      "baseFixture": "patch_2x50ug_q48h",
+      "method": "mipd",
+      "historyMode": "retrospective",
+      "labs": [
+        {
+          "id": "l1",
+          "timeH": 498287,
+          "concValue": 90,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l2",
+          "timeH": 498407,
+          "concValue": 120,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l3",
+          "timeH": 498527,
+          "concValue": 105,
+          "unit": "pg/ml"
+        }
+      ],
+      "scale": 1.27102972173,
+      "kMul": 0.889126393493,
+      "halfLifeDeltaPct": 12.469948853,
+      "fitErrPct": 12.4849212308,
+      "points": [
+        {
+          "offsetH": 95,
+          "obs": 90,
+          "pred": 72.5900113032,
+          "ratio": 1.23984000532
+        },
+        {
+          "offsetH": 215,
+          "obs": 120,
+          "pred": 72.5900116144,
+          "ratio": 1.65312
+        },
+        {
+          "offsetH": 335,
+          "obs": 105,
+          "pred": 72.590011303,
+          "ratio": 1.44648000621
+        }
+      ],
+      "at": [
+        {
+          "offsetH": 100,
+          "factor": 1.42952646908,
+          "calibratedE2": 103.769342936
+        },
+        {
+          "offsetH": 220,
+          "factor": 1.42952647793,
+          "calibratedE2": 103.769343636
+        },
+        {
+          "offsetH": 336,
+          "factor": 1.42952644133,
+          "calibratedE2": 103.769340684
+        },
+        {
+          "offsetH": 400,
+          "factor": 1.27102972173,
+          "calibratedE2": 0
+        }
+      ]
+    },
+    {
+      "name": "ekf_retro_3labs",
+      "baseFixture": "patch_2x50ug_q48h",
+      "method": "ekf",
+      "historyMode": "retrospective",
+      "labs": [
+        {
+          "id": "l1",
+          "timeH": 498287,
+          "concValue": 90,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l2",
+          "timeH": 498407,
+          "concValue": 120,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l3",
+          "timeH": 498527,
+          "concValue": 105,
+          "unit": "pg/ml"
+        }
+      ],
+      "scale": 1.27123007381,
+      "kMul": 0.88928838356,
+      "halfLifeDeltaPct": 12.4494616692,
+      "fitErrPct": 12.4850369586,
+      "points": [
+        {
+          "offsetH": 95,
+          "obs": 90,
+          "pred": 72.5900113032,
+          "ratio": 1.23984000532
+        },
+        {
+          "offsetH": 215,
+          "obs": 120,
+          "pred": 72.5900116144,
+          "ratio": 1.65312
+        },
+        {
+          "offsetH": 335,
+          "obs": 105,
+          "pred": 72.590011303,
+          "ratio": 1.44648000621
+        }
+      ],
+      "at": [
+        {
+          "offsetH": 100,
+          "factor": 1.42949136574,
+          "calibratedE2": 103.766794785
+        },
+        {
+          "offsetH": 220,
+          "factor": 1.42949137457,
+          "calibratedE2": 103.766795483
+        },
+        {
+          "offsetH": 336,
+          "factor": 1.42949133806,
+          "calibratedE2": 103.766792538
+        },
+        {
+          "offsetH": 400,
+          "factor": 1.27123007381,
+          "calibratedE2": 0
+        }
+      ]
+    },
+    {
+      "name": "mipd_forward_3labs",
+      "baseFixture": "patch_2x50ug_q48h",
+      "method": "mipd",
+      "historyMode": "forward",
+      "labs": [
+        {
+          "id": "l1",
+          "timeH": 498287,
+          "concValue": 90,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l2",
+          "timeH": 498407,
+          "concValue": 120,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l3",
+          "timeH": 498527,
+          "concValue": 105,
+          "unit": "pg/ml"
+        }
+      ],
+      "scale": 1.27102972173,
+      "kMul": 0.889126393493,
+      "halfLifeDeltaPct": 12.469948853,
+      "fitErrPct": 9.46336272043,
+      "points": [
+        {
+          "offsetH": 95,
+          "obs": 90,
+          "pred": 72.5900113032,
+          "ratio": 1.23984000532
+        },
+        {
+          "offsetH": 215,
+          "obs": 120,
+          "pred": 72.5900116144,
+          "ratio": 1.65312
+        },
+        {
+          "offsetH": 335,
+          "obs": 105,
+          "pred": 72.590011303,
+          "ratio": 1.44648000621
+        }
+      ],
+      "at": [
+        {
+          "offsetH": 100,
+          "factor": 1.22307691888,
+          "calibratedE2": 88.783167698
+        },
+        {
+          "offsetH": 220,
+          "factor": 1.41494643982,
+          "calibratedE2": 102.710978501
+        },
+        {
+          "offsetH": 336,
+          "factor": 1.42952644133,
+          "calibratedE2": 103.769340684
+        },
+        {
+          "offsetH": 400,
+          "factor": 1.27102972173,
+          "calibratedE2": 0
+        }
+      ]
+    },
+    {
+      "name": "ou_kalman_retro_3labs",
+      "baseFixture": "patch_2x50ug_q48h",
+      "method": "ou_kalman",
+      "historyMode": "retrospective",
+      "labs": [
+        {
+          "id": "l1",
+          "timeH": 498287,
+          "concValue": 90,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l2",
+          "timeH": 498407,
+          "concValue": 120,
+          "unit": "pg/ml"
+        },
+        {
+          "id": "l3",
+          "timeH": 498527,
+          "concValue": 105,
+          "unit": "pg/ml"
+        }
+      ],
+      "scale": 1.43917035724,
+      "kMul": 1,
+      "halfLifeDeltaPct": 0,
+      "fitErrPct": 2.30865306643,
+      "points": [
+        {
+          "offsetH": 95,
+          "obs": 90,
+          "pred": 72.5900113032,
+          "ratio": 1.23984000532
+        },
+        {
+          "offsetH": 215,
+          "obs": 120,
+          "pred": 72.5900116144,
+          "ratio": 1.65312
+        },
+        {
+          "offsetH": 335,
+          "obs": 105,
+          "pred": 72.590011303,
+          "ratio": 1.44648000621
+        }
+      ],
+      "at": [
+        {
+          "offsetH": 100,
+          "factor": 1.26752567053,
+          "calibratedE2": 92.0097030947
+        },
+        {
+          "offsetH": 220,
+          "factor": 1.58461994441,
+          "calibratedE2": 115.027580169
+        },
+        {
+          "offsetH": 336,
+          "factor": 1.43761413009,
+          "calibratedE2": 104.356426104
+        },
+        {
+          "offsetH": 400,
+          "factor": 1.34990033073,
+          "calibratedE2": 0
+        }
+      ]
+    }
+  ],
+  "sourceCommit": "90103d23a92c0a1bf4e765181aeef8dde947765c"
+}
