@@ -6,6 +6,7 @@ struct OverviewView: View {
     @State private var range: TrackerChartRange = .week
     @State private var timeline: TimelineModel?
     @State private var loadedRequest: TimelineRequest?
+    @State private var shareSnapshot: ConcentrationShareSnapshot?
     @State private var showDose = false
     @State private var showInfo = false
     @State private var earlyPlan: MedicationPlan?
@@ -15,24 +16,31 @@ struct OverviewView: View {
 
     var body: some View {
         let request = timelineRequest
+        let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 TrackerHeader(title: "Overview", subtitle: dateLabel) {
                     Button {
-                        showDose = true
+                        if let shareableTimeline {
+                            shareSnapshot = ConcentrationShareSnapshot(
+                                timeline: shareableTimeline, calendar: store.calendar, range: request.range,
+                                monochrome: store.appearance == .mono
+                            )
+                        }
                     } label: {
                         Label {
-                            Text("Record dose")
+                            Text("Share")
                         } icon: {
-                            TrackerTheme.navigationIcon("plus")
+                            TrackerTheme.navigationIcon("square.and.arrow.up")
                         }
                         .font(.subheadline)
                         .frame(minHeight: 44)
                         .foregroundStyle(TrackerTheme.accent)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Record dose")
-                    .accessibilityIdentifier("overview.addDose")
+                    .disabled(shareableTimeline == nil)
+                    .opacity(shareableTimeline == nil ? 0.5 : 1)
+                    .accessibilityIdentifier("overview.share")
                 }
                 currentLevel
                 todayPlan
@@ -94,6 +102,9 @@ struct OverviewView: View {
             }
         }
         .sheet(isPresented: $showDose) { DoseEditorView(store: store) }
+        .sheet(item: $shareSnapshot) { snapshot in
+            ConcentrationSharePreview(snapshot: snapshot)
+        }
         .sheet(isPresented: $showInfo) {
             VStack(alignment: .leading, spacing: 16) {
                 TrackerSectionTitle(title: "About concentration estimates")
