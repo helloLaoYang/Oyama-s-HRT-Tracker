@@ -61,7 +61,7 @@
 "All" = "全部";
 "Projected from medication plan" = "预计：按用药方案";
 "Future recorded doses" = "之后：按已记录剂量";
-"After now: natural decay" = "之后：自然衰减";
+"Expected" = "预期";
 "Lab result" = "化验";
 "Now" = "现在";
 "Medication activity" = "用药统计";
