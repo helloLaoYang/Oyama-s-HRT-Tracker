@@ -20,8 +20,9 @@ export function e2Clearance(event: DoseEvent, birthYear: number | null, bodyWeig
 
 /** Testosterone clearance rate for this event's route and age; as for estradiol, k3 holds only the weight remainder. */
 export function tClearance(event: DoseEvent, birthYear: number | null, bodyWeightKG: number): number {
+    const isDepotInjection = event.route === Route.injection || event.route === Route.sc;
     return (
-        (event.route === Route.injection ? _activePKParams.t_kClearInj : _activePKParams.t_kClear) *
+        (isDepotInjection ? _activePKParams.t_kClearInj : _activePKParams.t_kClear) *
         ageClearanceMultiplier('t', birthYear, event.timeH) *
         weightK3Factor(bodyWeightKG)
     );

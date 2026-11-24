@@ -152,11 +152,14 @@ const tRange = (events: Parameters<typeof runSimulation>[0], from: number, to: n
 describe('testosterone injections', () => {
     // The formation fraction (DEFAULT_PK_PARAMS.t_ff_*) is fitted to the first
     // two, so their averages get a tight band.
-    it('enanthate weekly at the Xyosted trial mean dose averages within 1.1x of the label Cavg of 553 ng/dL', () => {
-        // Xyosted label, week 12, N = 137, doses of 50, 75 or 100 mg averaging
-        // 73.9 mg/week: https://medlibrary.org/lib/rx/meds/xyosted/page/4/
-        const sim = runSimulation(regimen(Route.injection, Ester.TE, 73.9, 168, 20, NOW_H - 168), BW)!;
-        within(scan(sim, interpolateConcentration_T, NOW_H - 168, NOW_H, 0.5).mean, 553, 1.1);
+    it('subcutaneous enanthate at the Xyosted trial mean dose matches the label exposure bands', () => {
+        // Week 12, N = 137, doses of 50, 75 or 100 mg averaging 73.9 mg/week.
+        // https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=8a3d204c-be26-49e0-8599-0ac12a272e81
+        const start = NOW_H - 168;
+        const { lo, hi, mean } = tRange(regimen(Route.sc, Ester.TE, 73.9, 168, 12, start), start, NOW_H);
+        within(mean, 553, 1.1);
+        within(lo, 436);
+        within(hi, 790);
     });
 
     it('undecanoate on the Aveed schedule matches the label after the third injection', () => {
@@ -364,19 +367,5 @@ describe('known gaps against published data', () => {
         const sim = runSimulation(regimen(Route.oral, Ester.E2, 1, 24, 30, NOW_H - 24), BW)!;
         const { tmaxH } = scan(sim, interpolateConcentration_E2, NOW_H - 24, NOW_H, 0.1);
         expect(tmaxH).toBeLessThanOrEqual(4);
-    });
-
-    // Xyosted label, week 12: Cmin 436 against a Cavg of 553 ng/dL, a ratio of
-    // 0.79 (https://medlibrary.org/lib/rx/meds/xyosted/page/4/). At the same
-    // average the model's weekly enanthate trough is about 240 ng/dL, a ratio of
-    // 0.43: its curve swings more than this subcutaneous label's. The
-    // intramuscular Azmiro label swings less than the model too (single 200 mg
-    // cypionate: Tmax 72 h, half-life about 8 days, baseline-corrected Cmax
-    // 758 ng/dL, where the model peaks at about 1430 ng/dL at 2 days), so
-    // injection route does not explain it. The depot rates are left as they are
-    // until timed lab results show which way to move them.
-    it.fails('enanthate weekly at the Xyosted mean dose troughs within 1.5x of the label Cmin of 436 ng/dL', () => {
-        const { lo } = tRange(regimen(Route.injection, Ester.TE, 73.9, 168, 20, NOW_H - 168), NOW_H - 168, NOW_H);
-        within(lo, 436);
     });
 });

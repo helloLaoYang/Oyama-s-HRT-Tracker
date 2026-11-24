@@ -341,11 +341,11 @@ export const DEFAULT_PK_PARAMS: PKCustomParams = {
     // One formation fraction per mg of testosterone for all three esters: two
     // labels for different esters land on the same value at 70 kg.
     //   - Xyosted (enanthate, subcutaneous, weekly) label, week 12, N = 137:
-    //     Cavg 553 ng/dL (https://medlibrary.org/lib/rx/meds/xyosted/page/4/).
+    //     Cavg 553 ng/dL (https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=8a3d204c-be26-49e0-8599-0ac12a272e81).
     //     Doses were titrated; the FDA clinical pharmacology review gives
     //     25 men on 50 mg, 93 on 75 mg and 19 on 100 mg, a mean of 73.9 mg/week
     //     (https://www.accessdata.fda.gov/drugsatfda_docs/nda/2019/209863Orig1s000ClinPharmR.pdf).
-    //     0.043 gives 555 ng/dL on 73.9 mg/week.
+    //     0.043 gives about 556 ng/dL on 73.9 mg/week in the subcutaneous model.
     //   - Aveed (undecanoate 750 mg at weeks 0 and 4, then every 10 weeks)
     //     label, after the third injection, N = 117: Cavg 495 ng/dL
     //     (https://medlibrary.org/lib/rx/meds/aveed/page/6/). 0.043 gives 503.
