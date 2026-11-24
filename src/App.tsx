@@ -30,6 +30,7 @@ import {
 import { useAppData } from './hooks/useAppData';
 import { useAppNavigation, tabForView, ViewKey } from './hooks/useAppNavigation';
 import { isNativeAppShell, syncNativeStatusBar } from './utils/nativeShell';
+import { readStoredAccount } from './utils/storedAccount';
 
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
@@ -73,15 +74,8 @@ import { copyText } from './utils/clipboard';
 
 /** A leftover signed-in profile, used only to keep that device's backup wording. */
 const rememberedAccount = (): { username: string } | null => {
-    try {
-        const raw = localStorage.getItem('auth_user');
-        if (!raw) return null;
-        const username = (JSON.parse(raw) as { username?: unknown }).username;
-        if (typeof username === 'string' && username.trim()) return { username: username.trim() };
-    } catch {
-        /* the local store has no account name */
-    }
-    return null;
+    const username = readStoredAccount(localStorage)?.username;
+    return username ? { username } : null;
 };
 
 const AppContent = () => {

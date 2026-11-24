@@ -43,27 +43,10 @@ import {
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { RecordKind, SyncState, Tombstones } from '../utils/syncMerge';
+import { readStoredAccount } from '../utils/storedAccount';
 
 /** Namespace used while signed out. Its keys are the original, un-prefixed ones. */
 const LOCAL_OWNER = 'local';
-
-/**
- * Records written while an account was signed in live under `hrt-u<id>-…`.
- * The app no longer signs in, so a device that still has `auth_user` keeps
- * reading and writing that same namespace. Everyone else stays on `local`.
- * The old keys are never renamed or deleted.
- */
-const storageOwner = (): string => {
-    try {
-        const raw = localStorage.getItem('auth_user');
-        if (!raw) return LOCAL_OWNER;
-        const id = (JSON.parse(raw) as { id?: unknown }).id;
-        if (typeof id === 'string' && id.length > 0 && id.length <= 128) return id;
-    } catch {
-        /* a broken leftover is not an account; the local keys still load */
-    }
-    return LOCAL_OWNER;
-};
 
 export type { DoseTemplate, QuickDose } from '../utils/backupState';
 
@@ -86,7 +69,7 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     // Everything below is scoped to (owner, mode). `scope` is the composite the
     // reload/persist handshake keys on — see loadedScopeRef. `owner` is fixed
     // for the life of the page: there is no sign-in to switch it.
-    const [owner] = useState(storageOwner);
+    const [owner] = useState(() => readStoredAccount(localStorage)?.id ?? LOCAL_OWNER);
     const scope = `${owner}|${mode}`;
     const keyFor = (m: 'transfem' | 'transmasc', suffix: string) => modeKeyFor(owner, m, suffix);
     const sharedKey = (suffix: string) => nsFor(owner, suffix);
