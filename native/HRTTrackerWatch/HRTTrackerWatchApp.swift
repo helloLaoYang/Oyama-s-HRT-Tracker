@@ -147,7 +147,7 @@ private struct WatchConcentrationView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 } else if store.snapshot.map({ now >= $0.expiresAt }) ?? true {
-                    Text("Open HRT Tracker on iPhone to sync.")
+                    Text("Open HRTrace on iPhone to sync.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 } else {
@@ -303,7 +303,7 @@ private struct WatchTodayView: View {
                             }
                         }
                     } else {
-                        Text("Open HRT Tracker on iPhone to sync.").foregroundStyle(.secondary)
+                        Text("Open HRTrace on iPhone to sync.").foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 4)

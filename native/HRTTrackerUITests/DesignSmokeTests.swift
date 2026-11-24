@@ -55,6 +55,68 @@ final class DesignSmokeTests: XCTestCase {
         screenshot("18-advanced-calibration", in: app)
     }
 
+    func testAppLanguagesAndOpenSourceLicenses() {
+        let app = launchDemo()
+        app.tabBars.buttons["设置"].tap()
+
+        let settings = [("de", "Einstellungen"), ("fr", "Réglages"), ("ja", "設定"),
+                        ("en", "Settings"), ("zh-Hans", "设置"), ("system", "设置")]
+        for (language, title) in settings {
+            app.buttons["settings.general"].tap()
+            app.buttons["settings.language"].tap()
+            let choice = app.buttons["language.\(language)"]
+            XCTAssertTrue(choice.waitForExistence(timeout: 6))
+            choice.tap()
+            XCTAssertTrue(app.tabBars.buttons[title].waitForExistence(timeout: 6))
+
+            if language == "fr" {
+                app.terminate()
+                app.launch()
+                app.tabBars.buttons["Historique"].tap()
+                XCTAssertEqual(app.buttons["history.select"].label, "Sélectionner")
+                app.tabBars.buttons[title].tap()
+            }
+        }
+
+        app.buttons["settings.about"].tap()
+        XCTAssertTrue(element("settings.projectWebsite", in: app).exists)
+        app.buttons["settings.licenses"].tap()
+        XCTAssertTrue(app.navigationBars["开源许可"].waitForExistence(timeout: 6))
+        XCTAssertTrue(element("licenses.pkSource", in: app).exists)
+        let license = app.staticTexts["licenses.mit"]
+        XCTAssertTrue(license.exists)
+        XCTAssertTrue(license.label.contains("Copyright (c) 2025 Joseph Smirnova Oyama"))
+        screenshot("23-open-source-licenses", in: app)
+    }
+
+    func testFeedbackFromAbout() {
+        let app = launchDemo()
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.about"].tap()
+        app.buttons["settings.feedback"].tap()
+
+        XCTAssertTrue(app.navigationBars["意见反馈"].waitForExistence(timeout: 6))
+        let submit = app.buttons["feedback.submit"]
+        if app.staticTexts["feedback.unavailable"].exists {
+            XCTAssertFalse(submit.exists)
+            return
+        }
+
+        XCTAssertTrue(app.staticTexts["feedback.publicNotice"].exists)
+        XCTAssertTrue(submit.exists)
+        XCTAssertFalse(submit.isEnabled)
+
+        let title = app.textFields["feedback.title"]
+        title.tap()
+        title.typeText("Example title")
+        XCTAssertFalse(submit.isEnabled)
+
+        let body = element("feedback.body", in: app)
+        body.tap()
+        body.typeText("Example description")
+        XCTAssertTrue(submit.isEnabled)
+    }
+
     func testOverviewLayoutAndSimulationNavigation() {
         let app = launchDemo()
         let overview = app.scrollViews.firstMatch
@@ -62,6 +124,14 @@ final class DesignSmokeTests: XCTestCase {
         let cpa = element("timeline.plot.cpa", in: app)
         let heatmap = app.staticTexts["用药统计"]
 
+        let share = app.buttons["overview.share"]
+        waitUntilEnabled(share)
+        let estimate = app.buttons["overview.estimate.info"]
+        XCTAssertEqual(estimate.label, "当前估算血药浓度")
+        XCTAssertEqual(estimate.frame.midY, share.frame.midY, accuracy: 2)
+        XCTAssertLessThan(estimate.frame.maxX, share.frame.minX)
+        XCTAssertEqual(app.staticTexts["overview.estimate.status"].label, "相当于女性卵泡期")
+        XCTAssertFalse(app.buttons["添加血检结果"].exists)
         XCTAssertTrue(app.staticTexts["今日方案"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["更换雌二醇贴片"].exists)
         XCTAssertTrue(app.staticTexts["醋酸环丙孕酮"].exists)
@@ -138,6 +208,32 @@ final class DesignSmokeTests: XCTestCase {
         ))
         XCTAssertTrue(shareActions.firstMatch.waitForExistence(timeout: 6), app.debugDescription)
         screenshot("20-system-share-sheet", in: app)
+    }
+
+    func testOverviewSingleReadingHeader() {
+        let app = launchDemo()
+        app.tabBars.buttons["记录"].tap()
+        let search = app.searchFields.firstMatch
+        search.tap()
+        search.typeText("CPA\n")
+
+        let prefix = "history.record."
+        let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))
+        let identifiers = records.allElementsBoundByIndex.map(\.identifier)
+        XCTAssertEqual(identifiers.count, 3)
+        for identifier in identifiers {
+            let recordID = identifier.dropFirst(prefix.count)
+            app.buttons["history.recordActions.\(recordID)"].tap()
+            app.buttons["删除"].tap()
+            XCTAssertTrue(app.staticTexts["删除所选用药记录？"].waitForExistence(timeout: 5))
+            app.buttons["删除"].tap()
+            XCTAssertTrue(app.buttons[identifier].waitForNonExistence(timeout: 5))
+        }
+
+        app.tabBars.buttons["概览"].tap()
+        waitUntilEnabled(app.buttons["overview.share"])
+        XCTAssertEqual(app.staticTexts["overview.estimate.status"].label, "相当于女性卵泡期")
+        screenshot("22-overview-single-reading", in: app)
     }
 
     func testDarkAppearanceAndNativeEntrySheets() {

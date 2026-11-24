@@ -9,6 +9,24 @@
             "state": "translated",
             "value": "高 %@%%"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %% höher"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %% de plus"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%% 高い"
+          }
         }
       }
     },
@@ -19,6 +37,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "低 %@%%"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %% niedriger"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %% de moins"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%% 低い"
           }
         }
       }
@@ -31,6 +67,24 @@
             "state": "translated",
             "value": "%lld 条"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Ergebnisse"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultats : %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の結果"
+          }
         }
       }
     },
@@ -41,6 +95,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加检查结果"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laborwert hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un résultat d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果を追加"
           }
         }
       }
@@ -53,6 +125,24 @@
             "state": "translated",
             "value": "检测方法（选填）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messmethode (optional)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Méthode d’analyse (facultative)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測定方法（任意）"
+          }
         }
       }
     },
@@ -63,6 +153,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "校准后"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalibriert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étalonné"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正済み"
           }
         }
       }
@@ -75,6 +183,24 @@
             "state": "translated",
             "value": "校准方法"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalibriermethode"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Méthode d’étalonnage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正方法"
+          }
         }
       }
     },
@@ -85,6 +211,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "校准设置"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalibriereinstellungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages d’étalonnage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正設定"
           }
         }
       }
@@ -97,6 +241,24 @@
             "state": "translated",
             "value": "取消"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
+          }
         }
       }
     },
@@ -107,6 +269,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "化学发光"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chemilumineszenz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chimiluminescence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "化学発光法"
           }
         }
       }
@@ -119,6 +299,24 @@
             "state": "translated",
             "value": "无法更新检查结果"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laborwerte konnten nicht aktualisiert werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de mettre à jour les résultats d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果を更新できませんでした"
+          }
         }
       }
     },
@@ -129,6 +327,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前校准"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Kalibrierung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étalonnage actuel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の補正"
           }
         }
       }
@@ -141,6 +357,24 @@
             "state": "translated",
             "value": "删除"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
         }
       }
     },
@@ -151,6 +385,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除全部化验"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Laborwerte löschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer tous les résultats d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての検査結果を削除"
           }
         }
       }
@@ -163,6 +415,24 @@
             "state": "translated",
             "value": "删除全部化验结果？"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Laborwerte löschen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer tous les résultats d’analyse ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての検査結果を削除しますか？"
+          }
         }
       }
     },
@@ -173,6 +443,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除这条检查结果？"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Laborwert löschen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer ce résultat d’analyse ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この検査結果を削除しますか？"
           }
         }
       }
@@ -185,6 +473,24 @@
             "state": "translated",
             "value": "每条化验只调整其采样时间之后的估算。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Laborwert beeinflusst nur die Schätzungen nach dem Zeitpunkt der Probenahme."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque résultat d’analyse ne modifie que les estimations postérieures au prélèvement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各検査結果は、その採血時刻以降の推定値にのみ反映されます。"
+          }
         }
       }
     },
@@ -195,6 +501,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "编辑检查结果"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laborwert bearbeiten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier le résultat d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果を編集"
           }
         }
       }
@@ -207,6 +531,24 @@
             "state": "translated",
             "value": "请输入大于 0 的化验值。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Messwert größer als null ein."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez une valeur mesurée supérieure à zéro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0より大きい実測値を入力してください。"
+          }
         }
       }
     },
@@ -217,6 +559,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "雌二醇"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiol"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エストラジオール"
           }
         }
       }
@@ -229,6 +589,24 @@
             "state": "translated",
             "value": "前向"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur zukünftig"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prospectif"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以降のみ"
+          }
         }
       }
     },
@@ -239,6 +617,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "半衰期变化"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderung der Halbwertszeit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variation de la demi-vie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "半減期の変化"
           }
         }
       }
@@ -251,6 +647,24 @@
             "state": "translated",
             "value": "历史模式"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalibrierzeitraum"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode d’historique"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正の適用範囲"
+          }
         }
       }
     },
@@ -261,6 +675,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "免疫法"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immunassay"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immunodosage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免疫測定法"
           }
         }
       }
@@ -273,6 +705,24 @@
             "state": "translated",
             "value": "化验列表操作"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen für Laborwert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions sur le résultat d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果の操作"
+          }
         }
       }
     },
@@ -283,6 +733,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "检查结果"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laborwerte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultats d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果"
           }
         }
       }
@@ -295,6 +763,24 @@
             "state": "translated",
             "value": "纳入校准的化验"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwendete Laborwerte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultats d’analyse utilisés"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正に用いた検査結果"
+          }
         }
       }
     },
@@ -306,6 +792,24 @@
             "state": "translated",
             "value": "检查"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Labor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyses"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査"
+          }
         }
       }
     },
@@ -313,6 +817,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übereinstimmungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correspondance"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "一致"
@@ -328,6 +850,24 @@
             "state": "translated",
             "value": "化验值"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messwert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valeur mesurée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実測値"
+          }
         }
       }
     },
@@ -338,6 +878,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "模型 vs 化验"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell und Laborwerte im Vergleich"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle et résultats d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルと検査結果の比較"
           }
         }
       }
@@ -350,6 +908,24 @@
             "state": "translated",
             "value": "暂无检查记录"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Laborwerte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun résultat d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果がありません"
+          }
         }
       }
     },
@@ -360,6 +936,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "未填写"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angegeben"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non renseigné"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未入力"
           }
         }
       }
@@ -372,6 +966,24 @@
             "state": "translated",
             "value": "好"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
         }
       }
     },
@@ -382,6 +994,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ"
           }
         }
       }
@@ -394,6 +1024,24 @@
             "state": "translated",
             "value": "关闭 · 显示原始模型"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus · Zeigt das Ausgangsmodell"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé · Modèle brut affiché"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ · 補正前のモデルを表示"
+          }
         }
       }
     },
@@ -404,6 +1052,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "原始"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unkalibriert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brut"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正前"
           }
         }
       }
@@ -416,6 +1082,24 @@
             "state": "translated",
             "value": "原始模型 %@"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgangsmodell %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle brut %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正前のモデル %@"
+          }
         }
       }
     },
@@ -426,6 +1110,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "回顾"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückwirkend"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétrospectif"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去も補正"
           }
         }
       }
@@ -438,6 +1140,24 @@
             "state": "translated",
             "value": "采样时间"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitpunkt der Probenahme"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure du prélèvement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "採血時刻"
+          }
         }
       }
     },
@@ -445,6 +1165,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "保存"
@@ -460,6 +1198,24 @@
             "state": "translated",
             "value": "模型估算与化验对照，斜线表示相等。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streudiagramm zum Vergleich von Modellschätzungen und Laborwerten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuage de points comparant les estimations aux résultats d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデル推定値と検査結果を比較する散布図"
+          }
         }
       }
     },
@@ -470,6 +1226,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示原始模型对照"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergleich mit dem Ausgangsmodell"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparaison avec le modèle brut"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正前のモデルと比較しています"
           }
         }
       }
@@ -482,6 +1256,24 @@
             "state": "translated",
             "value": "总睾酮"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamttestosteron"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testostérone totale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "総テストステロン"
+          }
         }
       }
     },
@@ -492,6 +1284,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "单位"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einheit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unité"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単位"
           }
         }
       }
@@ -504,6 +1314,24 @@
             "state": "translated",
             "value": "使用可用的化验结果调整历史曲线。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwendet verfügbare Laborwerte zur Anpassung des bisherigen Kurvenverlaufs."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilise les résultats d’analyse disponibles pour ajuster la courbe passée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用可能な検査結果で過去の濃度曲線を補正します。"
+          }
         }
       }
     },
@@ -515,6 +1343,24 @@
             "state": "translated",
             "value": "等待可校准的化验结果"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein geeigneter Laborwert zur Kalibrierung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente d’un résultat d’analyse utilisable pour l’étalonnage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補正に使える検査結果がまだありません"
+          }
         }
       }
     },
@@ -525,6 +1371,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "横轴 模型 · 纵轴 化验"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "X: Modell · Y: Laborwert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "X : modèle · Y : résultat d’analyse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "X：モデル · Y：検査結果"
           }
         }
       }

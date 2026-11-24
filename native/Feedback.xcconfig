@@ -1,0 +1,4 @@
+// Public URL of the deployed feedback Worker, including /feedback.
+// Use https:/$()/ so Xcode preserves both slashes in the URL.
+// Example: HRT_FEEDBACK_ENDPOINT_URL = https:/$()/feedback.example.com/feedback
+HRT_FEEDBACK_ENDPOINT_URL =

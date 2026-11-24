@@ -9,6 +9,24 @@
             "state": "translated",
             "value": "%@ 已用完"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist aufgebraucht."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ : rupture de stock."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の在庫がなくなりました。"
+          }
         }
       }
     },
@@ -20,6 +38,24 @@
             "state": "translated",
             "value": "%@：%@"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ geht zur Neige. %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ : stock faible. %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の在庫が残りわずかです。%@"
+          }
         }
       }
     },
@@ -27,6 +63,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mL · %@ mg/mL"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mL · %@ mg/mL"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ mL · %2$@ mg/mL"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ mL · %@ mg/mL"
@@ -42,6 +96,24 @@
             "state": "translated",
             "value": "%@ mg"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
         }
       }
     },
@@ -52,6 +124,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 片"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ patch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 枚"
           }
         }
       }
@@ -64,6 +154,24 @@
             "state": "translated",
             "value": "%@ 片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ patchs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 枚"
+          }
         }
       }
     },
@@ -74,6 +182,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 泵"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Pumpstoß"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dose de pompe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ プッシュ"
           }
         }
       }
@@ -86,6 +212,24 @@
             "state": "translated",
             "value": "%@ 泵"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Pumpstöße"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ doses de pompe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ プッシュ"
+          }
         }
       }
     },
@@ -96,6 +240,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "剩 %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ übrig"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restant : %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残り %@"
           }
         }
       }
@@ -108,6 +270,24 @@
             "state": "translated",
             "value": "%@ 袋"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Beutel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sachet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 包"
+          }
         }
       }
     },
@@ -118,6 +298,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 袋"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Beutel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sachets"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 包"
           }
         }
       }
@@ -130,6 +328,24 @@
             "state": "translated",
             "value": "%@ 片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Tablette"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ comprimé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 錠"
+          }
         }
       }
     },
@@ -140,6 +356,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 片"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Tabletten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ comprimés"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 錠"
           }
         }
       }
@@ -152,6 +386,24 @@
             "state": "translated",
             "value": "%@ 支"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Durchstechflasche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ flacon"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 本"
+          }
         }
       }
     },
@@ -162,6 +414,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 支"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Durchstechflaschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ flacons"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 本"
           }
         }
       }
@@ -174,6 +444,24 @@
             "state": "translated",
             "value": "%@ 支又 %@ mg"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Durchstechflaschen + %@ mg"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ flacons + %2$@ mg"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 本と %@ mg"
+          }
         }
       }
     },
@@ -181,6 +469,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@"
@@ -196,6 +502,24 @@
             "state": "translated",
             "value": "%@ · 每单位 %@ mg"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ mg pro Einheit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ mg par unité"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 1単位あたり %@ mg"
+          }
         }
       }
     },
@@ -206,6 +530,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 天"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld j"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 日"
           }
         }
       }
@@ -218,6 +560,24 @@
             "state": "translated",
             "value": "将在 %2$@ 用完，约 %1$@ 天"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reicht noch etwa %@ Tag · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ %1$@ jour restant · %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残り約 %@ 日 · %@"
+          }
         }
       }
     },
@@ -228,6 +588,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "将在 %2$@ 用完，约 %1$@ 天"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reicht noch etwa %@ Tage · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ %1$@ jours restants · %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残り約 %@ 日 · %@"
           }
         }
       }
@@ -240,6 +618,24 @@
             "state": "translated",
             "value": "添加药品"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorrat hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter au stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫を追加"
+          }
         }
       }
     },
@@ -250,6 +646,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "记下手头的药量，快用完之前会在概览提醒你"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge einen Vorrat hinzu. Er wird beim Erfassen von Dosen automatisch angepasst."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez votre stock. Il se mettra à jour à chaque prise enregistrée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫を追加すると、投与を記録するたびに在庫量が更新されます。"
           }
         }
       }
@@ -262,6 +676,24 @@
             "state": "translated",
             "value": "调整库存"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorrat anpassen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuster le stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫量を修正"
+          }
         }
       }
     },
@@ -272,6 +704,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "数量（mg）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menge (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quantité (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "総量 (mg)"
           }
         }
       }
@@ -284,6 +734,24 @@
             "state": "translated",
             "value": "按 mg 计"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lose Menge (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En vrac (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "総量管理 (mg)"
+          }
         }
       }
     },
@@ -294,6 +762,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
           }
         }
       }
@@ -306,6 +792,24 @@
             "state": "translated",
             "value": "浓度（mg/mL）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzentration (mg/mL)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentration (mg/mL)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "濃度 (mg/mL)"
+          }
         }
       }
     },
@@ -316,6 +820,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法保存库存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorrat konnte nicht gespeichert werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer le stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫を保存できませんでした"
           }
         }
       }
@@ -328,6 +850,24 @@
             "state": "translated",
             "value": "目前剩余的用量"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zähle den aktuellen Restbestand"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compter la quantité restante"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の残量を入力"
+          }
         }
       }
     },
@@ -338,6 +878,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除库存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorrat löschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫を削除"
           }
         }
       }
@@ -350,6 +908,24 @@
             "state": "translated",
             "value": "删除此库存记录？"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Vorratseintrag löschen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer cette entrée de stock ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この在庫記録を削除しますか？"
+          }
         }
       }
     },
@@ -360,6 +936,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
           }
         }
       }
@@ -372,6 +966,24 @@
             "state": "translated",
             "value": "药量库存"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorrat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫"
+          }
         }
       }
     },
@@ -382,6 +994,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "提前提醒"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorratswarnung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerte de stock faible"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫不足の警告"
           }
         }
       }
@@ -394,6 +1024,24 @@
             "state": "translated",
             "value": "药物"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medikament"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Médicament"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薬剤"
+          }
         }
       }
     },
@@ -404,6 +1052,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前方案未使用"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Vorrat wird in keinem aktuellen Plan verwendet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun traitement actuel n’utilise ce stock."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、この在庫を使う投与計画はありません。"
           }
         }
       }
@@ -416,6 +1082,24 @@
             "state": "translated",
             "value": "暂无库存记录"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Vorrat erfasst"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun stock enregistré"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫の登録がまだありません"
+          }
         }
       }
     },
@@ -426,6 +1110,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "好"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
@@ -438,6 +1140,24 @@
             "state": "translated",
             "value": "开封余量（mg）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest in angebrochener Packung (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quantité ouverte (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開封済みの残量 (mg)"
+          }
         }
       }
     },
@@ -448,6 +1168,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "已用完"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgebraucht"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En rupture de stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫切れ"
           }
         }
       }
@@ -460,6 +1198,24 @@
             "state": "translated",
             "value": "包装"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conditionnement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包装形態"
+          }
         }
       }
     },
@@ -470,6 +1226,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "贴片"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Patch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付剤"
           }
         }
       }
@@ -482,6 +1256,24 @@
             "state": "translated",
             "value": "贴片（片）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Patchs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付枚数"
+          }
         }
       }
     },
@@ -492,6 +1284,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "按压泵"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pumpstoß"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pompe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポンプ"
           }
         }
       }
@@ -504,6 +1314,24 @@
             "state": "translated",
             "value": "按压泵（泵）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pumpstöße"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doses de pompe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュ数"
+          }
         }
       }
     },
@@ -514,6 +1342,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "现有数量"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verfügbare Menge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quantité disponible"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手元にある数量"
           }
         }
       }
@@ -526,6 +1372,24 @@
             "state": "translated",
             "value": "小袋"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beutel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sachet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分包"
+          }
         }
       }
     },
@@ -537,6 +1401,24 @@
             "state": "translated",
             "value": "小袋（袋）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beutel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sachets"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包数"
+          }
         }
       }
     },
@@ -544,6 +1426,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "保存"
@@ -559,6 +1459,24 @@
             "state": "translated",
             "value": "每泵剂量（mg）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stärke (mg pro Pumpstoß)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teneur (mg par dose de pompe)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含有量 (mg/プッシュ)"
+          }
         }
       }
     },
@@ -569,6 +1487,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "每袋剂量（mg）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stärke (mg pro Beutel)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teneur (mg par sachet)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含有量 (mg/包)"
           }
         }
       }
@@ -581,6 +1517,24 @@
             "state": "translated",
             "value": "每片剂量（mg）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stärke (mg pro Tablette)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teneur (mg par comprimé)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含有量 (mg/錠)"
+          }
         }
       }
     },
@@ -591,6 +1545,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "剂量（mg）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stärke (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teneur (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含有量 (mg)"
           }
         }
       }
@@ -603,6 +1575,24 @@
             "state": "translated",
             "value": "药片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tablette"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprimé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錠剤"
+          }
         }
       }
     },
@@ -613,6 +1603,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "药片（片）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabletten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprimés"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錠数"
           }
         }
       }
@@ -625,6 +1633,24 @@
             "state": "translated",
             "value": "西林瓶 / 安瓿"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchstechflasche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flacon"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バイアル"
+          }
         }
       }
     },
@@ -635,6 +1661,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "单支容量（mL）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volumen pro Durchstechflasche (mL)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume du flacon (mL)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バイアル1本の容量 (mL)"
           }
         }
       }
@@ -647,6 +1691,24 @@
             "state": "translated",
             "value": "西林瓶 / 安瓿（支）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchstechflaschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flacons"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バイアル本数"
+          }
         }
       }
     },
@@ -657,6 +1719,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "提前提醒"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vor Aufbrauchen des Vorrats warnen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerter avant la rupture de stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫がなくなる前に通知"
           }
         }
       }

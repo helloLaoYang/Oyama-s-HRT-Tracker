@@ -105,7 +105,7 @@ struct DoseHeatmap: View {
 
     private func detail(_ date: Date, events: [DoseEvent], drugs: Bool = false) -> String {
         let when = date.formatted(.dateTime.month().day().weekday().timeZone(calendar.timeZone))
-        let count = String(localized: "\(events.count) medication records")
+        let count = label("\(events.count) medication records")
         guard drugs, !events.isEmpty else { return when + " · " + count }
         let names = Set(events.map { trackerDrugName($0.ester) }).sorted().joined(separator: "、")
         return when + " · " + count + " · " + names

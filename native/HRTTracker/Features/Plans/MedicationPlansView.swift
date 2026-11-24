@@ -6,16 +6,16 @@ func planDoseCaption(_ plan: MedicationPlan) -> String {
     if plan.route == .patchApply, let release = plan.extras["releaseRateUGPerDay"] {
         let count = max(1, plan.extras["patchCount"].flatMap { Int(exactly: $0) } ?? 1)
         let perPatch = (release / Double(count)).formatted(.number.precision(.fractionLength(0...2)))
-        return count == 1 ? String(localized: "\(perPatch) µg/day") :
-            String(localized: "\(perPatch) µg/day × \(count) patches")
+        return count == 1 ? label("\(perPatch) µg/day") :
+            label("\(perPatch) µg/day × \(count) patches")
     }
     return plan.doseMG.formatted(.number.precision(.fractionLength(0...3))) + " mg"
 }
 
 func planRepeatCaption(_ plan: MedicationPlan) -> String {
     if plan.everyDays == 1 { return label("Daily") }
-    if plan.everyDays < 1 { return String(localized: "Every \((plan.everyDays * 24).formatted(.number)) hours") }
-    return String(localized: "Every \(plan.everyDays.formatted(.number)) days")
+    if plan.everyDays < 1 { return label("Every \((plan.everyDays * 24).formatted(.number)) hours") }
+    return label("Every \(plan.everyDays.formatted(.number)) days")
 }
 
 struct MedicationPlansView: View {

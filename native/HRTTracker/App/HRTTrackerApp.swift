@@ -65,32 +65,41 @@ private enum TrackerTab: String, CaseIterable {
 private struct TrackerRoot: View {
     let store: TrackerStore
     let watchSync: PhoneWatchSync
+    @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.locale) private var systemLocale
+    @State private var selectedTab: TrackerTab = .overview
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack { OverviewView(store: store) }
                 .tabItem { tab(.overview) }
+                .tag(TrackerTab.overview)
                 .accessibilityIdentifier("tab.overview")
 
             NavigationStack { HistoryView(store: store) }
                 .tabItem { tab(.history) }
+                .tag(TrackerTab.history)
                 .accessibilityIdentifier("tab.history")
 
             NavigationStack { LabsView(store: store) }
                 .tabItem { tab(.labs) }
+                .tag(TrackerTab.labs)
                 .accessibilityIdentifier("tab.labs")
 
             NavigationStack { TrackerSettingsView(store: store) }
                 .tabItem { tab(.settings) }
+                .tag(TrackerTab.settings)
                 .accessibilityIdentifier("tab.settings")
         }
+        .id(language)
+        .environment(\.locale, language.locale ?? systemLocale)
         .tint(TrackerTheme.accent)
         .preferredColorScheme(preferredScheme)
         .saturation(store.appearance == .mono ? 0 : 1)
         .task(id: ReminderInputs(
             enabled: store.remindersEnabled, mode: store.mode, plans: store.plans, doses: store.doses,
-            day: store.calendar.startOfDay(for: store.now), active: scenePhase == .active
+            day: store.calendar.startOfDay(for: store.now), language: language, active: scenePhase == .active
         )) {
             guard scenePhase == .active else { return }
             await MedicationNotifications.refresh(for: store)
@@ -136,5 +145,6 @@ private struct ReminderInputs: Equatable {
     let plans: [MedicationPlan]
     let doses: [DoseEvent]
     let day: Date
+    let language: AppLanguage
     let active: Bool
 }

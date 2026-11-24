@@ -58,6 +58,7 @@ struct TrackerSettingsView: View {
 
 private struct GeneralTrackerSettings: View {
     @Bindable var store: TrackerStore
+    @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
 
     var body: some View {
         Form {
@@ -110,12 +111,42 @@ private struct GeneralTrackerSettings: View {
                     LabeledContent("Appearance") { Text(store.appearance.title) }
                 }
                 .accessibilityIdentifier("settings.appearance")
+                NavigationLink {
+                    LanguageSettingsView(language: $language)
+                } label: {
+                    LabeledContent("Language") { Text(verbatim: language.title) }
+                }
+                .accessibilityIdentifier("settings.language")
                 Toggle("Project using medication plan", isOn: $store.showPrediction)
                     .accessibilityIdentifier("settings.prediction")
                 NavigationLink("Medication plan") { MedicationPlansView(store: store) }
             }
         }
         .navigationTitle("General settings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct LanguageSettingsView: View {
+    @Binding var language: AppLanguage
+
+    var body: some View {
+        List(AppLanguage.allCases) { option in
+            Button {
+                language = option
+            } label: {
+                HStack {
+                    Text(verbatim: option.title).foregroundStyle(TrackerTheme.ink)
+                    Spacer()
+                    if language == option {
+                        Image(systemName: "checkmark").foregroundStyle(TrackerTheme.accent)
+                    }
+                }
+            }
+            .accessibilityAddTraits(language == option ? .isSelected : [])
+            .accessibilityIdentifier("language.\(option.rawValue)")
+        }
+        .navigationTitle("Language")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -226,10 +257,49 @@ private struct TrackerAboutView: View {
             }
             Section("Disclaimer") {
                 Text("Use laboratory reports and your care team to make treatment decisions.")
-                Link("Project website", destination: URL(string: "https://hrt.mahiro.uk")!)
+                Link("Project website", destination: URL(string: "https://github.com/helloLaoYang/Oyama-s-HRT-Tracker")!)
+                    .accessibilityIdentifier("settings.projectWebsite")
             }
+            NavigationLink(FeedbackText.localized("Feedback")) { FeedbackView() }
+                .accessibilityIdentifier("settings.feedback")
+            NavigationLink("Open-source licenses") { OpenSourceLicensesView() }
+                .accessibilityIdentifier("settings.licenses")
         }
         .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct OpenSourceLicensesView: View {
+    private static let licenseText = Bundle.main.url(forResource: "LICENSE", withExtension: nil).flatMap {
+        try? String(contentsOf: $0, encoding: .utf8)
+    }
+
+    var body: some View {
+        List {
+            Section("Project license") {
+                Link(destination: URL(string: "https://github.com/xunxunProjects/Oyama-s-HRT-Tracker/blob/main/LICENSE")!) {
+                    Text(verbatim: "Oyama’s HRT Tracker")
+                }
+            }
+            Section("Original pharmacokinetic model") {
+                Link(destination: URL(string: "https://github.com/LaoZhong-Mihari/HRT-Recorder-PKcomponent-Test")!) {
+                    Text(verbatim: "LaoZhong-Mihari · HRT-Recorder-PKcomponent-Test")
+                }
+                .accessibilityIdentifier("licenses.pkSource")
+            }
+            Section {
+                if let license = Self.licenseText {
+                    Text(verbatim: license)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("licenses.mit")
+                } else {
+                    Text("License text could not be loaded.")
+                }
+            }
+        }
+        .navigationTitle("Open-source licenses")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -271,7 +341,7 @@ private struct TrackerDataSettings: View {
             }
         }
         .fileExporter(isPresented: $exportingFile, document: document, contentType: .json,
-                      defaultFilename: "HRT-Tracker-Backup") { result in
+                      defaultFilename: "HRTrace-Backup") { result in
             if case .failure(let error) = result { feedback = error.localizedDescription }
         }
         .navigationDestination(isPresented: $showingPreview) {
@@ -294,7 +364,7 @@ private struct TrackerDataSettings: View {
                         do {
                             let counts = try store.importBackup(preview)
                             showingPreview = false
-                            feedback = String(localized: "Imported \(counts.added), updated \(counts.updated), skipped \(counts.skipped).")
+                            feedback = label("Imported \(counts.added), updated \(counts.updated), skipped \(counts.skipped).")
                         } catch {
                             feedback = error.localizedDescription
                         }

@@ -65,7 +65,7 @@ struct ConcentrationTimeline: View {
                     Text(verbatim: "·")
                     Text("Model estimate")
                     Spacer(minLength: 8)
-                    Text(verbatim: "HRT Tracker")
+                    Text(verbatim: "HRTrace")
                 }
                 .font(.caption)
                 .foregroundStyle(TrackerTheme.muted)

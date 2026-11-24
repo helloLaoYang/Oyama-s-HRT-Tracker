@@ -198,7 +198,7 @@ enum MedicationNotifications {
     private static func makeRequest(_ reminder: Reminder, calendar: Calendar) -> UNNotificationRequest {
         let plan = reminder.plan
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Medication reminders")
+        content.title = label("Medication reminders")
         content.body = trackerDrugName(plan.ester) + " · " + planDoseCaption(plan)
         content.threadIdentifier = plan.id
         content.userInfo = ["planItemID": plan.id, "scheduledAtH": reminder.date.timeIntervalSince1970 / 3_600]

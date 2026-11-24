@@ -43,7 +43,7 @@ final class TrackerStore {
             }
         } catch {
             context.rollback()
-            persistenceError = "Could not open the local HRT Tracker store."
+            persistenceError = label("Cannot open tracker data")
         }
     }
 
@@ -575,16 +575,16 @@ final class TrackerStore {
         var settings: [String] = []
         if let overrides = contents.pkOverrides, overrides != pkOverrides,
            shouldTake(contents.pkParamsUpdatedAt, over: profile.pkParamsUpdatedAt) {
-            settings.append(String(localized: "Drug parameters"))
+            settings.append(label("Drug parameters"))
         }
         if (contents.calibrationMethod != nil && contents.calibrationMethod != calibrationMethod ||
             contents.calibrationHistory != nil && contents.calibrationHistory != calibrationHistory ||
             contents.ageModelEnabled != nil && contents.ageModelEnabled != ageModelEnabled),
            shouldTake(contents.modelSettingsUpdatedAt, over: profile.modelSettingsUpdatedAt) {
-            settings.append(String(localized: "Model settings"))
+            settings.append(label("Model settings"))
         }
         if let leadDays = contents.supplyLeadDays, leadDays != supplyLeadDays, profile.supplyLeadDays == nil {
-            settings.append(String(localized: "Inventory warning period"))
+            settings.append(label("Inventory warning period"))
         }
         return BackupPreview(
             counts: reconcileBackup(contents, apply: false),
