@@ -8,6 +8,7 @@ struct ConcentrationTimeline: View {
     @ScaledMetric(relativeTo: .caption2) private var gutter: CGFloat = 39
     @ScaledMetric(relativeTo: .caption2) private var axisSize: CGFloat = 10
     private let trailingInset: CGFloat = 12
+    private let futureDash: [CGFloat] = [5, 4]
 
     private var selected: Double { cursor ?? model.now }
 
@@ -25,22 +26,6 @@ struct ConcentrationTimeline: View {
                 }
                 timeAxis.frame(height: axisSize + 6)
             }
-
-            HStack(spacing: 15) {
-                if model.futureUsesPlan {
-                    legend("Projected from medication plan", color: TrackerTheme.chartLine, dash: true)
-                } else if model.futureUsesRecords {
-                    legend("Future recorded doses", color: TrackerTheme.chartLine.opacity(0.6))
-                } else {
-                    legend("After now: natural decay", color: TrackerTheme.chartLine.opacity(0.6))
-                }
-                if model.traces.contains(where: { $0.kind != .cpa }) {
-                    Label("Lab result", systemImage: "diamond.fill")
-                        .symbolRenderingMode(.monochrome)
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(TrackerTheme.muted)
 
             Text(readout)
                 .font(.footnote.monospacedDigit())
@@ -70,7 +55,7 @@ struct ConcentrationTimeline: View {
     }
 
     private var rangePicker: some View {
-        TrackerSegment(options: TrackerChartRange.allCases, selection: $range) { option in
+        TrackerSegment(options: TrackerChartRange.allCases, selection: $range, compact: true) { option in
             switch option {
             case .week: "7 days"
             case .month: "30 days"
@@ -82,19 +67,45 @@ struct ConcentrationTimeline: View {
     }
 
     private func seriesHeader(_ kind: ConcentrationSeries, color: Color) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                legend(Text(verbatim: kind.name + " · " + kind.unit), color: color)
-                Spacer(minLength: 3)
-                calibrationLabel(kind)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                legend(Text(verbatim: kind.name + " · " + kind.unit), color: color)
-                calibrationLabel(kind)
+        let items = HStack(spacing: 8) {
+            legend(Text(verbatim: kind.name + " · " + kind.unit), color: color)
+            legend(Text(futureLegendTitle), color: futureColor(color), dash: futureDash)
+            if kind != .cpa {
+                Label("Lab result", systemImage: "diamond.fill")
+                    .symbolRenderingMode(.monochrome)
             }
         }
-        .font(.footnote)
+        .fixedSize(horizontal: true, vertical: false)
+        let calibration = calibrationLabel(kind)
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                items
+                Spacer(minLength: 0)
+                calibration.fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(alignment: .trailing, spacing: 4) {
+                ScrollView(.horizontal) {
+                    items
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                calibration
+            }
+        }
+        .font(.caption)
+        .lineLimit(1)
         .foregroundStyle(TrackerTheme.muted)
+    }
+
+    private var futureLegendTitle: LocalizedStringKey {
+        if model.futureUsesPlan { return "Projected from medication plan" }
+        if model.futureUsesRecords { return "Future recorded doses" }
+        return "Expected"
+    }
+
+    private func futureColor(_ color: Color) -> Color {
+        color.opacity(model.futureUsesPlan ? 0.88 : 0.52)
     }
 
     @ViewBuilder
@@ -104,18 +115,14 @@ struct ConcentrationTimeline: View {
         }
     }
 
-    private func legend(_ title: LocalizedStringKey, color: Color, dash: Bool = false) -> some View {
-        legend(Text(title), color: color, dash: dash)
-    }
-
-    private func legend(_ text: Text, color: Color, dash: Bool = false) -> some View {
+    private func legend(_ text: Text, color: Color, dash: [CGFloat] = []) -> some View {
         HStack(spacing: 7) {
             Canvas { context, size in
                 let path = Path { path in
                     path.move(to: CGPoint(x: 0, y: size.height / 2))
                     path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
                 }
-                context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 2, dash: dash ? [4, 3] : []))
+                context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 2, dash: dash))
             }
             .frame(width: 15, height: 8)
             .accessibilityHidden(true)
@@ -158,8 +165,7 @@ struct ConcentrationTimeline: View {
                          color: TrackerTheme.muted.opacity(0.7), dash: [2, 4])
 
                 drawTrace(context, trace.past, color: color, x: x, y: y)
-                drawTrace(context, trace.future, color: color.opacity(model.futureUsesPlan ? 0.88 : 0.52),
-                          dash: model.futureUsesPlan ? [5, 4] : [], x: x, y: y)
+                drawTrace(context, trace.future, color: futureColor(color), dash: futureDash, x: x, y: y)
 
                 for point in trace.doses {
                     let center = CGPoint(x: x(point.hour), y: y(point.value))
