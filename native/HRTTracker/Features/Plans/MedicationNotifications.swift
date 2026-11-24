@@ -64,7 +64,7 @@ enum MedicationNotifications {
         let calendar = store.calendar
         let otherCount = pending.count - owned.count
         let capacity = max(0, min(requestLimit, 64 - otherCount))
-        let candidates = reminders(for: store.plans, doses: store.doses, now: now, calendar: calendar)
+        let candidates = reminders(for: store, now: now)
         let desired = Array(candidates.prefix(capacity))
         let desiredIDs = Set(desired.map(\.identifier))
         let obsolete = owned.filter { !desiredIDs.contains($0.identifier) }.map(\.identifier)
@@ -100,31 +100,32 @@ enum MedicationNotifications {
         }
     }
 
-    private static func reminders(
-        for plans: [MedicationPlan], doses: [DoseEvent], now: Date, calendar: Calendar
-    ) -> [Reminder] {
+    private static func reminders(for store: TrackerStore, now: Date) -> [Reminder] {
+        let calendar = store.calendar
         guard let end = calendar.date(byAdding: .day, value: calendarLookaheadDays, to: now) else { return [] }
         let today = calendar.startOfDay(for: now)
         let lastDay = calendar.startOfDay(for: end)
-        let logged = doses.compactMap { dose -> (dose: DoseEvent, time: Date)? in
+        let logged = store.doses.compactMap { dose -> (dose: DoseEvent, time: Date)? in
             let seconds = dose.timeH * 3_600
             guard seconds.isFinite, seconds <= now.timeIntervalSince1970 else { return nil }
             return (dose, Date(timeIntervalSince1970: seconds))
         }
 
-        return plans.flatMap { plan -> [Reminder] in
+        return store.plans.flatMap { plan -> [Reminder] in
             guard plan.remindersEnabled, plan.everyDays.isFinite, (1...180).contains(plan.everyDays) else { return [] }
-            let times = Set(plan.reminderMinutes.filter { (0..<1_440).contains($0) }).sorted()
+            let times = plan.reminderMinutes.filter { (0..<1_440).contains($0) }.sorted()
             guard let firstTime = times.first else { return [] }
             let taken = logged.filter { $0.dose.route == plan.route && $0.dose.ester == plan.ester }.map(\.time)
             if plan.everyDays == 1 {
-                let completedToday = taken.filter { $0 >= today }.count
+                let completedToday = store.completedDailyPlanSlots(plan, at: now)
                 let minutes = Array(times.prefix(plan.dosesPerDay))
                 var reminders: [Reminder] = []
                 var day = today
                 while day <= lastDay {
-                    let remaining = day == today ? Array(minutes.dropFirst(completedToday)) : minutes
-                    for minute in remaining {
+                    let remaining = day == today
+                        ? minutes.enumerated().filter { !completedToday.contains($0.offset) }.map(\.element)
+                        : minutes
+                    for minute in Set(remaining).sorted() {
                         if let time = date(on: day, minute: minute, calendar: calendar), time > now, time <= end {
                             reminders.append(Reminder(plan: plan, date: time))
                         }

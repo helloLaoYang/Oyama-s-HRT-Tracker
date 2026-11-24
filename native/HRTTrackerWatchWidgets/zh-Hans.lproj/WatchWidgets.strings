@@ -1,0 +1,11 @@
+"Metric" = "指标";
+"Follow iPhone" = "跟随 iPhone";
+"Estradiol" = "雌二醇";
+"Cyproterone acetate" = "醋酸环丙孕酮";
+"Testosterone" = "睾酮";
+"Current concentration" = "当前浓度";
+"Concentration" = "浓度";
+"Concentration hidden" = "浓度已隐藏";
+"No current %@ estimate" = "暂无当前%@估算";
+"%@ model estimate, %@ %@" = "%@模型估算，%@ %@";
+"Show the current model estimate for one concentration." = "显示单项浓度的当前模型估算值。";

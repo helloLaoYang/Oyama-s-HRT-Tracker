@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import HRTEngine
 import Observation
@@ -317,14 +318,10 @@ final class TrackerStore {
 
     func planStatus(_ plan: MedicationPlan) -> MedicationPlanStatus {
         let today = calendar.startOfDay(for: now)
-        let matching = matchingDoses(for: plan)
-        let done = matching.prefix { $0 >= today }.count
+        let matching = matchingPlanDoses(plan, through: now)
+        let done = planOccurrences(plan, on: today, matching: matching).filter(\.completed).count
         if done >= plan.dosesPerDay { return .taken }
-        if plan.everyDays > 1 {
-            let next = matching.first.map { calendar.startOfDay(for: $0.addingTimeInterval(plan.everyDays * 86_400)) }
-                ?? plan.anchorTimeH.map { calendar.startOfDay(for: Date(timeIntervalSince1970: $0 * 3_600)) }
-            if let next, next > today { return .rest(next: next) }
-        }
+        if let next = nextPlanDay(plan, matching: matching), next > today { return .rest(next: next) }
         return .due(done: done, total: plan.dosesPerDay)
     }
 
@@ -332,11 +329,10 @@ final class TrackerStore {
 
     func nextScheduledTime(_ plan: MedicationPlan) -> Date? {
         let today = calendar.startOfDay(for: now)
-        let minutes = plan.reminderMinutes.sorted()
         switch planStatus(plan) {
-        case let .due(done, _):
-            let minute = minutes.dropFirst(done).first ?? plan.reminderMinute
-            return scheduledTime(on: today, minute: minute).map { max(now, $0) }
+        case .due:
+            return planOccurrences(plan, on: today, matching: matchingPlanDoses(plan, through: now))
+                .first(where: { !$0.completed }).map { max(now, $0.scheduledAt) }
         case let .rest(next):
             return scheduledTime(on: next, minute: plan.reminderMinute)
         case .taken:
@@ -344,9 +340,7 @@ final class TrackerStore {
             if plan.everyDays <= 1 {
                 nextDay = calendar.date(byAdding: .day, value: 1, to: today)
             } else {
-                nextDay = matchingDoses(for: plan).first.map {
-                    calendar.startOfDay(for: $0.addingTimeInterval(plan.everyDays * 86_400))
-                }
+                nextDay = nextPlanDay(plan, matching: matchingPlanDoses(plan, through: now))
             }
             return nextDay.flatMap { scheduledTime(on: $0, minute: plan.reminderMinute) }
         }
@@ -354,19 +348,138 @@ final class TrackerStore {
 
     @discardableResult
     func complete(_ plan: MedicationPlan) -> DoseEvent? {
-        guard !isTaken(plan) else { return nil }
-        let event = DoseEvent(route: plan.route, timeH: nowH, doseMG: plan.doseMG, ester: plan.ester, extras: plan.extras)
+        guard let current = plans.first(where: { $0.id == plan.id }), current == plan else { return nil }
+        let recordedAt = isDemo ? now : Date()
+        let day = calendar.startOfDay(for: recordedAt)
+        let matching = matchingPlanDoses(plan, through: recordedAt)
+        guard let occurrence = planOccurrences(plan, on: day, matching: matching).first(where: { !$0.completed }) else {
+            return nil
+        }
+        let event = plannedDose(plan, occurrenceID: occurrence.id, recordedAt: recordedAt)
+        if !isDemo { now = recordedAt }
         return saveDose(event) ? event : nil
     }
 
-    private func matchingDoses(for plan: MedicationPlan) -> [Date] {
-        doses.filter { $0.route == plan.route && $0.ester == plan.ester && $0.timeH <= nowH }
-            .map { Date(timeIntervalSince1970: $0.timeH * 3_600) }
+    func watchPlanOccurrences(at date: Date) -> [WatchDoseOccurrence] {
+        let day = calendar.startOfDay(for: date)
+        let versions = watchPlanVersions
+        return plans.flatMap { plan -> [WatchDoseOccurrence] in
+            let matching = matchingPlanDoses(plan, through: date)
+            let slots = planOccurrences(plan, on: day, matching: matching)
+            if let next = nextPlanDay(plan, matching: matching), next > day, !slots.contains(where: \.completed) {
+                return []
+            }
+            let title = plan.route == .patchApply && plan.ester == "E2"
+                ? label("Replace estradiol patch") : trackerDrugName(plan.ester)
+            let action: WatchDoseAction
+            switch plan.route {
+            case .patchApply: action = .replacePatch
+            case .oral, .sublingual: action = .take
+            case .injection, .sc: action = .inject
+            default: action = .record
+            }
+            return slots.map {
+                WatchDoseOccurrence(id: $0.id, version: versions[plan.id] ?? "initial", title: title, detail: planDoseCaption(plan),
+                                    scheduledAt: $0.scheduledAt, action: action, completed: $0.completed)
+            }
+        }.sorted { ($0.scheduledAt, $0.id) < ($1.scheduledAt, $1.id) }
+    }
+
+    func recordWatchDose(_ command: WatchDoseCommand) -> WatchDoseResult {
+        let receivedAt = isDemo ? now : Date()
+        guard command.recordedAt.timeIntervalSince1970 >= 0, command.recordedAt <= receivedAt else { return .stale }
+        let day = calendar.startOfDay(for: command.recordedAt)
+        let versions = watchPlanVersions
+        for plan in plans where versions[plan.id] == command.version {
+            let matching = matchingPlanDoses(plan, through: receivedAt)
+            let slots = planOccurrences(plan, on: day, matching: matching)
+            guard let occurrence = slots.first(where: { $0.id == command.occurrenceID }) else { continue }
+            if occurrence.completed { return .alreadyRecorded }
+            let previous = matching.filter { $0.timeH < day.trackerHours }
+            if let next = nextPlanDay(plan, matching: previous), next > day { return .stale }
+            let event = plannedDose(plan, occurrenceID: occurrence.id, recordedAt: command.recordedAt)
+            if !isDemo { now = receivedAt }
+            return saveDose(event) ? .recorded : .retry
+        }
+        return .stale
+    }
+
+    func completedDailyPlanSlots(_ plan: MedicationPlan, at date: Date) -> Set<Int> {
+        let day = calendar.startOfDay(for: date)
+        let slots = planOccurrences(plan, on: day, matching: matchingPlanDoses(plan, through: date))
+        return Set(slots.compactMap { $0.completed ? $0.index : nil })
+    }
+
+    private struct PlanOccurrence {
+        let id: String
+        let index: Int
+        let scheduledAt: Date
+        let completed: Bool
+    }
+
+    private static let plannedDosePrefix = "hrt-plan-"
+
+    private func planOccurrences(_ plan: MedicationPlan, on day: Date, matching: [DoseEvent]) -> [PlanOccurrence] {
+        let calendar = calendar
+        let dayComponents = calendar.dateComponents([.year, .month, .day], from: day)
+        guard let year = dayComponents.year, let month = dayComponents.month, let dayNumber = dayComponents.day,
+              let end = calendar.date(byAdding: .day, value: 1, to: day) else { return [] }
+        let dayKey = "\(year)-\(month)-\(dayNumber)"
+        let rawMode = mode.rawValue
+        let ids = Set(doseRecords.lazy.filter { $0.modeRaw == rawMode }.map(\.uuid))
+        let minutes = plan.reminderMinutes.sorted()
+        var unassigned = matching.count {
+            !$0.id.hasPrefix(Self.plannedDosePrefix) && $0.timeH >= day.trackerHours && $0.timeH < end.trackerHours
+        }
+        return (0..<plan.dosesPerDay).compactMap { slot in
+            let minute = slot < minutes.count ? minutes[slot] : plan.reminderMinute
+            guard let scheduled = scheduledTime(on: day, minute: minute) else { return nil }
+            // Both devices name the same plan/day/slot without adding fields to existing dose records.
+            let material = "\(rawMode):\(dayKey):\(slot):\(plan.id)"
+            let digest = SHA256.hash(data: Data(material.utf8)).map { String(format: "%02x", $0) }.joined()
+            let id = Self.plannedDosePrefix + digest
+            let recorded = ids.contains(id)
+            let completed = recorded || unassigned > 0
+            if !recorded && completed { unassigned -= 1 }
+            return PlanOccurrence(id: id, index: slot, scheduledAt: scheduled, completed: completed)
+        }
+    }
+
+    var watchPlanVersions: [String: String] {
+        let rawMode = mode.rawValue
+        return Dictionary(planRecords.lazy.filter { $0.modeRaw == rawMode }.map { row in
+            (row.uuid, row.updatedAt.map { String($0.bitPattern, radix: 16) } ?? "initial")
+        }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func matchingPlanDoses(_ plan: MedicationPlan, through date: Date) -> [DoseEvent] {
+        let cutoff = date.trackerHours
+        return doses.filter { $0.route == plan.route && $0.ester == plan.ester && $0.timeH <= cutoff }
+    }
+
+    private func nextPlanDay(_ plan: MedicationPlan, matching: [DoseEvent]) -> Date? {
+        guard plan.everyDays > 1 else { return nil }
+        let calendar = calendar
+        if let lastDose = matching.first {
+            let time = Date(trackerHours: lastDose.timeH)
+            let next = Int(exactly: plan.everyDays).flatMap { calendar.date(byAdding: .day, value: $0, to: time) }
+                ?? time.addingTimeInterval(plan.everyDays * 86_400)
+            return calendar.startOfDay(for: next)
+        }
+        return plan.anchorTimeH.map { calendar.startOfDay(for: Date(trackerHours: $0)) }
+    }
+
+    private func plannedDose(_ plan: MedicationPlan, occurrenceID: String, recordedAt: Date) -> DoseEvent {
+        DoseEvent(id: occurrenceID, route: plan.route, timeH: recordedAt.trackerHours, doseMG: plan.doseMG,
+                  ester: plan.ester, extras: plan.extras)
     }
 
     private func scheduledTime(on date: Date, minute: Int) -> Date? {
-        guard (0..<1_440).contains(minute) else { return nil }
-        return calendar.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: date)
+        let calendar = calendar
+        guard (0..<1_440).contains(minute),
+              let time = calendar.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: date),
+              calendar.isDate(time, inSameDayAs: date) else { return nil }
+        return time
     }
 
     private var stamp: Double { (isDemo ? now : Date()).timeIntervalSince1970 * 1_000 }

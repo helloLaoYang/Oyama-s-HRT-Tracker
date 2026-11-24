@@ -6,7 +6,7 @@ import UIKit
 @main
 @MainActor
 struct HRTTrackerApp: App {
-    private let startup: Result<(container: ModelContainer, store: TrackerStore), Error>
+    private let startup: Result<(container: ModelContainer, store: TrackerStore, watchSync: PhoneWatchSync), Error>
 
     init() {
         let navigationBar = UINavigationBar.appearance()
@@ -21,7 +21,8 @@ struct HRTTrackerApp: App {
                 for: schema,
                 configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: memoryOnly)
             )
-            return (container, TrackerStore(context: container.mainContext, demo: memoryOnly))
+            let store = TrackerStore(context: container.mainContext, demo: memoryOnly)
+            return (container, store, PhoneWatchSync(store: store))
         }
     }
 
@@ -29,7 +30,7 @@ struct HRTTrackerApp: App {
         WindowGroup {
             switch startup {
             case .success(let state):
-                TrackerRoot(store: state.store)
+                TrackerRoot(store: state.store, watchSync: state.watchSync)
                     .modelContainer(state.container)
             case .failure:
                 ContentUnavailableView("Cannot open tracker data", systemImage: "exclamationmark.triangle",
@@ -63,6 +64,7 @@ private enum TrackerTab: String, CaseIterable {
 
 private struct TrackerRoot: View {
     let store: TrackerStore
+    let watchSync: PhoneWatchSync
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -93,6 +95,10 @@ private struct TrackerRoot: View {
             guard scenePhase == .active else { return }
             await MedicationNotifications.refresh(for: store)
         }
+        .task(id: WatchRefreshInputs(inputs: PhoneWatchInputs(store: store, at: store.now),
+                                     active: scenePhase == .active)) {
+            if scenePhase == .active { watchSync.refresh() }
+        }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             while !Task.isCancelled {
@@ -117,6 +123,11 @@ private struct TrackerRoot: View {
             tab.icon
         }
     }
+}
+
+private struct WatchRefreshInputs: Equatable {
+    let inputs: PhoneWatchInputs
+    let active: Bool
 }
 
 private struct ReminderInputs: Equatable {
