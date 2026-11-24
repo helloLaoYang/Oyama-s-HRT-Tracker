@@ -6,6 +6,9 @@ struct AIAssistantConsent: View {
     let request: AIAssistantRequest
     let profile: AIProviderProfile
     let memory: AIConversationContext?
+    let attachments: [AIAssistantAttachment]
+    let generatesImage: Bool
+    let remembersApproval: Bool
     let send: (Bool) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -18,10 +21,11 @@ struct AIAssistantConsent: View {
     }
 
     private var taskTitle: String {
+        if generatesImage { return assistantLabel("Generate image") }
         switch request.purpose {
-        case .question: assistantLabel("Answer a record question")
-        case .recap: assistantLabel("Organize the recap")
-        case .report: assistantLabel("Organize the visit summary")
+        case .question: return assistantLabel("Answer a question")
+        case .recap: return assistantLabel("Organize the recap")
+        case .report: return assistantLabel("Organize the visit summary")
         }
     }
 
@@ -33,10 +37,22 @@ struct AIAssistantConsent: View {
                         .foregroundStyle(TrackerTheme.muted)
                         .font(.subheadline)
                         .accessibilityIdentifier("ai.consent")
+                    if remembersApproval {
+                        Text(assistantLabel("This approval also applies to future questions, record summaries, and any memory summaries you opt to include. Change it in Model settings."))
+                            .foregroundStyle(TrackerTheme.muted)
+                            .font(.footnote)
+                        if !attachments.isEmpty {
+                            Text(assistantLabel("It also covers the files you attach to later messages for this model."))
+                                .foregroundStyle(TrackerTheme.muted)
+                                .font(.footnote)
+                        }
+                    }
                     VStack(alignment: .leading, spacing: 8) {
                         LabeledContent(assistantLabel("Send to"), value: profile.baseURL.host ?? "")
                         LabeledContent(assistantLabel("Model"), value: profile.model)
-                        LabeledContent(assistantLabel("Reasoning effort"), value: profile.effort.title)
+                        if profile.api == .chatCompletions || profile.requestsReasoningSummary {
+                            LabeledContent(assistantLabel("Reasoning effort"), value: profile.effort.title)
+                        }
                         LabeledContent(assistantLabel("Range"), value: assistantLabel("Last \(request.snapshot.range.rawValue) days"))
                         LabeledContent(assistantLabel("Task"), value: taskTitle)
                     }
@@ -46,7 +62,13 @@ struct AIAssistantConsent: View {
                     if let question = request.question {
                         content(assistantLabel("Question"), text: question)
                     }
-                    content(assistantLabel("Summary to send"), text: request.facts.map(\.text).joined(separator: "\n\n"))
+                    if !attachments.isEmpty {
+                        content(assistantLabel("Attachments to send"), text: attachments.map(\.name).joined(separator: "\n"))
+                            .accessibilityIdentifier("ai.consent.attachments")
+                    }
+                    if !request.facts.isEmpty {
+                        content(assistantLabel("Summary to send"), text: request.facts.map(\.text).joined(separator: "\n\n"))
+                    }
 
                     if !reviewableMemory.isEmpty {
                         Toggle(assistantLabel("Include the memory summary"), isOn: $includeMemory)
@@ -66,6 +88,7 @@ struct AIAssistantConsent: View {
                     send(includeMemory && !reviewableMemory.isEmpty)
                 } label: {
                     Text(assistantLabel("Confirm send"))
+                        .foregroundStyle(TrackerTheme.accentInk)
                         .frame(maxWidth: .infinity, minHeight: 29)
                 }
                 .buttonStyle(.borderedProminent)

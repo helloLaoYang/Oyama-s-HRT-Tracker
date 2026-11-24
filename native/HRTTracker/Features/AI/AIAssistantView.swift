@@ -1,6 +1,5 @@
 import HRTEngine
 import SwiftUI
-import UniformTypeIdentifiers
 
 @MainActor
 struct AIAssistantView: View {
@@ -11,19 +10,21 @@ struct AIAssistantView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("ai.preferredModel") private var preferredModel: Model?
     @FocusState private var isQuestionFocused: Bool
 
-    @State private var section: Section = .recap
     @State private var range: AIRange = .month
     @State private var loadedSnapshot: AIInsightSnapshot?
     @State private var loadedKey: SnapshotKey?
-    @State private var model: Model = .apple
+    @State private var appleStatus: AIAppleAvailability?
     @State private var question = ""
-    @State private var editedReport: String?
-    @State private var reportEditor: ReportEditor?
-    @State private var requestedRange: AIRange?
-    @State private var reviewedFacts: [AIInsightFact]?
-    @State private var reportFacts: [AIInsightFact]?
+    @State private var attachments: [AIAssistantAttachment] = []
+    @State private var importingAttachments = false
+    @State private var generatesImage = false
+    @State private var liveReply: LiveReply?
+    @State private var pendingRecordChange: PendingRecordChange?
+    @State private var presentedReport: ReportRoute?
     @State private var sheet: DetailSheet?
     @State private var requestTask: Task<Void, Never>?
     @State private var runningID: UUID?
@@ -31,25 +32,18 @@ struct AIAssistantView: View {
     @State private var showClearConfirmation = false
     @State private var showModelSettings = false
 
-    private enum Section: String, CaseIterable {
-        case recap, report, ask
-
-        var title: String {
-            switch self {
-            case .recap: assistantLabel("Recap")
-            case .report: assistantLabel("Visit summary")
-            case .ask: assistantLabel("Q&A")
-            }
-        }
-    }
-
-    private enum Model: String, CaseIterable {
+    private enum Model: String {
         case apple, compatible
     }
 
-    private struct ReportEditor: Identifiable {
+    private struct ReportRoute: Hashable {
         let id = UUID()
-        let text: String
+        let document: AIConversationDocument
+        let mode: HRTMode
+        let savedTurnID: UUID?
+
+        static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+        func hash(into hasher: inout Hasher) { hasher.combine(id) }
     }
 
     private struct SnapshotKey: Equatable {
@@ -60,10 +54,46 @@ struct AIAssistantView: View {
         let labs: [LabResult]
     }
 
+    private struct CloudRequest {
+        let profile: AIProviderProfile
+        let attachments: [AIAssistantAttachment]
+        let generatesImage: Bool
+        let sendingRevision: UUID
+
+        var allowsRecordChanges: Bool { profile.api == .responses && !generatesImage }
+
+        var instructions: String {
+            if generatesImage { return AIAssistantRequest.imageInstructions }
+            return allowsRecordChanges ? AIAssistantRequest.recordChangeInstructions : AIAssistantRequest.streamingInstructions
+        }
+    }
+
     private struct Approval {
         let request: AIAssistantRequest
-        let profile: AIProviderProfile
+        let cloud: CloudRequest
         let memory: AIConversationContext?
+    }
+
+    private struct LiveReply {
+        let question: String
+        let attachmentNames: [String]
+        var text = ""
+        var reasoning = ""
+        var imagePreview: Data?
+        var generatedImage: Data?
+        var recordChange: AIRecordChangeArguments?
+
+        var scrollStep: Int {
+            (text.utf8.count + reasoning.utf8.count) / 64 * 2 + (imagePreview == nil && generatedImage == nil ? 0 : 1)
+        }
+    }
+
+    private struct PendingRecordChange {
+        let requestID: UUID
+        let mode: HRTMode
+        let question: String
+        let attachmentNames: [String]
+        let draft: AIRecordChangeDraft
     }
 
     private enum DetailSheet: Identifiable {
@@ -84,7 +114,7 @@ struct AIAssistantView: View {
     }
 
     private var snapshot: AIInsightSnapshot? {
-        guard loadedSnapshot?.range == range, loadedSnapshot?.mode == store.mode else { return nil }
+        guard loadedKey == snapshotKey else { return nil }
         return loadedSnapshot
     }
 
@@ -93,25 +123,25 @@ struct AIAssistantView: View {
                     doses: store.doses, labs: store.labs)
     }
 
+    private var model: Model {
+        if let preferredModel, preferredModel == .apple || modelSettings.profile != nil {
+            return preferredModel
+        }
+        return modelSettings.profile == nil ? .apple : .compatible
+    }
+
     private var modelUnavailable: String? {
         switch model {
-        case .apple: AIModelClient.appleUnavailableReason(locale: locale)
+        case .apple: (appleStatus ?? AIModelClient.appleAvailability(locale: locale)).unavailableReason
         case .compatible: modelSettings.profile == nil ? assistantLabel("Configure a compatible model to continue.") : nil
         }
     }
 
     private var isWorking: Bool { runningID != nil }
-
-    private var reportText: String {
-        if let editedReport { return editedReport }
-        guard let snapshot else { return "" }
-        guard let reportFacts, !reportFacts.isEmpty else { return snapshot.report }
-        return snapshot.report + "\n\n" + assistantLabel("Highlights") + "\n" + reportFacts.map(\.text).joined(separator: "\n")
-    }
-
-    private var hasCurrentRecords: Bool {
-        guard let snapshot else { return false }
-        return !snapshot.doses.isEmpty || !snapshot.labs.isEmpty || snapshot.facts.contains { $0.source == .curve }
+    private var acceptsAttachments: Bool { model == .compatible && modelSettings.profile != nil }
+    private var canGenerateImage: Bool { model == .compatible && modelSettings.profile?.api == .responses }
+    private var incompatibleMedia: Bool {
+        (!attachments.isEmpty && !acceptsAttachments) || (generatesImage && !canGenerateImage)
     }
 
     var body: some View {
@@ -119,19 +149,7 @@ struct AIAssistantView: View {
             ScrollViewReader { scroll in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        controls
-                        if conversation.storageUnavailable {
-                            status(assistantLabel("Local chat storage is unavailable."), icon: "exclamationmark.circle")
-                        }
-                        if let failure {
-                            status(failure, icon: "exclamationmark.circle")
-                                .accessibilityIdentifier("ai.error")
-                        }
-                        switch section {
-                        case .recap: recap
-                        case .report: report
-                        case .ask: chat
-                        }
+                        chat
                         Color.clear.frame(height: 1).accessibilityHidden(true).id("ai.end")
                     }
                     .padding(17)
@@ -139,19 +157,31 @@ struct AIAssistantView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if section == .ask { questionBar }
-                    if section == .report, snapshot != nil { reportBar }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    controls
+                        .disabled(pendingRecordChange != nil)
+                        .padding(.horizontal, 17)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: 540)
+                        .frame(maxWidth: .infinity)
+                        .background(TrackerTheme.background)
                 }
-                .onChange(of: conversation.turns.count) { _, _ in
-                    if section == .ask {
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if pendingRecordChange == nil { composer }
+                }
+                .onChange(of: conversation.turns.count, initial: true) { oldCount, newCount in
+                    guard newCount > 0 else { return }
+                    if newCount == oldCount {
+                        scroll.scrollTo("ai.end", anchor: .bottom)
+                    } else {
                         withAnimation(.easeOut(duration: 0.18)) { scroll.scrollTo("ai.end", anchor: .bottom) }
                     }
                 }
-                .onChange(of: section) { _, current in
-                    if current == .ask, !conversation.turns.isEmpty {
-                        scroll.scrollTo("ai.end", anchor: .bottom)
-                    }
+                .onChange(of: liveReply?.scrollStep) { _, step in
+                    if step != nil { scroll.scrollTo("ai.end", anchor: .bottom) }
+                }
+                .onChange(of: pendingRecordChange?.requestID) { _, id in
+                    if id != nil { scroll.scrollTo("ai.pendingRecordChange", anchor: .top) }
                 }
             }
             .background(TrackerTheme.background.ignoresSafeArea())
@@ -163,12 +193,35 @@ struct AIAssistantView: View {
                     Button(assistantLabel("Done")) { dismiss() }
                         .accessibilityIdentifier("ai.done")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showModelSettings = true } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel(assistantLabel("Model settings"))
+                    .accessibilityIdentifier("ai.modelSettings")
+                    .disabled(isWorking || pendingRecordChange != nil)
+                }
             }
             .navigationDestination(isPresented: $showModelSettings) {
                 AIModelSettingsView(settings: modelSettings)
             }
+            .navigationDestination(item: $presentedReport) { report in
+                AIAssistantDocumentView(
+                    document: report.document,
+                    allowsSourceNavigation: report.mode == store.mode,
+                    onEdit: report.savedTurnID.map { id in
+                        { text in try conversation.updateDocument(id, text: text) }
+                    }
+                ) { reference in
+                    if report.mode == store.mode { show(reference) }
+                }
+            }
         }
         .tint(TrackerTheme.accent)
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await AIModelClient.monitorAppleAvailability(locale: locale) { appleStatus = $0 }
+        }
         .task(id: snapshotKey) {
             let key = snapshotKey
             let refreshed = await AIInsightSnapshot.capture(store: store, range: key.range)
@@ -180,20 +233,23 @@ struct AIAssistantView: View {
         .onDisappear { stop() }
         .onChange(of: store.mode) { _, _ in
             stop()
+            pendingRecordChange = nil
             failure = nil
-            editedReport = nil
-            reviewedFacts = nil
-            reportFacts = nil
             sheet = nil
         }
         .sheet(item: $sheet) { current in
             switch current {
             case .consent(let approval):
                 AIAssistantConsent(
-                    request: approval.request, profile: approval.profile, memory: approval.memory
+                    request: approval.request, profile: approval.cloud.profile, memory: approval.memory,
+                    attachments: approval.cloud.attachments, generatesImage: approval.cloud.generatesImage,
+                    remembersApproval: modelSettings.confirmationMode == .firstSend
                 ) { includeMemory in
                     sheet = nil
-                    guard model == .compatible, approval.profile == modelSettings.profile,
+                    let cloud = approval.cloud
+                    guard model == .compatible, cloud.profile == modelSettings.profile,
+                          cloud.sendingRevision == modelSettings.sendingRevision,
+                          cloud.attachments == attachments, cloud.generatesImage == generatesImage,
                           approval.request.snapshot.mode == store.mode,
                           approval.request.snapshot.range == range,
                           approval.request.snapshot.facts == snapshot?.facts,
@@ -201,7 +257,9 @@ struct AIAssistantView: View {
                         failure = assistantLabel("The model or records changed. Start the request again.")
                         return
                     }
-                    run(approval.request, context: includeMemory ? approval.memory : nil, profile: approval.profile)
+                    modelSettings.authorizeSending(for: cloud.profile, includeMemory: includeMemory,
+                                                   includesAttachments: !cloud.attachments.isEmpty)
+                    run(approval.request, context: includeMemory ? approval.memory : nil, cloud: cloud)
                 }
                 .presentationDetents([.large])
             case .record(let reference):
@@ -209,27 +267,12 @@ struct AIAssistantView: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .sheet(item: $reportEditor) { editor in
-            AIAssistantReportEditor(text: editor.text) { editedReport = $0 }
-        }
-        .confirmationDialog(
-            assistantLabel("Replace the edited summary?"),
-            isPresented: Binding(get: { requestedRange != nil }, set: { if !$0 { requestedRange = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button(assistantLabel("Replace summary"), role: .destructive) {
-                guard let requestedRange else { return }
-                editedReport = nil
-                setRange(requestedRange)
-                self.requestedRange = nil
-            }
-            Button(assistantLabel("Cancel"), role: .cancel) { requestedRange = nil }
-        }
         .confirmationDialog(
             assistantLabel("Clear chat and memory?"), isPresented: $showClearConfirmation, titleVisibility: .visible
         ) {
             Button(assistantLabel("Clear chat and memory"), role: .destructive) {
                 stop()
+                pendingRecordChange = nil
                 do { try conversation.clear(); failure = nil }
                 catch { failure = assistantLabel("Could not update local chat and memory.") }
             }
@@ -240,72 +283,54 @@ struct AIAssistantView: View {
     }
 
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                Picker(assistantLabel("Assistant view"), selection: $section) {
-                    ForEach(Section.allCases, id: \.self) { choice in
-                        Text(choice.title).tag(choice)
-                            .accessibilityIdentifier("ai.segment.\(choice.rawValue)")
-                    }
-                }
-                .pickerStyle(.segmented)
-                .fixedSize(horizontal: true, vertical: false)
-
-                Picker(assistantLabel("Assistant view"), selection: $section) {
-                    ForEach(Section.allCases, id: \.self) { choice in
-                        Text(choice.title).tag(choice)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-            .frame(maxWidth: .infinity)
-            .onChange(of: section) { _, _ in
-                isQuestionFocused = false
-                if !isWorking { failure = nil }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                rangeMenu.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
+                modelMenu.fixedSize(horizontal: true, vertical: false)
             }
 
-            HStack(alignment: .firstTextBaseline) {
-                Menu {
-                    ForEach(AIRange.allCases) { option in
-                        Button {
-                            if option != range {
-                                if editedReport != nil { requestedRange = option }
-                                else { setRange(option) }
-                            }
-                        } label: {
-                            if option == range {
-                                Label(assistantLabel("Last \(option.rawValue) days"), systemImage: "checkmark")
-                            } else {
-                                Text(assistantLabel("Last \(option.rawValue) days"))
-                            }
-                        }
-                    }
-                } label: {
-                    Label(assistantLabel("Last \(range.rawValue) days"), systemImage: "chevron.down")
-                        .labelStyle(.titleAndIcon)
-                        .font(.subheadline)
-                }
-                .accessibilityIdentifier("ai.range")
-                Spacer(minLength: 12)
+            VStack(alignment: .leading, spacing: 4) {
+                rangeMenu
                 modelMenu
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var rangeMenu: some View {
+        Menu {
+            ForEach(AIRange.allCases) { option in
+                Button {
+                    if option != range { setRange(option) }
+                } label: {
+                    if option == range {
+                        Label(assistantLabel("Last \(option.rawValue) days"), systemImage: "checkmark")
+                    } else {
+                        Text(assistantLabel("Last \(option.rawValue) days"))
+                    }
+                }
+            }
+        } label: {
+            Label(assistantLabel("Last \(range.rawValue) days"), systemImage: "chevron.down")
+                .labelStyle(.titleAndIcon)
+                .font(.subheadline)
+        }
+        .accessibilityIdentifier("ai.range")
     }
 
     private var modelMenu: some View {
         Menu {
-            Button { model = .apple } label: {
+            Button { preferredModel = .apple } label: {
                 if model == .apple { Label(assistantLabel("Apple on-device"), systemImage: "checkmark") }
                 else { Text(assistantLabel("Apple on-device")) }
             }
             if let profile = modelSettings.profile {
-                Button { model = .compatible } label: {
+                Button { preferredModel = .compatible } label: {
                     if model == .compatible { Label(profile.model, systemImage: "checkmark") }
                     else { Text(verbatim: profile.model) }
                 }
             }
-            Button(assistantLabel("Model settings")) { showModelSettings = true }
-            .accessibilityIdentifier("ai.modelSettings")
         } label: {
             Label(
                 model == .apple ? assistantLabel("Apple on-device") :
@@ -319,60 +344,6 @@ struct AIAssistantView: View {
         .disabled(isWorking)
         .accessibilityIdentifier("ai.modelMenu")
         .onChange(of: model) { _, _ in failure = nil }
-    }
-
-    @ViewBuilder
-    private var recap: some View {
-        if let snapshot {
-            if !hasCurrentRecords {
-                status(assistantLabel("No records in this range."), icon: "tray")
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(reviewedFacts ?? snapshot.facts) { fact in
-                        factRow(fact)
-                    }
-                }
-                if modelUnavailable == nil { organizeButton(.recap) }
-            }
-        } else {
-            ProgressView(assistantLabel("Reading records…"))
-        }
-    }
-
-    @ViewBuilder
-    private var report: some View {
-        if snapshot != nil {
-            Text(verbatim: editedReport ?? snapshot?.report ?? "")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
-                .accessibilityIdentifier("ai.report.text")
-
-            if let reportFacts {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(assistantLabel("Highlights")).font(.headline.weight(.medium))
-                    ForEach(reportFacts) { fact in factRow(fact) }
-                }
-            }
-            if modelUnavailable == nil, hasCurrentRecords {
-                organizeButton(.report)
-            }
-        } else {
-            ProgressView(assistantLabel("Reading records…"))
-        }
-    }
-
-    private func organizeButton(_ purpose: AIAssistantRequest.Purpose) -> some View {
-        HStack {
-            Spacer()
-            if isWorking {
-                Button(assistantLabel("Stop"), action: stop)
-                    .accessibilityIdentifier("ai.stop")
-            } else {
-                Button(assistantLabel("Organize with model")) { prepare(purpose) }
-                    .accessibilityIdentifier("ai.organize")
-            }
-        }
-        .font(.subheadline)
     }
 
     private var chat: some View {
@@ -402,17 +373,8 @@ struct AIAssistantView: View {
                 }
             }
 
-            if let modelUnavailable {
-                VStack(alignment: .leading, spacing: 8) {
-                    status(modelUnavailable, icon: "sparkles")
-                    Button(assistantLabel("Model settings")) { showModelSettings = true }
-                    .font(.subheadline)
-                    .accessibilityIdentifier("ai.modelSettings")
-                }
-            }
-
-            if conversation.turns.isEmpty, modelUnavailable == nil {
-                Text(assistantLabel("Ask about your logged doses or measurements."))
+            if conversation.turns.isEmpty, pendingRecordChange == nil, liveReply == nil {
+                Text(assistantLabel("Ask about your records or a general topic."))
                     .font(.subheadline)
                     .foregroundStyle(TrackerTheme.muted)
             }
@@ -420,110 +382,207 @@ struct AIAssistantView: View {
             LazyVStack(alignment: .leading, spacing: 20) {
                 ForEach(conversation.turns) { turn in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(verbatim: turn.question)
-                            .padding(10)
-                            .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 12))
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .accessibilityIdentifier("ai.turn")
-                        Text(verbatim: turn.answer)
-                            .textSelection(.enabled)
-                        if turn.mode == store.mode {
-                            ForEach(Array(turn.sources.enumerated()), id: \.offset) { _, source in
-                                Button { show(source) } label: {
-                                    Label(sourceTitle(source), systemImage: "arrow.up.right")
-                                        .font(.footnote)
-                                }
-                                .buttonStyle(.borderless)
+                        questionBubble(turn.question, attachmentNames: turn.attachmentNames)
+                        if let document = turn.document {
+                            AIAssistantDocumentCard(document: document) {
+                                isQuestionFocused = false
+                                presentedReport = ReportRoute(document: document, mode: turn.mode, savedTurnID: turn.id)
                             }
-                        } else if !turn.sources.isEmpty {
-                            Text(assistantLabel("This source is no longer available for the current mode."))
-                                .font(.footnote)
-                                .foregroundStyle(TrackerTheme.muted)
+                        } else {
+                            if let summary = turn.reasoningSummary, !summary.isEmpty {
+                                AIAssistantReasoning(summary: summary, startsExpanded: false)
+                            }
+                            if !turn.answer.isEmpty {
+                                Text(verbatim: turn.answer).textSelection(.enabled)
+                            }
+                            if let image = turn.generatedImage {
+                                AIAssistantGeneratedImage(data: image)
+                            }
+                            if turn.mode == store.mode {
+                                ForEach(Array(turn.sources.enumerated()), id: \.offset) { _, source in
+                                    Button { show(source) } label: {
+                                        Label(sourceTitle(source), systemImage: "arrow.up.right")
+                                            .font(.footnote)
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                            } else if !turn.sources.isEmpty {
+                                Text(assistantLabel("This source is no longer available for the current mode."))
+                                    .font(.footnote)
+                                    .foregroundStyle(TrackerTheme.muted)
+                            }
                         }
                     }
                 }
             }
-            if isWorking {
-                ProgressView(assistantLabel("Organizing records…"))
-            }
-        }
-    }
-
-    private var questionBar: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField(assistantLabel("Ask about your records"), text: $question, axis: .vertical)
-                .lineLimit(1...4)
-                .padding(10)
-                .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 10))
-                .focused($isQuestionFocused)
-                .accessibilityIdentifier("ai.question")
-                .disabled(isWorking || modelUnavailable != nil || conversation.storageUnavailable)
-            if isWorking {
-                Button(assistantLabel("Stop"), action: stop)
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("ai.stop")
-            } else {
-                Button(assistantLabel("Send")) { prepare(.question) }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(modelUnavailable != nil || conversation.storageUnavailable || snapshot == nil ||
-                              question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("ai.send")
-            }
-        }
-        .padding(.horizontal, 17)
-        .padding(.vertical, 10)
-        .frame(maxWidth: 540)
-        .frame(maxWidth: .infinity)
-        .background(TrackerTheme.background)
-    }
-
-    private var reportBar: some View {
-        HStack(spacing: 14) {
-            Button(assistantLabel("Edit")) { reportEditor = ReportEditor(text: reportText) }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("ai.report.edit")
-            NavigationLink {
-                AIAssistantReportPreview(text: reportText)
-            } label: {
-                Text(assistantLabel("Preview export"))
-                    .frame(maxWidth: .infinity, minHeight: 26)
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityIdentifier("ai.report.preview")
-        }
-        .padding(.horizontal, 17)
-        .padding(.vertical, 10)
-        .frame(maxWidth: 540)
-        .frame(maxWidth: .infinity)
-        .background(TrackerTheme.background)
-    }
-
-    @ViewBuilder
-    private func factRow(_ fact: AIInsightFact) -> some View {
-        if let source = fact.source {
-            Button { show(source) } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(verbatim: fact.text)
-                        .foregroundStyle(TrackerTheme.ink)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
+            if let pending = pendingRecordChange {
+                VStack(alignment: .leading, spacing: 10) {
+                    questionBubble(pending.question, attachmentNames: pending.attachmentNames)
+                    AIRecordChangeCard(draft: pending.draft, store: store) {
+                        pendingRecordChange = nil
+                    } onSaved: { reference in
+                        finishRecordChange(pending, reference: reference)
+                    }
+                    .id(pending.requestID)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 9)
-                .contentShape(Rectangle())
+                .id("ai.pendingRecordChange")
+            } else if let liveReply {
+                questionBubble(liveReply.question, attachmentNames: liveReply.attachmentNames)
+                if !liveReply.reasoning.isEmpty {
+                    AIAssistantReasoning(summary: liveReply.reasoning, startsExpanded: true)
+                }
+                if !liveReply.text.isEmpty {
+                    Text(verbatim: AIAssistantRequest.displayedStreamText(liveReply.text))
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("ai.streaming.answer")
+                }
+                if let preview = liveReply.generatedImage ?? liveReply.imagePreview {
+                    AIAssistantGeneratedImage(data: preview, allowsSharing: false)
+                }
+                if liveReply.text.isEmpty, liveReply.reasoning.isEmpty, liveReply.imagePreview == nil,
+                   liveReply.generatedImage == nil {
+                    ProgressView(assistantLabel("Preparing a reply…"))
+                }
+            } else if isWorking {
+                ProgressView(assistantLabel("Preparing a reply…"))
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ai.fact.\(fact.id)")
-        } else {
-            Text(verbatim: fact.text)
-                .padding(.vertical, 9)
         }
+    }
+
+    private func questionBubble(_ text: String, attachmentNames: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(verbatim: text)
+            ForEach(attachmentNames.indices, id: \.self) { index in
+                Label(attachmentNames[index], systemImage: "paperclip")
+                    .font(.caption)
+                    .foregroundStyle(TrackerTheme.muted)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 15))
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .accessibilityIdentifier("ai.turn")
+    }
+
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if conversation.storageUnavailable {
+                status(assistantLabel("Local chat storage is unavailable."), icon: "exclamationmark.circle")
+            }
+            if let failure {
+                status(failure, icon: "exclamationmark.circle")
+                    .accessibilityIdentifier("ai.error")
+            }
+            if let modelUnavailable {
+                status(modelUnavailable, icon: "sparkles")
+            }
+            if incompatibleMedia {
+                status(assistantLabel("Switch to a model that supports these attachments or image generation to send this message."),
+                       icon: "paperclip")
+            }
+            composerField
+        }
+        .padding(.horizontal, 17)
+        .padding(.vertical, 8)
+        .frame(maxWidth: 540)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .background(TrackerTheme.background)
+    }
+
+    private var composerField: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AIAssistantAttachmentControls(attachments: $attachments,
+                                          allowsAdding: acceptsAttachments,
+                                          onLoadingChanged: { importingAttachments = $0 },
+                                          onError: { failure = $0 }) {
+                documentCommand(.recap)
+                documentCommand(.visit)
+                if canGenerateImage || generatesImage {
+                    Button {
+                        generatesImage.toggle()
+                    } label: {
+                        composerToolLabel(assistantLabel("Generate image"), icon: "photo.badge.plus",
+                                          selected: generatesImage)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(generatesImage ? .isSelected : [])
+                    .accessibilityIdentifier("ai.generateImage")
+                }
+            }
+            .disabled(isWorking)
+            HStack(alignment: .bottom, spacing: 6) {
+                TextField(assistantLabel("Ask a question"), text: $question, axis: .vertical)
+                    .lineLimit(3...4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 3)
+                    .padding(.bottom, 8)
+                    .padding(.leading, 6)
+                    .focused($isQuestionFocused)
+                    .accessibilityIdentifier("ai.question")
+                    .disabled(isWorking || conversation.storageUnavailable)
+                if isWorking {
+                    composerButton(title: assistantLabel("Stop"), icon: "stop.fill", action: stop)
+                        .accessibilityIdentifier("ai.stop")
+                } else {
+                    composerButton(title: assistantLabel("Send"), icon: "arrow.up", action: prepareQuestion)
+                        .disabled(modelUnavailable != nil || conversation.storageUnavailable || snapshot == nil ||
+                                  incompatibleMedia || importingAttachments ||
+                                  question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("ai.send")
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 18))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ai.composer")
+    }
+
+    private func composerButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 34, height: 34)
+                .background(TrackerTheme.accent, in: Circle())
+                .foregroundStyle(TrackerTheme.accentInk)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(ComposerActionStyle())
+        .accessibilityLabel(title)
+    }
+
+    private func documentCommand(_ kind: AIConversationDocument.Kind) -> some View {
+        Button { openReport(kind) } label: {
+            composerToolLabel(commandTitle(kind), icon: kind == .recap ? "list.bullet.rectangle" : "doc.text")
+        }
+        .buttonStyle(.plain)
+        .disabled(snapshot == nil || isWorking)
+        .accessibilityIdentifier(kind == .recap ? "ai.command.recap" : "ai.command.visit")
+    }
+
+    private func composerToolLabel(_ title: String, icon: String, selected: Bool = false) -> some View {
+        Label(title, systemImage: icon)
+            .font(.caption.weight(.medium))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .frame(minHeight: 28)
+            .background(selected ? TrackerTheme.wash : TrackerTheme.surface, in: Capsule())
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(.rect)
+    }
+
+    private func commandTitle(_ kind: AIConversationDocument.Kind) -> String {
+        kind == .recap ? assistantLabel("Recap") : assistantLabel("Visit summary")
     }
 
     private func status(_ text: String, icon: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.subheadline)
+            .font(.footnote)
             .foregroundStyle(TrackerTheme.muted)
     }
 
@@ -549,118 +608,152 @@ struct AIAssistantView: View {
         stop()
         range = value
         failure = nil
-        reviewedFacts = nil
-        reportFacts = nil
     }
 
-    private func prepare(_ purpose: AIAssistantRequest.Purpose) {
-        guard let snapshot, !isWorking, modelUnavailable == nil else { return }
-        guard loadedKey == snapshotKey else {
-            failure = assistantLabel("The model or records changed. Start the request again.")
-            return
-        }
+    private func openReport(_ kind: AIConversationDocument.Kind) {
+        guard let snapshot, !isWorking else { return }
+        isQuestionFocused = false
+        let document = snapshot.document(kind, at: store.now, calendar: store.calendar)
+        presentedReport = ReportRoute(document: document, mode: snapshot.mode, savedTurnID: nil)
+    }
+
+    private func prepareQuestion() {
+        guard let snapshot, !isWorking, pendingRecordChange == nil,
+              modelUnavailable == nil, !conversation.storageUnavailable,
+              !incompatibleMedia, !importingAttachments else { return }
         isQuestionFocused = false
         failure = nil
         let draft = question.trimmingCharacters(in: .whitespacesAndNewlines)
-        if purpose == .question, draft.isEmpty { return }
-        if purpose == .question, draft.count > 500 {
+        guard !draft.isEmpty else { return }
+        if draft.count > 500 {
             failure = assistantLabel("Keep the question to 500 characters or fewer.")
             return
         }
-        let request = AIAssistantRequest(purpose: purpose, question: purpose == .question ? draft : nil, snapshot: snapshot)
-        guard !request.facts.isEmpty else {
-            failure = assistantLabel("There are no records to answer from in this range.")
-            return
-        }
+        let request = AIAssistantRequest(purpose: .question, question: draft, snapshot: snapshot,
+                                         includesRecordFacts: !generatesImage)
 
         do {
-            let baseInput = AIAssistantRequest.instructions + (try request.input(context: nil, includeRecentTurns: false))
             switch model {
             case .apple:
-                let context = conversation.storageUnavailable ? nil : try conversation.context(
+                let inputWithoutMemory = try request.input(context: nil, includeRecentTurns: false)
+                let context = try conversation.context(
                     mode: snapshot.mode, modelLimit: AIModelClient.appleContextLimit(),
-                    reservedTokens: AIModelClient.appleOutputLimit, baseInput: baseInput, includeRecentTurns: true
+                    reservedTokens: AIModelClient.appleOutputLimit,
+                    baseInput: AIAssistantRequest.instructions + inputWithoutMemory, includeRecentTurns: true
                 )
                 run(request, context: context)
             case .compatible:
                 guard let profile = modelSettings.profile else { return }
+                let cloud = CloudRequest(profile: profile, attachments: attachments, generatesImage: generatesImage,
+                                         sendingRevision: modelSettings.sendingRevision)
+                let inputWithoutMemory = try request.input(context: nil, includeRecentTurns: false,
+                                                          allowsRecordChanges: cloud.allowsRecordChanges)
+                let baseInput = cloud.instructions + inputWithoutMemory
                 let limit = AIModelClient.compatibleContextLimit(for: profile)
-                let outputLimit = AIModelClient.compatibleOutputLimit
+                let outputLimit = AIModelClient.compatibleOutputLimit(for: profile)
                 guard AIConversationStore.fits(modelLimit: limit, reservedTokens: outputLimit, baseInput: baseInput) else {
                     throw AIModelClientError.contextLimitExceeded
                 }
-                var memory = conversation.storageUnavailable ? nil : try? conversation.context(
+                let remembered = modelSettings.rememberedSending(for: profile, includesAttachments: !attachments.isEmpty)
+                var memory = remembered == false || cloud.generatesImage ? nil : try? conversation.context(
                     mode: snapshot.mode, modelLimit: limit, reservedTokens: outputLimit,
                     baseInput: baseInput, includeRecentTurns: false
                 )
                 if let context = memory {
-                    let previewedInput = AIAssistantRequest.instructions + (try request.input(context: context, includeRecentTurns: false))
+                    let previewedInput = cloud.instructions + (try request.input(
+                        context: context, includeRecentTurns: false, allowsRecordChanges: cloud.allowsRecordChanges
+                    ))
                     if !AIConversationStore.fits(modelLimit: limit, reservedTokens: outputLimit, baseInput: previewedInput) {
                         memory = nil
                     }
                 }
-                sheet = .consent(Approval(request: request, profile: profile, memory: memory))
+                if let includeMemory = remembered {
+                    run(request, context: includeMemory ? memory : nil, cloud: cloud)
+                } else {
+                    sheet = .consent(Approval(request: request, cloud: cloud, memory: memory))
+                }
             }
         } catch {
             failure = assistantLabel("Could not prepare this request. Shorten it and try again.")
         }
     }
 
-    private func run(_ request: AIAssistantRequest, context: AIConversationContext?, profile: AIProviderProfile? = nil) {
-        guard !isWorking else { return }
+    private func run(_ request: AIAssistantRequest, context: AIConversationContext?, cloud: CloudRequest? = nil) {
+        guard !isWorking, let prompt = request.question else { return }
         runningID = request.id
+        if let cloud {
+            liveReply = LiveReply(question: prompt, attachmentNames: cloud.attachments.map(\.name))
+        }
         requestTask = Task {
             defer {
                 if runningID == request.id {
                     runningID = nil
                     requestTask = nil
+                    liveReply = nil
                 }
             }
             do {
-                let response: String
-                if let profile {
-                    let input = try request.input(context: context, includeRecentTurns: false)
-                    let apiKey = try modelSettings.apiKey(for: profile)
-                    response = try await AIModelClient.completeCompatible(
-                        system: AIAssistantRequest.instructions, input: input, profile: profile, apiKey: apiKey
-                    )
+                let selection: AIAssistantRequest.Selection
+                if let cloud {
+                    guard cloud.sendingRevision == modelSettings.sendingRevision else { throw AIModelClientError.settingsChanged }
+                    let input = try request.input(context: context, includeRecentTurns: false,
+                                                  allowsRecordChanges: cloud.allowsRecordChanges)
+                    let apiKey = try modelSettings.apiKey(for: cloud.profile)
+                    try await AIModelClient.streamCompatible(
+                        system: cloud.instructions, input: input, profile: cloud.profile, apiKey: apiKey,
+                        attachments: cloud.attachments, generateImage: cloud.generatesImage,
+                        allowRecordChanges: cloud.allowsRecordChanges
+                    ) { update in
+                        guard runningID == request.id else { return }
+                        receive(update)
+                    }
+                    try Task.checkCancellation()
+                    guard runningID == request.id, request.snapshot.mode == store.mode, let liveReply else { return }
+                    if let change = liveReply.recordChange, cloud.allowsRecordChanges {
+                        let draft = AIRecordChangeDraft(arguments: change, snapshot: request.snapshot,
+                                                        reference: request.recordReference(for: change.recordRef),
+                                                        calendar: store.calendar)
+                        pendingRecordChange = PendingRecordChange(
+                            requestID: request.id, mode: request.snapshot.mode, question: prompt,
+                            attachmentNames: liveReply.attachmentNames, draft: draft
+                        )
+                        resetComposer()
+                        return
+                    }
+                    if liveReply.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       liveReply.generatedImage != nil {
+                        selection = AIAssistantRequest.Selection(answer: "", facts: [])
+                    } else {
+                        selection = try request.streamSelection(from: liveReply.text)
+                    }
                 } else {
-                    response = try await completeOnDevice(request, context: context)
+                    let response = try await completeOnDevice(request, context: context)
+                    selection = try request.selection(from: response)
                 }
                 try Task.checkCancellation()
                 guard runningID == request.id, request.snapshot.mode == store.mode else { return }
-                let selection: AIAssistantRequest.Selection
-                do { selection = try request.selection(from: response) }
-                catch {
-                    failure = assistantLabel("The answer did not match the available records. Try again.")
-                    return
-                }
 
-                if request.purpose == .question, let prompt = request.question {
-                    let answer = selection.outOfScope ? assistantLabel("I can help review your saved records and estimates. Take treatment decisions to your care team.") :
-                        selection.facts.map(\.text).joined(separator: "\n\n")
-                    var sources: [AIRecordReference] = []
-                    for source in selection.facts.compactMap(\.source) where !sources.contains(source) {
-                        sources.append(source)
-                    }
-                    do {
-                        try conversation.append(AIChatTurn(
-                            id: UUID(), date: store.now, mode: request.snapshot.mode, question: prompt,
-                            answer: answer, sources: sources
-                        ))
-                        question = ""
-                    } catch {
-                        failure = assistantLabel("Could not update local chat and memory.")
-                    }
-                } else if selection.outOfScope {
-                    failure = assistantLabel("The answer did not match the available records. Try again.")
-                } else if request.purpose == .recap {
-                    reviewedFacts = selection.facts
-                } else {
-                    reportFacts = selection.facts
+                var sources: [AIRecordReference] = []
+                for source in selection.facts.compactMap(\.source) where !sources.contains(source) {
+                    sources.append(source)
+                }
+                do {
+                    try conversation.append(AIChatTurn(
+                        date: store.now, mode: request.snapshot.mode, question: prompt,
+                        answer: selection.answer, sources: sources,
+                        reasoningSummary: liveReply.flatMap { $0.reasoning.isEmpty ? nil : $0.reasoning },
+                        generatedImage: liveReply?.generatedImage,
+                        attachmentNames: liveReply?.attachmentNames ?? []
+                    ))
+                    resetComposer()
+                } catch {
+                    failure = assistantLabel("Could not update local chat and memory.")
                 }
             } catch is CancellationError {
                 // The draft remains available.
+            } catch is AIAssistantRequest.InvalidReply {
+                guard runningID == request.id, !Task.isCancelled else { return }
+                failure = AIModelClientError.invalidResponse.errorDescription
             } catch {
                 guard runningID == request.id, !Task.isCancelled else { return }
                 if let safeError = error as? AIModelClientError {
@@ -669,6 +762,43 @@ struct AIAssistantView: View {
                     failure = assistantLabel("Could not complete the request. Try again.")
                 }
             }
+        }
+    }
+
+    private func receive(_ update: AIStreamUpdate) {
+        switch update {
+        case .text(let text): liveReply?.text += text
+        case .reasoningSummary(let text): liveReply?.reasoning += text
+        case .imagePreview(let image): liveReply?.imagePreview = image
+        case .image(let image):
+            if AIAssistantGeneratedImage.isValid(image) { liveReply?.generatedImage = image }
+            liveReply?.imagePreview = nil
+        case .recordChange(let change): liveReply?.recordChange = change
+        }
+    }
+
+    private func resetComposer() {
+        question = ""
+        attachments = []
+        generatesImage = false
+    }
+
+    private func finishRecordChange(_ pending: PendingRecordChange, reference: AIRecordReference) {
+        guard pendingRecordChange?.requestID == pending.requestID else { return }
+        pendingRecordChange = nil
+        let answer: String
+        switch reference {
+        case .dose: answer = assistantLabel("Medication record saved.")
+        case .lab: answer = assistantLabel("Lab result saved.")
+        case .curve: return
+        }
+        do {
+            try conversation.append(AIChatTurn(
+                id: pending.requestID, date: store.now, mode: pending.mode, question: pending.question,
+                answer: answer, sources: [reference], attachmentNames: pending.attachmentNames
+            ))
+        } catch {
+            failure = assistantLabel("The record was saved. Could not save the chat receipt.")
         }
     }
 
@@ -706,6 +836,41 @@ struct AIAssistantView: View {
         requestTask?.cancel()
         requestTask = nil
         runningID = nil
+        liveReply = nil
+    }
+}
+
+private struct AIAssistantReasoning: View {
+    let summary: String
+    @State private var expanded: Bool
+
+    init(summary: String, startsExpanded: Bool) {
+        self.summary = summary
+        _expanded = State(initialValue: startsExpanded)
+    }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            Text(verbatim: summary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 7)
+                .textSelection(.enabled)
+        } label: {
+            Label(assistantLabel("Reasoning summary"), systemImage: "brain")
+        }
+        .font(.footnote)
+        .foregroundStyle(TrackerTheme.muted)
+        .padding(10)
+        .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("ai.reasoningSummary")
+    }
+}
+
+private struct ComposerActionStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(isEnabled ? (configuration.isPressed ? 0.76 : 1) : 0.4)
     }
 }
 

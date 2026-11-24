@@ -121,11 +121,14 @@ final class DesignSmokeTests: XCTestCase {
         let app = launchDemo()
         let tabs = app.tabBars.firstMatch
         let records = tabs.buttons["记录"]
-        let assistant = tabs.buttons["AI"]
+        let assistant = app.buttons["tab.assistant"]
         let checks = tabs.buttons["检查"]
         XCTAssertTrue(assistant.waitForExistence(timeout: 8))
         XCTAssertLessThan(records.frame.midX, assistant.frame.midX)
         XCTAssertLessThan(assistant.frame.midX, checks.frame.midX)
+        XCTAssertEqual(assistant.frame.midY, records.frame.midY, accuracy: 6)
+        XCTAssertGreaterThanOrEqual(assistant.frame.width, 44)
+        XCTAssertEqual(assistant.label, "HRTrace")
 
         checks.tap()
         XCTAssertTrue(app.buttons["labs.calibration"].waitForExistence(timeout: 6))
@@ -133,31 +136,99 @@ final class DesignSmokeTests: XCTestCase {
         let done = app.buttons["ai.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 8))
         XCTAssertTrue(element("ai.range", in: app).exists)
-        XCTAssertTrue(element("ai.segment.recap", in: app).exists)
+        XCTAssertTrue(element("ai.question", in: app).exists)
+        XCTAssertTrue(app.staticTexts["可以询问记录，也可以聊一般话题。"].exists)
+        XCTAssertFalse(element("ai.segment.recap", in: app).exists)
         screenshot("24-record-assistant-sheet", in: app)
 
-        element("ai.segment.report", in: app).tap()
-        XCTAssertTrue(element("ai.report.edit", in: app).waitForExistence(timeout: 8))
-        element("ai.report.preview", in: app).tap()
+        let recap = app.buttons["ai.command.recap"]
+        waitUntilEnabled(recap)
+        recap.tap()
+        let recapBar = app.navigationBars["记录回顾"]
+        XCTAssertTrue(recapBar.waitForExistence(timeout: 8))
+        recapBar.buttons.firstMatch.tap()
+        XCTAssertFalse(element("ai.turn", in: app).exists)
+
+        app.buttons["ai.command.visit"].tap()
+        let edit = app.buttons["ai.document.edit"]
+        let preview = app.buttons["ai.document.preview"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 8))
+        XCTAssertEqual(edit.label, "编辑摘要")
+        XCTAssertEqual(edit.frame.width, 44, accuracy: 1)
+        XCTAssertLessThan(preview.frame.width, app.frame.width / 2)
+        screenshot("27-visit-summary", in: app)
+        edit.tap()
+        XCTAssertTrue(element("ai.report.editor", in: app).waitForExistence(timeout: 8))
+        app.navigationBars["编辑摘要"].buttons["取消"].tap()
+        preview.tap()
         XCTAssertTrue(element("ai.report.export", in: app).waitForExistence(timeout: 8))
         app.navigationBars["导出预览"].buttons.firstMatch.tap()
 
+        let visitBar = app.navigationBars["就诊摘要"]
+        XCTAssertTrue(visitBar.waitForExistence(timeout: 6))
+        visitBar.buttons.firstMatch.tap()
+        XCTAssertFalse(element("ai.turn", in: app).exists)
         done.tap()
         XCTAssertTrue(app.buttons["labs.calibration"].waitForExistence(timeout: 6))
         screenshot("25-central-ai-entry", in: app)
 
-        tabs.buttons["设置"].tap()
-        app.buttons["settings.aiModels"].tap()
+        assistant.tap()
+        let modelSettings = app.buttons["ai.modelSettings"]
+        XCTAssertTrue(modelSettings.waitForExistence(timeout: 8))
+        modelSettings.tap()
         let fetch = element("ai.models.fetch", in: app)
         XCTAssertTrue(fetch.waitForExistence(timeout: 8))
         XCTAssertFalse(fetch.isEnabled)
-        XCTAssertTrue(element("ai.models.reasoning", in: app).exists)
+        XCTAssertTrue(element("ai.models.api", in: app).exists)
+        let summary = app.switches["ai.models.reasoningSummary"]
+        XCTAssertTrue(summary.exists)
+        summary.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        XCTAssertEqual(summary.value as? String, "1")
+        let confirmationMode = element("ai.models.confirmationMode", in: app)
+        XCTAssertTrue(confirmationMode.exists)
+        confirmationMode.tap()
+        let everySend = app.buttons["每次发送"]
+        XCTAssertTrue(everySend.waitForExistence(timeout: 6))
+        everySend.tap()
         let address = app.textFields["ai.models.address"]
         address.tap()
         address.typeText("https://localhost:19443/v1")
         XCTAssertTrue(fetch.isEnabled)
         XCTAssertFalse(element("ai.models.save", in: app).isEnabled)
         screenshot("26-ai-model-settings", in: app)
+    }
+
+    func testAssistantPreservesOverviewState() {
+        let app = launchDemo()
+        let overviewTab = app.tabBars.buttons["概览"]
+        let overview = app.scrollViews.firstMatch
+        let month = app.buttons["30天"]
+        XCTAssertTrue(overviewTab.waitForExistence(timeout: 8))
+        scroll(overview, until: month)
+        month.tap()
+        XCTAssertTrue(month.isSelected)
+
+        let chartTitle = app.staticTexts["激素浓度变化曲线"]
+        let initialY = chartTitle.frame.minY
+        // Start above the plot so the gesture scrolls the page instead of moving the plot cursor.
+        let from = overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.54))
+        let to = overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.24))
+        from.press(forDuration: 0.05, thenDragTo: to)
+        XCTAssertTrue(chartTitle.isHittable)
+        let chartY = chartTitle.frame.minY
+        XCTAssertLessThan(chartY, initialY - 40)
+        screenshot("28-overview-before-assistant", in: app)
+
+        app.buttons["tab.assistant"].tap()
+        let done = app.buttons["ai.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 8))
+        done.tap()
+
+        XCTAssertTrue(chartTitle.waitForExistence(timeout: 8))
+        XCTAssertTrue(overviewTab.isSelected)
+        XCTAssertEqual(chartTitle.frame.minY, chartY, accuracy: 3)
+        XCTAssertTrue(month.isSelected)
+        screenshot("29-overview-after-assistant", in: app)
     }
 
     func testOverviewLayoutAndSimulationNavigation() {

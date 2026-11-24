@@ -29,6 +29,34 @@
         }
       }
     },
+    "API format": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 格式"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Format"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format API"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API形式"
+          }
+        }
+      }
+    },
     "API key": {
       "localizations": {
         "zh-Hans": {
@@ -309,6 +337,34 @@
         }
       }
     },
+    "Attachments require a separate first confirmation. Changing the service address, model, API format, or key resets approval.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首次发送附件时需单独确认。更改服务地址、模型、API 格式或密钥后，需要重新确认。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim ersten Senden von Anhängen ist eine separate Bestätigung nötig. Änderungen an Dienstadresse, Modell, API-Format oder Schlüssel setzen die Freigabe zurück."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le premier envoi de pièces jointes nécessite une confirmation distincte. Un changement d’adresse du service, de modèle, de format API ou de clé annule l’autorisation."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルの初回送信には別途確認が必要です。サービスのアドレス、モデル、API形式、キーのいずれかを変更すると、承認がリセットされます。"
+          }
+        }
+      }
+    },
     "Choose a model": {
       "localizations": {
         "zh-Hans": {
@@ -361,6 +417,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "互換サービス"
+          }
+        }
+      }
+    },
+    "Confirm sending": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送确认"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden bestätigen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmation d’envoi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信の確認"
           }
         }
       }
@@ -541,6 +625,34 @@
         "ja": { "stringUnit": { "state": "translated", "value": "正の整数を入力してください。" } }
       }
     },
+    "Every send": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次发送"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei jedem Senden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À chaque envoi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎回"
+          }
+        }
+      }
+    },
     "Extra high": {
       "localizations": {
         "zh-Hans": {
@@ -621,6 +733,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "先にモデル一覧を取得"
+          }
+        }
+      }
+    },
+    "First send": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅首次发送"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim ersten Senden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Au premier envoi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初回のみ"
           }
         }
       }
@@ -933,6 +1073,34 @@
         }
       }
     },
+    "Reasoning summaries and image generation require a compatible Responses API model.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推理摘要和图片生成需要支持相应功能的 Responses API 模型。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für Zusammenfassungen der Schlussfolgerungen und Bildgenerierung ist ein kompatibles Responses-API-Modell erforderlich."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les résumés de raisonnement et la génération d’images nécessitent un modèle compatible avec ces fonctions dans l’API Responses."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推論の要約と画像生成には、各機能に対応したResponses APIモデルが必要です。"
+          }
+        }
+      }
+    },
     "Remove compatible service": {
       "localizations": {
         "zh-Hans": {
@@ -985,6 +1153,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "互換サービスを削除しますか？"
+          }
+        }
+      }
+    },
+    "Revoke sending permission": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销发送授权"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendefreigabe widerrufen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Révoquer l’autorisation d’envoi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信許可を取り消す"
           }
         }
       }
@@ -1101,6 +1297,34 @@
         }
       }
     },
+    "Show reasoning summaries": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示推理摘要"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammenfassungen der Schlussfolgerungen anzeigen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les résumés de raisonnement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推論の要約を表示"
+          }
+        }
+      }
+    },
     "Test connection": {
       "localizations": {
         "zh-Hans": {
@@ -1181,6 +1405,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "APIキーを取得できません。モデルの設定を確認してください。"
+          }
+        }
+      }
+    },
+    "The attachments exceed the allowed size or format.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件大小超出限制或格式不受支持。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anhänge sind zu groß oder haben ein nicht unterstütztes Format."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pièces jointes dépassent la taille autorisée ou sont dans un format non pris en charge."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルがサイズ制限を超えているか、対応していない形式です。"
+          }
+        }
+      }
+    },
+    "The model response ended before it was complete.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型回复尚未完成，连接已结束。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Modellantwort ist vorzeitig abgebrochen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La réponse du modèle s’est interrompue avant d’être complète."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルの応答が完了する前に通信が終了しました。"
           }
         }
       }
@@ -1381,30 +1661,86 @@
         }
       }
     },
-    "This device does not support Apple Intelligence.": {
+    "Apple's on-device model is unavailable with this device configuration. Check Apple Intelligence settings and regional availability.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此设备不支持 Apple Intelligence。"
+            "value": "在当前设备配置下，Apple 端侧模型不可用。请检查 Apple 智能设置及所在地区的可用性。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dieses Gerät unterstützt Apple Intelligence nicht."
+            "value": "Apples lokales Modell ist mit dieser Gerätekonfiguration nicht verfügbar. Prüfe die Einstellungen und die regionale Verfügbarkeit von Apple Intelligence."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cet appareil ne prend pas en charge Apple Intelligence."
+            "value": "Le modèle embarqué d’Apple est indisponible avec cette configuration. Vérifiez les réglages d’Apple Intelligence et sa disponibilité dans votre région."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このデバイスはApple Intelligenceに対応していません。"
+            "value": "現在のデバイス設定ではAppleのオンデバイスモデルを利用できません。Apple Intelligenceの設定と、お住まいの地域での提供状況を確認してください。"
+          }
+        }
+      }
+    },
+    "The model list endpoint is unavailable (HTTP %lld). Check the service address.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型列表接口不可用（HTTP %lld）。请检查服务地址。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Endpunkt für die Modellliste ist nicht verfügbar (HTTP %lld). Prüfe die Dienstadresse."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le point d’accès à la liste des modèles est indisponible (HTTP %lld). Vérifiez l’adresse du service."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデル一覧のエンドポイントを利用できません（HTTP %lld）。サービスのアドレスを確認してください。"
+          }
+        }
+      }
+    },
+    "The service could not list models (HTTP %lld).": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务未能返回模型列表（HTTP %lld）。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Dienst konnte die Modelle nicht auflisten (HTTP %lld)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le service n’a pas pu fournir la liste des modèles (HTTP %lld)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サービスからモデル一覧を取得できませんでした（HTTP %lld）。"
           }
         }
       }

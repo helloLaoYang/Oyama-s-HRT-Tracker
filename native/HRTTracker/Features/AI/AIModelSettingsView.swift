@@ -6,6 +6,7 @@ struct AIModelSettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var address = ""
     @State private var credentialAddress: URL?
@@ -15,6 +16,8 @@ struct AIModelSettingsView: View {
     @State private var credentialLoadFailed = false
     @State private var model: String?
     @State private var models: [String] = []
+    @State private var api: AIProviderAPI = .responses
+    @State private var requestsReasoningSummary = false
     @State private var effort: AIReasoningEffort = .medium
     @State private var contextLimit = ""
     @State private var showModels = false
@@ -23,18 +26,27 @@ struct AIModelSettingsView: View {
     @State private var activity: Activity?
     @State private var task: Task<Void, Never>?
     @State private var operationID: UUID?
-    @State private var status: String?
-    @State private var failed = false
+    @State private var status: Status?
+    @State private var appleStatus: AIAppleAvailability?
 
     private enum Activity { case fetchingModels, testingConnection }
 
+    private struct Status {
+        let message: String
+        let failed: Bool
+        let activity: Activity?
+    }
+
     private var baseURL: URL? { AIModelClient.baseURL(from: address) }
-    private var appleUnavailable: String? { AIModelClient.appleUnavailableReason(locale: locale) }
+    private var appleUnavailable: String? {
+        (appleStatus ?? AIModelClient.appleAvailability(locale: locale)).unavailableReason
+    }
     private var contextText: String { contextLimit.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var confirmedLimit: Int? { Int(contextText).flatMap { $0 > 0 ? $0 : nil } }
     private var draft: AIProviderProfile? {
         guard let baseURL, let model, contextText.isEmpty || confirmedLimit != nil else { return nil }
-        return AIProviderProfile(baseURL: baseURL, model: model, effort: effort, contextLimit: confirmedLimit)
+        return AIProviderProfile(baseURL: baseURL, model: model, effort: effort, contextLimit: confirmedLimit,
+                                 api: api, requestsReasoningSummary: api == .responses && requestsReasoningSummary)
     }
 
     var body: some View {
@@ -47,7 +59,7 @@ struct AIModelSettingsView: View {
                     contextRow("Effective context", limit: limit)
                 }
             }
-            Section(AIModelText.localized("Compatible service")) {
+            Section {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(AIModelText.localized("Service address"))
                     TextField("https://api.example.com/v1", text: $address)
@@ -89,13 +101,49 @@ struct AIModelSettingsView: View {
                     }
                 }
                 modelsRow
-                Picker(AIModelText.localized("Reasoning effort"), selection: $effort) {
-                    ForEach(AIReasoningEffort.allCases) { value in
+                Picker(AIModelText.localized("API format"), selection: $api) {
+                    ForEach(AIProviderAPI.allCases) { value in
                         Text(value.title).tag(value)
                     }
                 }
                 .disabled(activity != nil)
-                .accessibilityIdentifier("ai.models.reasoning")
+                .accessibilityIdentifier("ai.models.api")
+                if api == .responses {
+                    Toggle(AIModelText.localized("Show reasoning summaries"), isOn: $requestsReasoningSummary)
+                        .disabled(activity != nil)
+                        .accessibilityIdentifier("ai.models.reasoningSummary")
+                }
+                if api == .chatCompletions || requestsReasoningSummary {
+                    Picker(AIModelText.localized("Reasoning effort"), selection: $effort) {
+                        ForEach(AIReasoningEffort.allCases) { value in
+                            Text(value.title).tag(value)
+                        }
+                    }
+                    .disabled(activity != nil)
+                    .accessibilityIdentifier("ai.models.reasoning")
+                }
+            } header: {
+                Text(AIModelText.localized("Compatible service"))
+            } footer: {
+                Text(AIModelText.localized("Reasoning summaries and image generation require a compatible Responses API model."))
+            }
+            Section {
+                Picker(AIModelText.localized("Confirm sending"), selection: Binding(
+                    get: { settings.confirmationMode }, set: { settings.setConfirmationMode($0) }
+                )) {
+                    ForEach(AIExternalConfirmationMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .accessibilityIdentifier("ai.models.confirmationMode")
+                if settings.hasSendingApproval {
+                    Button(AIModelText.localized("Revoke sending permission"), role: .destructive) {
+                        settings.revokeSendingApproval()
+                    }
+                    .accessibilityIdentifier("ai.models.revokeSendingApproval")
+                }
+            } footer: {
+                Text(AIModelText.localized("Attachments require a separate first confirmation. Changing the service address, model, API format, or key resets approval."))
             }
             Section {
                 contextRow("Default context", limit: AIModelClient.defaultContextLimit)
@@ -126,11 +174,8 @@ struct AIModelSettingsView: View {
                 }
                 .accessibilityIdentifier("ai.models.test")
                 .disabled(draft == nil || activity != nil || credentialLoadFailed)
-                if let status {
-                    Text(status)
-                        .font(.footnote)
-                        .foregroundStyle(failed ? Color.red : TrackerTheme.muted)
-                        .accessibilityIdentifier("ai.models.status")
+                if let status, status.activity != .fetchingModels {
+                    statusLabel(status)
                 }
             }
             if settings.profile != nil {
@@ -157,6 +202,10 @@ struct AIModelSettingsView: View {
             Button(AIModelText.localized("Remove compatible service"), role: .destructive, action: remove)
         }
         .onAppear(perform: restoreDraft)
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await AIModelClient.monitorAppleAvailability(locale: locale) { appleStatus = $0 }
+        }
         .onDisappear(perform: cancelOperation)
         .onChange(of: address) { _, value in
             let newURL = AIModelClient.baseURL(from: value)
@@ -217,7 +266,17 @@ struct AIModelSettingsView: View {
             .buttonStyle(.borderless)
             .disabled(models.isEmpty || activity != nil)
             .accessibilityIdentifier("ai.models.selector")
+            if let status, status.activity == .fetchingModels {
+                statusLabel(status)
+            }
         }
+    }
+
+    private func statusLabel(_ status: Status) -> some View {
+        Text(status.message)
+            .font(.footnote)
+            .foregroundStyle(status.failed ? Color.red : TrackerTheme.muted)
+            .accessibilityIdentifier("ai.models.status")
     }
 
     private var modelPicker: some View {
@@ -264,6 +323,8 @@ struct AIModelSettingsView: View {
         credentialAddress = profile.baseURL
         address = profile.baseURL.absoluteString
         model = profile.model
+        api = profile.api
+        requestsReasoningSummary = profile.requestsReasoningSummary
         effort = profile.effort
         contextLimit = profile.contextLimit.map(String.init) ?? ""
         do {
@@ -338,8 +399,7 @@ struct AIModelSettingsView: View {
     }
 
     private func setStatus(_ message: String?, failed: Bool = false) {
-        status = message
-        self.failed = failed
+        status = message.map { Status(message: $0, failed: failed, activity: activity) }
     }
 
     private func save() {

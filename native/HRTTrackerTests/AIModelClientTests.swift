@@ -17,6 +17,48 @@ final class AIModelClientTests: XCTestCase {
         XCTAssertNil(AIModelClient.baseURL(from: "https://localhost:19443/v1#model"))
     }
 
+    func testModelsAndCompletionsResolveFromPastedServiceAddresses() throws {
+        let host = "https://localhost:19443"
+        let cases = [
+            ("", "/v1"),
+            ("/v1/chat/completions/", "/v1"),
+            ("/v1/responses", "/v1"),
+            ("/v1/models", "/v1"),
+            ("/gateway%20name/compatible", "/gateway%20name/compatible"),
+            ("/gateway/v2/chat/completions", "/gateway/v2"),
+            ("/models", "")
+        ]
+        for (pastedPath, expectedBasePath) in cases {
+            let base = try XCTUnwrap(AIModelClient.baseURL(from: host + pastedPath))
+            let models = try AIModelClient.modelListRequest(baseURL: base, apiKey: "fixture-key")
+            XCTAssertEqual(models.url?.absoluteString, host + expectedBasePath + "/models")
+            XCTAssertEqual(models.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-key")
+            let profile = AIProviderProfile(baseURL: base, model: "fixture-model", effort: .medium, contextLimit: nil,
+                                            api: .chatCompletions)
+            let completion = try AIModelClient.completionRequest(system: "", input: "", profile: profile, apiKey: nil)
+            XCTAssertEqual(completion.url?.absoluteString, host + expectedBasePath + "/chat/completions")
+        }
+    }
+
+    func testModelListFailureDistinguishesMissingEndpointAndOtherServerFailures() {
+        XCTAssertEqual(AIModelClient.modelListRejection(status: 401), .accessDenied)
+        XCTAssertEqual(AIModelClient.modelListRejection(status: 404), .modelListEndpointUnavailable(404))
+        XCTAssertEqual(AIModelClient.modelListRejection(status: 405), .modelListEndpointUnavailable(405))
+        XCTAssertEqual(AIModelClient.modelListRejection(status: 429), .rateLimited)
+        XCTAssertEqual(AIModelClient.modelListRejection(status: 502), .modelListRequestFailed(502))
+    }
+
+    func testAppleLocaleCandidatesUseThePreferredRegionWithoutSwitchingLanguageOrScript() {
+        let candidates = AIModelClient.appleLocaleCandidates(
+            locale: Locale(identifier: "zh-Hans-HK"),
+            preferredLanguages: ["zh-Hans-CN", "zh-Hant-HK", "en-US"]
+        )
+        XCTAssertEqual(candidates.prefix(2).map(\.identifier), ["zh-Hans-HK", "zh-Hans-CN"])
+        XCTAssertTrue(candidates.allSatisfy { $0.language.languageCode == .chinese && $0.language.script?.identifier == "Hans" })
+        let normalized = AIModelClient.appleLocaleCandidates(locale: Locale(identifier: "zh-Hans-HK"), preferredLanguages: [])
+        XCTAssertTrue(normalized.contains(Locale(identifier: "zh-Hans-CN")))
+    }
+
     func testCompatibleCompletionIsStatelessAndUsesTheSelectedEffort() throws {
         let profile = try profile(effort: .xhigh)
         let request = try AIModelClient.completionRequest(
@@ -86,6 +128,7 @@ final class AIModelClientTests: XCTestCase {
 
     private func profile(effort: AIReasoningEffort = .medium, contextLimit: Int? = nil) throws -> AIProviderProfile {
         let base = try XCTUnwrap(AIModelClient.baseURL(from: "https://localhost:19443/v1"))
-        return AIProviderProfile(baseURL: base, model: "fixture-model", effort: effort, contextLimit: contextLimit)
+        return AIProviderProfile(baseURL: base, model: "fixture-model", effort: effort, contextLimit: contextLimit,
+                                 api: .chatCompletions)
     }
 }

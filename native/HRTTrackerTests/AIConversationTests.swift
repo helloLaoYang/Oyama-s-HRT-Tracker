@@ -1,5 +1,6 @@
 import HRTEngine
 import SwiftData
+import UIKit
 import XCTest
 @testable import HRTTracker
 
@@ -38,6 +39,71 @@ final class AIConversationTests: XCTestCase {
         let resources = try directory.resourceValues(forKeys: [.isExcludedFromBackupKey])
         XCTAssertEqual(resources.isExcludedFromBackup, true)
         #endif
+    }
+
+    @MainActor
+    func testMediaSurvivesReopeningWithoutEnteringConversationContext() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let image = try makeImageData()
+        let turn = AIChatTurn(date: .now, mode: .transfem, question: "What is in this image?",
+                              answer: "A red square", sources: [], reasoningSummary: "Private summary",
+                              generatedImage: image, attachmentNames: ["private-record.pdf"])
+        do {
+            let store = AIConversationStore(directory: directory)
+            try store.append(turn)
+        }
+
+        let reopened = AIConversationStore(directory: directory)
+        XCTAssertEqual(reopened.turns, [turn])
+        for includeRecentTurns in [false, true] {
+            let context = try reopened.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 100,
+                                               baseInput: "Question", includeRecentTurns: includeRecentTurns)
+            let text = context.recentTurns + context.summary + context.longTerm
+            XCTAssertFalse(text.contains("Private summary"))
+            XCTAssertFalse(text.contains("private-record.pdf"))
+            XCTAssertFalse(text.contains(image.base64EncodedString()))
+        }
+        try reopened.clear()
+        XCTAssertTrue(AIConversationStore(directory: directory).turns.isEmpty)
+    }
+
+    @MainActor
+    func testAttachmentImportValidatesContentAndSize() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let pdf = directory.appendingPathComponent("record.pdf")
+        let example = Data("%PDF-1.4\n%%EOF".utf8)
+        try example.write(to: pdf)
+        let document = try AIAssistantAttachment.loadFile(pdf)
+        XCTAssertEqual(document.name, "record.pdf")
+        XCTAssertTrue(document.isPDF)
+        XCTAssertTrue(document.isValidPayload)
+        XCTAssertEqual(document.data, example)
+        XCTAssertThrowsError(try AIAssistantAttachment.loadFile(pdf, maxBytes: example.count - 1))
+        try Data("Not a PDF".utf8).write(to: pdf)
+        XCTAssertThrowsError(try AIAssistantAttachment.loadFile(pdf))
+
+        let picture = directory.appendingPathComponent("picture.png")
+        let image = try makeImageData()
+        try image.write(to: picture)
+        XCTAssertTrue(try AIAssistantAttachment.loadFile(picture).isValidPayload)
+        XCTAssertTrue(AIAssistantGeneratedImage.isValid(image))
+        XCTAssertFalse(AIAssistantGeneratedImage.isValid(example))
+    }
+
+    @MainActor
+    private func makeImageData() throws -> Data {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+        return try XCTUnwrap(image.pngData())
     }
 
     @MainActor
@@ -122,5 +188,57 @@ final class AIConversationTests: XCTestCase {
         XCTAssertEqual(testosterone.labs.first?.unit, "ng/dl")
         XCTAssertTrue(testosterone.facts.contains { $0.id == "estimate-t" })
         XCTAssertFalse(testosterone.facts.contains { $0.id == "estimate-e2" })
+    }
+
+    @MainActor
+    func testDocumentSnapshotsAndEditsPersistWithoutEnteringChatContext() async throws {
+        let schema = TrackerStore.schema
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(
+            schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none))
+        let tracker = TrackerStore(context: container.mainContext, demo: true)
+        let snapshot = await AIInsightSnapshot.capture(store: tracker, range: .week)
+        let document = snapshot.document(.visit, at: tracker.now.addingTimeInterval(604_800), calendar: tracker.calendar)
+        let recap = snapshot.document(.recap, at: tracker.now, calendar: tracker.calendar)
+        XCTAssertEqual(document.end, tracker.now)
+        XCTAssertEqual(document.timeZoneID, tracker.calendar.timeZone.identifier)
+        XCTAssertEqual(document.doses.count, snapshot.doses.count)
+        XCTAssertEqual(document.labs.count, snapshot.labs.count)
+        XCTAssertTrue(document.estimates.isEmpty)
+        XCTAssertEqual(recap.doseCount, document.doseCount)
+        XCTAssertEqual(recap.doses.count, 1)
+        XCTAssertEqual(recap.labs.count, 1)
+        XCTAssertEqual(recap.estimates.first?.source, .curve)
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let prior = AIChatTurn(date: tracker.now, mode: tracker.mode, question: "Legacy question",
+                               answer: "Legacy answer", sources: [])
+        let visit = AIChatTurn(date: tracker.now, mode: tracker.mode, question: "Private document command",
+                               answer: document.exportText, sources: [], document: document)
+        do {
+            let conversation = AIConversationStore(directory: directory)
+            try conversation.append(prior)
+            try conversation.append(visit)
+            try conversation.updateDocument(visit.id, text: "Private doctor notes")
+        }
+
+        let reopened = AIConversationStore(directory: directory)
+        XCTAssertEqual(reopened.turns.first, prior)
+        let saved = try XCTUnwrap(reopened.turns.last?.document)
+        XCTAssertEqual(saved.start, document.start)
+        XCTAssertEqual(saved.end, document.end)
+        XCTAssertEqual(saved.labs, document.labs)
+        XCTAssertEqual(saved.exportText, "Private doctor notes")
+        let local = try reopened.context(mode: tracker.mode, modelLimit: 4_096, reservedTokens: 100,
+                                         baseInput: "Question", includeRecentTurns: true)
+        let remote = try reopened.context(mode: tracker.mode, modelLimit: 4_096, reservedTokens: 100,
+                                          baseInput: "Question", includeRecentTurns: false)
+        XCTAssertTrue(local.recentTurns.contains(prior.question))
+        for context in [local, remote] {
+            let rendered = context.recentTurns + context.summary + context.longTerm
+            XCTAssertFalse(rendered.contains(visit.question))
+            XCTAssertFalse(rendered.contains(saved.exportText))
+        }
     }
 }

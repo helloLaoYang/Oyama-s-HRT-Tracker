@@ -1,6 +1,238 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Medication record saved.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用药记录已保存。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medikationseintrag gespeichert."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prise enregistrée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投薬記録を保存しました。"
+          }
+        }
+      }
+    },
+    "Lab result saved.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "化验结果已保存。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laborwert gespeichert."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultat enregistré."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査結果を保存しました。"
+          }
+        }
+      }
+    },
+    "The record was saved. Could not save the chat receipt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录已保存，聊天回执保存失败。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Eintrag wurde gespeichert. Die Chat-Bestätigung konnte nicht gespeichert werden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le relevé a été enregistré. Le reçu de la discussion n’a pas pu être enregistré."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録は保存されました。チャットの保存結果は記録できませんでした。"
+          }
+        }
+      }
+    },
+    "Attachments to send": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将发送的附件"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu sendende Anhänge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pièces jointes à envoyer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信する添付ファイル"
+          }
+        }
+      }
+    },
+    "Generate image": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成图片"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild erstellen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générer une image"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像を生成"
+          }
+        }
+      }
+    },
+    "It also covers the files you attach to later messages for this model.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此授权也适用于以后附加到此模型消息的文件。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie gilt auch für Dateien, die du künftigen Nachrichten an dieses Modell anhängst."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle couvre aussi les fichiers que vous joindrez plus tard aux messages destinés à ce modèle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このモデルへの今後のメッセージに添付するファイルにも適用されます。"
+          }
+        }
+      }
+    },
+    "Reasoning summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推理摘要"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammenfassung der Überlegungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumé du raisonnement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推論の要約"
+          }
+        }
+      }
+    },
+    "Switch to a model that supports these attachments or image generation to send this message.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请切换到支持这些附件或图片生成的模型，再发送这条消息。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zum Senden ein Modell, das diese Anhänge oder die Bilderstellung unterstützt."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour envoyer ce message, choisissez un modèle qui prend en charge ces pièces jointes ou la génération d’images."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このメッセージを送信するには、添付ファイルや画像生成に対応するモデルに切り替えてください。"
+          }
+        }
+      }
+    },
     "Add memory": {
       "extractionState": "manual",
       "localizations": {
@@ -30,31 +262,60 @@
         }
       }
     },
-    "Answer a record question": {
+    "This approval also applies to future questions, record summaries, and any memory summaries you opt to include. Change it in Model settings.": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "回答记录问题"
+            "value": "本次授权也适用于后续问题、记录摘要和你选择加入的记忆摘要。可在模型设置中修改或撤销。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Frage zu Aufzeichnungen beantworten"
+            "value": "Diese Freigabe gilt auch für künftige Fragen, Aufzeichnungszusammenfassungen und optional einbezogene Erinnerungszusammenfassungen. Du kannst sie in den Modelleinstellungen ändern."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Répondre à une question sur les relevés"
+            "value": "Cette autorisation couvre aussi vos prochaines questions, les résumés de vos relevés et les résumés de mémoire que vous choisissez d’inclure. Modifiez-la dans les réglages du modèle."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録についての質問に答える"
+            "value": "この許可は、今後の質問、記録の要約、追加を選んだ記憶の要約にも適用されます。モデル設定で変更できます。"
+          }
+        }
+      }
+    },
+    "Answer a question": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答问题"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Frage beantworten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Répondre à une question"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "質問に回答"
           }
         }
       }
@@ -117,31 +378,31 @@
         }
       }
     },
-    "Ask about your records": {
+    "Ask a question": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "询问你的记录"
+            "value": "输入问题"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Frage zu deinen Aufzeichnungen"
+            "value": "Eine Frage stellen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Question sur vos relevés"
+            "value": "Posez une question"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録について質問"
+            "value": "質問を入力"
           }
         }
       }
@@ -258,6 +519,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "チャットはこのデバイスに保存されます"
+          }
+        }
+      }
+    },
+    "Ask about your records or a general topic.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以询问记录，也可以聊一般话题。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stelle Fragen zu deinen Aufzeichnungen oder zu einem allgemeinen Thema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posez une question sur vos relevés ou sur un sujet général."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録や一般的な話題について質問できます。"
           }
         }
       }
@@ -1393,31 +1683,31 @@
         }
       }
     },
-    "Organizing records…": {
+    "Preparing a reply…": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在整理记录…"
+            "value": "正在准备回复…"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aufzeichnungen werden geordnet …"
+            "value": "Antwort wird vorbereitet…"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Organisation des relevés…"
+            "value": "Préparation de la réponse…"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録を整理中…"
+            "value": "回答を準備中…"
           }
         }
       }

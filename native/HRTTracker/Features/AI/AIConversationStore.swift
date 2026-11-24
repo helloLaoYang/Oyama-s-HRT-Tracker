@@ -10,6 +10,10 @@ struct AIChatTurn: Identifiable, Equatable, Sendable {
     let question: String
     let answer: String
     let sources: [AIRecordReference]
+    var document: AIConversationDocument? = nil
+    var reasoningSummary: String? = nil
+    var generatedImage: Data? = nil
+    var attachmentNames: [String] = []
 }
 
 struct AIMemoryEntry: Identifiable, Equatable, Sendable {
@@ -98,11 +102,33 @@ final class AIConversationStore {
     func append(_ turn: AIChatTurn) throws {
         guard !turns.contains(where: { $0.id == turn.id }) else { return }
         let sources = try JSONEncoder().encode(turn.sources)
+        let document = try turn.document.map { try JSONEncoder().encode($0) }
+        let media = try AIConversationMedia(turn).map { try JSONEncoder().encode($0) }
         try write { context in
-            context.insert(AIStoredTurn(turn: turn, sequence: nextSequence, sources: sources))
+            context.insert(AIStoredTurn(turn: turn, sequence: nextSequence, sources: sources,
+                                        documentData: document, mediaData: media))
         }
         nextSequence += 1
         turns.append(turn)
+    }
+
+    func updateDocument(_ id: UUID, text: String) throws {
+        guard let index = turns.firstIndex(where: { $0.id == id }), var document = turns[index].document,
+              document.kind == .visit else { throw AIConversationError.unavailable }
+        document.editedText = text == document.generatedText ? nil : text
+        let data = try JSONEncoder().encode(document)
+        try write { context in
+            var request = FetchDescriptor<AIStoredTurn>(predicate: #Predicate { $0.id == id })
+            request.fetchLimit = 1
+            guard let record = try context.fetch(request).first else { throw AIConversationError.unavailable }
+            record.documentData = data
+        }
+        let current = turns[index]
+        turns[index] = AIChatTurn(id: current.id, date: current.date, mode: current.mode,
+                                  question: current.question, answer: document.exportText,
+                                  sources: current.sources, document: document,
+                                  reasoningSummary: current.reasoningSummary, generatedImage: current.generatedImage,
+                                  attachmentNames: current.attachmentNames)
     }
 
     func saveMemory(id: UUID?, mode: HRTMode, text: String) throws {
@@ -149,7 +175,7 @@ final class AIConversationStore {
 
         let available = inputLimit - baseCost
         let remembered = boundedMemory(for: mode, budget: min(2_048, available / 3))
-        let modeTurns = turns.filter { $0.mode == mode }
+        let modeTurns = turns.filter { $0.mode == mode && $0.document == nil }
         let stored = try checkpoint(for: mode)
         let boundary = stored.flatMap { digest in
             modeTurns.firstIndex { $0.id == digest.through }.map { $0 + 1 }
@@ -285,22 +311,49 @@ private final class AIStoredTurn {
     var question: String
     var answer: String
     var sources: Data
+    var documentData: Data? = nil
+    @Attribute(.externalStorage) var mediaData: Data? = nil
 
-    init(turn: AIChatTurn, sequence: Int, sources: Data) {
+    init(turn: AIChatTurn, sequence: Int, sources: Data, documentData: Data?, mediaData: Data?) {
         id = turn.id
         self.sequence = sequence
         date = turn.date
         mode = turn.mode.rawValue
         question = turn.question
-        answer = turn.answer
+        answer = documentData == nil ? turn.answer : ""
         self.sources = sources
+        self.documentData = documentData
+        self.mediaData = mediaData
     }
 
     var turn: AIChatTurn? {
         guard let mode = HRTMode(rawValue: mode) else { return nil }
         let references = (try? JSONDecoder().decode([AIRecordReference].self, from: sources)) ?? []
-        return AIChatTurn(id: id, date: date, mode: mode, question: question, answer: answer,
-                          sources: references)
+        let media = mediaData.flatMap { try? JSONDecoder().decode(AIConversationMedia.self, from: $0) }
+        let document: AIConversationDocument?
+        if let documentData {
+            guard let decoded = try? JSONDecoder().decode(AIConversationDocument.self, from: documentData) else { return nil }
+            document = decoded
+        } else {
+            document = nil
+        }
+        return AIChatTurn(id: id, date: date, mode: mode, question: question,
+                          answer: document?.exportText ?? answer, sources: references, document: document,
+                          reasoningSummary: media?.reasoningSummary, generatedImage: media?.generatedImage,
+                          attachmentNames: media?.attachmentNames ?? [])
+    }
+}
+
+private struct AIConversationMedia: Codable {
+    let reasoningSummary: String?
+    let generatedImage: Data?
+    let attachmentNames: [String]
+
+    init?(_ turn: AIChatTurn) {
+        guard turn.reasoningSummary != nil || turn.generatedImage != nil || !turn.attachmentNames.isEmpty else { return nil }
+        reasoningSummary = turn.reasoningSummary
+        generatedImage = turn.generatedImage
+        attachmentNames = turn.attachmentNames
     }
 }
 

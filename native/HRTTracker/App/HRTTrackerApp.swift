@@ -58,7 +58,7 @@ private enum TrackerTab: String, CaseIterable {
         switch self {
         case .overview: "Overview"
         case .history: "Records"
-        case .assistant: "AI"
+        case .assistant: "HRTrace"
         case .labs: "Checks"
         case .settings: "Settings"
         }
@@ -83,8 +83,9 @@ private struct TrackerRoot: View {
     @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var systemLocale
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedTab: TrackerTab = .overview
+    @State private var keyboardVisible = false
     @State private var showsAssistant = false
     @State private var opensCurveAfterAssistant = false
     @State private var concentrationScrollRequest = 0
@@ -103,9 +104,15 @@ private struct TrackerRoot: View {
                 .accessibilityIdentifier("tab.history")
 
             Color.clear
-                .tabItem { tab(.assistant) }
+                .accessibilityHidden(usesInlineAssistant)
+                .tabItem {
+                    if usesInlineAssistant {
+                        Text(verbatim: " ").accessibilityHidden(true)
+                    } else {
+                        tab(.assistant)
+                    }
+                }
                 .tag(TrackerTab.assistant)
-                .accessibilityIdentifier("tab.assistant")
 
             NavigationStack { LabsView(store: store) }
                 .tabItem { tab(.labs) }
@@ -118,6 +125,18 @@ private struct TrackerRoot: View {
                 .accessibilityIdentifier("tab.settings")
         }
         .id(language)
+        .overlay(alignment: .bottom) {
+            if usesInlineAssistant, !keyboardVisible {
+                assistantButton
+                    .offset(y: 3)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardVisible = false
+        }
         .sheet(isPresented: $showsAssistant, onDismiss: assistantDismissed) {
             AIAssistantView(store: store, modelSettings: modelSettings, conversation: conversation) {
                 opensCurveAfterAssistant = true
@@ -150,6 +169,8 @@ private struct TrackerRoot: View {
         }
     }
 
+    private var usesInlineAssistant: Bool { horizontalSizeClass == .compact }
+
     private var tabSelection: Binding<TrackerTab> {
         Binding(get: { selectedTab }, set: { tab in
             if tab == .assistant {
@@ -179,31 +200,28 @@ private struct TrackerRoot: View {
         Label {
             Text(tab.title)
         } icon: {
-            if tab == .assistant {
-                assistantIcon
-            } else {
-                tab.icon
-            }
+            tab.icon
         }
     }
 
-    private var assistantIcon: Image {
-        let size = CGSize(width: 28, height: 28)
-        let style: UIUserInterfaceStyle = (preferredScheme ?? colorScheme) == .dark ? .dark : .light
-        let traits = UITraitCollection(userInterfaceStyle: style)
-        let monochrome = store.appearance == .mono
-        let fill = UIColor(monochrome ? TrackerTheme.subtle : TrackerTheme.wash).resolvedColor(with: traits)
-        let tint = UIColor(monochrome ? TrackerTheme.ink : TrackerTheme.accent).resolvedColor(with: traits)
-        let configuration = UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)
-        let icon = UIImage(systemName: "sparkles", withConfiguration: configuration)?.withTintColor(tint, renderingMode: .alwaysOriginal)
-        let image = UIGraphicsImageRenderer(size: size).image { _ in
-            fill.setFill()
-            UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).fill()
-            if let icon {
-                icon.draw(at: CGPoint(x: (size.width - icon.size.width) / 2, y: (size.height - icon.size.height) / 2))
+    private var assistantButton: some View {
+        Button {
+            showsAssistant = true
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 26.5, weight: .light))
+                    .frame(height: 26)
+                Text(TrackerTab.assistant.title)
+                    .font(.system(size: 10, weight: .medium))
             }
+            .foregroundStyle(TrackerTheme.ink)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
         }
-        return Image(uiImage: image.withRenderingMode(.alwaysOriginal))
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(TrackerTab.assistant.title))
+        .accessibilityIdentifier("tab.assistant")
     }
 }
 
