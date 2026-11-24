@@ -79,7 +79,7 @@ const seedOld = (at: number): Record<string, string> =>
         'hrt-pk-params-at': String(at),
         'hrt-cal-method': 'mipd',
         'hrt-cal-history-mode': 'retrospective',
-        auth_user: JSON.stringify({ id: 'sentinel', username: 'not-signed-in' }),
+        auth_token: 'SECRET-TOKEN-SENTINEL',
         login_device_passes: JSON.stringify({ sentinel: 'SECRET-DEVICE-PASS' }),
     });
 
@@ -131,7 +131,7 @@ test.describe('complete backup replace (L3 browser)', () => {
         expect((await readStorage<Record<string, number>>(page, 'hrt-pk-params'))?.e2_kClear).toBe(0.43);
         expect(await readStorage(page, 'hrt-cal-method')).toBe('off');
         expect(await readStorage(page, 'hrt-cal-history-mode')).toBe('forward');
-        expect(await readStorage(page, 'auth_user')).toEqual({ id: 'sentinel', username: 'not-signed-in' });
+        expect(await readStorage(page, 'auth_token')).toBe('SECRET-TOKEN-SENTINEL');
         expect(await readStorage(page, 'login_device_passes')).toEqual({ sentinel: 'SECRET-DEVICE-PASS' });
         expect(await readStorage(page, REPLACE_JOURNAL_KEY)).toBeNull();
 
@@ -205,6 +205,8 @@ test.describe('complete backup replace (L3 browser)', () => {
         await dismissAlert(page);
         expect(await readStorage<DoseEventFixture[]>(page, 'hrt-events')).toEqual([event('old-local', 2, old)]);
         expect(await readStorage(page, 'hrt-weight')).toBe(70);
+        expect(await readStorage(page, 'hrt-weight-at')).toBe(old);
+        expect(await readStorage(page, 'hrt-cal-method')).toBe('mipd');
         expect(await readStorage(page, 'hrt-masc-events')).toEqual([event('old-masc', 30, old)]);
         expect(await readStorage(page, REPLACE_JOURNAL_KEY)).toBeNull();
     });

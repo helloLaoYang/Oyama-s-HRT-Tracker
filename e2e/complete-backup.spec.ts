@@ -97,8 +97,8 @@ test.describe('complete backup export (L3 browser)', () => {
                 'app-show-prediction': 'true',
                 'app-hide-site-label': 'true',
                 'hrt-supply-lead-days': '21',
-                // None of these may reach the bundle, even as a value.
-                auth_user: JSON.stringify({ id: 'sentinel', username: 'not-signed-in' }),
+                // Leftover credentials without a profile keep the local storage scope.
+                auth_token: 'SECRET-TOKEN-SENTINEL',
                 login_device_passes: JSON.stringify({ sentinel: 'SECRET-DEVICE-PASS' }),
             }),
         );
@@ -109,6 +109,7 @@ test.describe('complete backup export (L3 browser)', () => {
         expect(bundle.format).toBe('oyama-hrt-complete-backup');
         expect(bundle.formatVersion).toBe(1);
         expect(bundle.mode).toBe('transfem');
+        expect(bundle.sourceAccount).toBeUndefined();
         expect(bundle.modes.transfem.events).toEqual([localEvent]);
         expect(bundle.modes.transfem.labResults).toHaveLength(1);
         expect(bundle.modes.transfem.doseTemplates?.[0]?.name).toBe('Weekly EV');
@@ -338,6 +339,7 @@ test.describe('complete backup import (L3 browser)', () => {
         const exported = await downloadCompleteBackup(page);
         // The file names its account only by a hash, never by id or username.
         expect(exported.sourceAccount).toMatch(/^[0-9a-f]{64}$/);
+        assertNoCredentials(exported);
         expect(JSON.stringify(exported)).not.toContain(user.user.id);
         expect(JSON.stringify(exported)).not.toContain(user.user.username);
 
