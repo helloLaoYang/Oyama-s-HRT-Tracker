@@ -23,6 +23,11 @@ PACKAGE_LOCK = ROOT / "package-lock.json"
 TAURI_CONF = ROOT / "src-tauri" / "tauri.conf.json"
 CARGO_TOML = ROOT / "src-tauri" / "Cargo.toml"
 CARGO_LOCK = ROOT / "src-tauri" / "Cargo.lock"
+PBXPROJ = ROOT / "ios" / "App" / "App.xcodeproj" / "project.pbxproj"
+
+# Both the Debug and Release configurations carry this. It is the version
+# shown on the iPhone; CURRENT_PROJECT_VERSION stays a build number.
+MARKETING_VERSION = re.compile(r"(?m)^(\s*MARKETING_VERSION = )([^;\n]+)(;)")
 
 # The first `version = "..."` in Cargo.toml is the one under [package].
 CARGO_TOML_VERSION = re.compile(r'(?m)^(version\s*=\s*")([^"]+)(")')
@@ -49,6 +54,13 @@ def cargo_lock_pattern() -> re.Pattern:
     return re.compile(rf'(\[\[package\]\]\nname = "{name}"\nversion = ")([^"]+)(")')
 
 
+def read_marketing_version() -> str | None:
+    matches = [match[1].strip() for match in MARKETING_VERSION.findall(PBXPROJ.read_text(encoding="utf-8"))]
+    if len(matches) != 2 or matches[0] != matches[1]:
+        return None
+    return matches[0]
+
+
 def read_versions() -> dict:
     lock = read_json(PACKAGE_LOCK)
     tauri = read_json(TAURI_CONF)
@@ -61,6 +73,7 @@ def read_versions() -> dict:
         "src-tauri/tauri.conf.json": tauri.get("package", {}).get("version"),
         "src-tauri/Cargo.toml": cargo_toml.group(2) if cargo_toml else None,
         "src-tauri/Cargo.lock": cargo_lock.group(2) if cargo_lock else None,
+        "ios MARKETING_VERSION": read_marketing_version(),
     }
 
 
@@ -75,6 +88,14 @@ def update_package_lock(version: str) -> None:
     data["version"] = version
     data.setdefault("packages", {}).setdefault("", {})["version"] = version
     write_json(PACKAGE_LOCK, data)
+
+
+def update_marketing_version(version: str) -> None:
+    text = PBXPROJ.read_text(encoding="utf-8")
+    new_text, count = MARKETING_VERSION.subn(lambda m: f"{m.group(1)}{version}{m.group(3)}", text)
+    if count != 2:
+        sys.exit(f"expected 2 MARKETING_VERSION lines in {PBXPROJ}, found {count}")
+    PBXPROJ.write_text(new_text, encoding="utf-8")
 
 
 def update_tauri_conf(version: str) -> None:
@@ -123,6 +144,7 @@ def main() -> None:
     update_package_json(args.version)
     update_package_lock(args.version)
     update_tauri_conf(args.version)
+    update_marketing_version(args.version)
     replace_once(CARGO_TOML, CARGO_TOML_VERSION, args.version)
     replace_once(CARGO_LOCK, cargo_lock_pattern(), args.version)
 

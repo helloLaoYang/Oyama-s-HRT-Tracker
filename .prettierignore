@@ -1,5 +1,7 @@
 dist/
+dist-ios/
 dev-dist/
+ios/
 public/
 src-tauri/
 .wrangler/

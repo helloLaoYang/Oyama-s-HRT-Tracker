@@ -47,6 +47,7 @@ Desktop (Tauri) ───────┼──> Cloudflare Worker (worker.ts) �
 hrt-tool (HTTPS) ──────┘         │
 hrt-tool (raw hrt/1) ──> hrt-server ──> Worker
                                   └──> R2 (avatars)
+iPhone (Capacitor) ── local WKWebView localStorage; optional HTTPS to the same Worker
 ```
 
 There are two largely independent halves:
@@ -110,22 +111,23 @@ Important product constraints:
 
 ### Supporting directories
 
-| Path                                                        | Responsibility                                                                                                        |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `migrations/`                                               | D1 schema history. `0000`–`0013` exist at this snapshot. Add the next number; never edit a shipped migration.         |
-| `wrangler.toml`                                             | Worker entry, assets binding, D1/R2 bindings, rate-limit bindings, and cron trigger.                                  |
-| `src-tauri/`                                                | Tauri 1.8 desktop shell (Rust). It wraps the same web build; it is not a second frontend.                             |
-| `hrt-server/`                                               | Optional Node 22 raw TLS adapter for the `hrt/1` protocol. Disabled unless `HRT_RAW_ENABLED=1`.                       |
-| `docker/`, `Dockerfile`, `compose.yaml`                     | Self-hosted image and startup/migration reconciliation.                                                               |
-| `tests/`                                                    | Vitest tests (`tests/**/*.test.ts`, Node environment).                                                                |
-| `e2e/`                                                      | Playwright browser tests.                                                                                             |
-| `scripts/`                                                  | `set_version.py` (version synchronization) and `publish-wiki.sh` (GitHub wiki publisher).                             |
-| `.github/workflows/`                                        | CI, CodeQL, desktop builds, Docker publishing, and releases.                                                          |
-| `docs/`                                                     | Protocol, tool API, backup vectors, and this guide.                                                                   |
-| `wiki/`                                                     | Source for the GitHub wiki. Edit here, then publish with `scripts/publish-wiki.sh`; do not edit the wiki UI directly. |
-| `design/`                                                   | Screenshot/OG generators and the design-system document.                                                              |
-| `dist/`                                                     | Build output. Generated; never edit.                                                                                  |
-| `node_modules/`, `src-tauri/target/`, `.wrangler/`, `data/` | Generated or local runtime state. Never commit.                                                                       |
+| Path                                                        | Responsibility                                                                                                         |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `migrations/`                                               | D1 schema history. `0000`–`0013` exist at this snapshot. Add the next number; never edit a shipped migration.          |
+| `wrangler.toml`                                             | Worker entry, assets binding, D1/R2 bindings, rate-limit bindings, and cron trigger.                                   |
+| `src-tauri/`                                                | Tauri 1.8 desktop shell (Rust). It wraps the same web build; it is not a second frontend.                              |
+| `ios/`, `capacitor.config.ts`                               | Capacitor 8 iOS shell (Swift Package Manager). `npm run build:ios` writes a service-worker-free bundle to `dist-ios/`. |
+| `hrt-server/`                                               | Optional Node 22 raw TLS adapter for the `hrt/1` protocol. Disabled unless `HRT_RAW_ENABLED=1`.                        |
+| `docker/`, `Dockerfile`, `compose.yaml`                     | Self-hosted image and startup/migration reconciliation.                                                                |
+| `tests/`                                                    | Vitest tests (`tests/**/*.test.ts`, Node environment).                                                                 |
+| `e2e/`                                                      | Playwright browser tests.                                                                                              |
+| `scripts/`                                                  | `set_version.py` (version synchronization) and `publish-wiki.sh` (GitHub wiki publisher).                              |
+| `.github/workflows/`                                        | CI, CodeQL, desktop builds, an unsigned iOS archive, Docker publishing, and releases.                                  |
+| `docs/`                                                     | Protocol, tool API, backup vectors, and this guide.                                                                    |
+| `wiki/`                                                     | Source for the GitHub wiki. Edit here, then publish with `scripts/publish-wiki.sh`; do not edit the wiki UI directly.  |
+| `design/`                                                   | Screenshot/OG generators and the design-system document.                                                               |
+| `dist/`, `dist-ios/`                                        | Build output. Generated; never edit. `dist-ios/` is the service-worker-free bundle `build:ios` copies into Xcode.      |
+| `node_modules/`, `src-tauri/target/`, `.wrangler/`, `data/` | Generated or local runtime state. Never commit.                                                                        |
 
 ## 3. Frontend
 
@@ -377,6 +379,7 @@ Treat these as hard constraints, not suggestions:
 | Change docs or wiki             | `docs/`, `wiki/` (source), `README.md`, `README.zh-CN.md`                                                                                             | `npx prettier --check` on tracked files; publish wiki if needed         |
 | Add or upgrade a dependency     | `package.json`, `package-lock.json` (only with a dependency change), security floors                                                                  | `npm ci`, audit, full test/build; explain why the dependency is needed  |
 | Touch the desktop shell         | `src-tauri/`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`                                                                                           | `npm run tauri:build` or at least Rust checks, `rustDependencies` test  |
+| Touch the iOS shell             | `ios/`, `capacitor.config.ts`, `src/utils/nativeShell.ts`, `vite.config.ts` (`CAPACITOR_BUILD`)                                                       | `npm run build:ios` (`cap sync` on Linux; archive on a Mac)             |
 | Touch F2F, tool API, or `hrt/1` | `f2f.ts`, `hrtPairing.ts`, `toolApi.ts`, `hrt-server/`, the matching `docs/` page                                                                     | `f2f`, `hrtPairing`, `hrtServer`, `toolInterface` tests                 |
 | Fix a bug                       | Reproduce first, add a regression test, then fix                                                                                                      | targeted test, full `npm test`, typecheck, build                        |
 
@@ -412,8 +415,8 @@ The `CI` workflow (`.github/workflows/ci.yml`) runs two jobs:
 | Typecheck and build | version agreement, lint, Prettier check, `tsc --noEmit`, unit tests, production build          |
 | Browser E2E         | build, then Playwright against Vite + `wrangler dev --local` with throwaway D1/R2 under `/tmp` |
 
-Separate workflows cover CodeQL, desktop builds, Docker publishing, and
-releases. A change is not done because one test passed: run the gates that the
+Separate workflows cover CodeQL, desktop builds, an unsigned iOS archive
+(`.github/workflows/ios.yml` on `macos-26`), Docker publishing, and releases. A change is not done because one test passed: run the gates that the
 changed area touches, then the full set before opening a pull request.
 
 ### Test map

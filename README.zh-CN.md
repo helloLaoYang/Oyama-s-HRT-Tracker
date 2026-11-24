@@ -20,6 +20,8 @@
   &nbsp;&nbsp;&nbsp;
   <a href="https://github.com/xunxunProjects/Oyama-s-HRT-Tracker/releases/latest"><b>macOS 与 Windows 桌面版</b></a>
   &nbsp;&nbsp;&nbsp;
+  <a href="#在-iphone-上安装"><b>在自己的 iPhone 上安装</b></a>
+  &nbsp;&nbsp;&nbsp;
   <a href="#docker"><b>用 Docker 自行部署</b></a>
   &nbsp;&nbsp;&nbsp;
   <a href="#支持项目"><b>Buy us a coffee</b></a>
@@ -38,6 +40,7 @@
   - [备份与分享](#备份与分享)
   - [模型来源](#模型来源)
 - [命令行工具](#命令行工具)
+- [在 iPhone 上安装](#在-iphone-上安装)
 - [自行部署](#自行部署)
 - [参与贡献](#参与贡献)
 - [给 AI 开发者](#给-ai-开发者)
@@ -48,7 +51,7 @@
 
 **Oyama's HRT Tracker**（HRT 记录工具）是一个注重隐私的工具，用于记录激素替代疗法用药，并模拟这些剂量带来的激素水平。它提供女性化模式（雌二醇，以及醋酸环丙孕酮）和男性化模式（睾酮），也可以记录其他辅助用药。
 
-**可以在浏览器中使用，也可以安装为应用、在 macOS 与 Windows 上运行，或部署到你自己的服务器。**
+**可以在浏览器中使用，也可以安装为应用、在 macOS、Windows 和你自己的 iPhone 上运行，或部署到你自己的服务器。**
 
 <p align="center">
   <picture>
@@ -127,6 +130,88 @@
 - 保管库、会话和具名连接均加密存储。
 
 命令行工具仍在实验阶段，网站不依赖它，也不会接触 OpenPGP 密钥或口令。构建方式与发布下载见 [Tools 仓库](https://github.com/xunxunProjects/Oyama-s-HRT-Tracker-Tools)。
+
+# 在 iPhone 上安装
+
+有两条路。想要一个主屏幕图标，用 Safari 添加到主屏幕即可。想要一个装在手机上的 App，并且记录只留在这个 App 里，用你自己的 Mac 和 Xcode 从源码安装。两种方式都不会把用药记录上传到新的地方。
+
+## 添加到主屏幕
+
+网站已经是一个可安装的 PWA：构建结果带有 Web App Manifest、主屏幕图标，以及 `apple-mobile-web-app-capable`。
+
+1. 在 iPhone 上用 Safari 打开 <https://hrt.mahiro.uk>，或你自己部署的 **https** 地址。
+2. 点底部分享按钮。
+3. 点「添加到主屏幕」，名称保持 HRT Tracker。
+4. 从主屏幕打开。它会以独立窗口运行，记录保存在 Safari 的网站数据里。
+
+iOS 只允许把 https（或本机的 localhost）装到主屏幕。通过普通 http 访问局域网地址时，系统不会提供这一项。这种方式不需要 Mac，也不需要 Apple 开发者账号。Safari 里的记录和下面这个 App 里的记录不互通。
+
+## 用 Xcode 安装
+
+iPhone 上的 App 是 Capacitor 8 包起来的同一份网页。网页跑在 WKWebView 里，用药、检查和库存仍写在这个 App 自己的 localStorage 中。工程没有配置远程服务器，也不会为 iOS 新增网络请求。
+
+登录、云备份、分享链接和网站公告仍会在你使用它们时访问原来的服务器。手机离线或服务器不可用时，这些功能会失败，已经记在手机上的数据留在原处。iOS 构建不生成 Service Worker，避免它在 WKWebView 里拦截包内的页面；即使把带 Service Worker 的普通网页构建拷进工程，App 发现自己跑在 Capacitor 里也不会去注册它。
+
+图标和启动图来自现有的 `public/pwa-512x512.png`，与网站主屏幕图标、桌面版图标是同一张图。
+
+### 准备
+
+- Apple 芯片的 Mac
+- [Xcode 26](https://apps.apple.com/app/xcode/id497799835) 或更新版本。Capacitor 8 需要它。从 App Store 安装后，在终端运行一次 `xcode-select --install`；如果系统说命令行工具已经安装，就不用再装
+- Node.js 22 或更新版本
+- 一台用数据线连上 Mac 的 iPhone。第一次连接时，在手机上点「信任」
+- 这个工程用 Swift Package Manager。Xcode 第一次打开时会从 GitHub 下载 `capacitor-swift-pm`，当时需要能访问 GitHub。不需要安装 CocoaPods。如果你删掉 `ios/` 后用 `npx cap add ios --packagemanager CocoaPods` 重建工程，才需要先 `brew install cocoapods`
+
+### 构建并在 Xcode 里打开
+
+在仓库根目录：
+
+```bash
+git clone https://github.com/xunxunProjects/Oyama-s-HRT-Tracker.git
+cd Oyama-s-HRT-Tracker
+npm install
+npm run build:ios
+npx cap open ios
+```
+
+`npm run build:ios` 会做两件事：用 `CAPACITOR_BUILD=1` 把网页构建到 `dist-ios/`（这份构建没有 Service Worker），然后运行 `npx cap sync ios`，把网页拷进 `ios/App/App/public`，并写好 `capacitor.config.json`。
+
+网页已经构建过、只想再同步一次时：
+
+```bash
+npm run cap:sync
+```
+
+它不会重新构建网页。`dist-ios/` 还不存在时，请用 `npm run build:ios`。
+
+也可以在访达里双击 `ios/App/App.xcodeproj`。这是 SPM 工程，打开的是 `.xcodeproj`，仓库里没有 CocoaPods 的 `App.xcworkspace`。第一次打开时等 Swift Package 解析结束，再编译。
+
+显示版本与 `package.json` 相同，写在 Xcode 的 `MARKETING_VERSION` 里。改版本时仍用 `python3 scripts/set_version.py`，它会一起改这里。
+
+### 签名并装到手机
+
+1. Xcode 窗口顶部的运行设备选你的 iPhone。
+2. 左侧点蓝色的 App 工程，选中 **App** target，打开 **Signing & Capabilities**。
+3. 勾选 **Automatically manage signing**。
+4. **Team** 选你的 Personal Team，或付费开发者团队。还没有 Team 时，打开 **Xcode → Settings → Accounts**，登录 Apple ID。免费 Apple ID 会带出一个 Personal Team。
+5. Bundle Identifier 默认是 `com.hellolaoyang.hrttracker`。如果 Xcode 说这个标识已被占用，改 `capacitor.config.ts` 里的 `appId`，保存后运行 `npm run cap:sync`，再回到 Signing 页确认 Bundle Identifier 已经换成新的。
+6. 点左上角的 Run。第一次在手机上打开时，进入 **设置 → 通用 → VPN 与设备管理**（有的系统写「设备管理」），信任你的开发者证书。
+
+免费个人 Apple ID 的限制：
+
+- 装上大约 7 天后描述文件过期，图标还在，但点开无法通过验证。用同一台 Mac 打开这个工程，再点一次 Run，覆盖安装即可继续使用。
+- 同一时间大约只能有 3 个这样签名的 App。
+- 个人 Team 不能使用部分需要付费账号的能力。这个 App 用不到那些能力。
+
+加入 Apple Developer Program（每年 99 美元）之后，描述文件大约一年有效，也可以走 TestFlight。两种账号都是在你自己的 Mac 上签名，仓库不保存证书。
+
+### 记录放在哪里
+
+记录在这个 App 的 WKWebView 里，和 Safari、桌面版各自独立。覆盖安装（不要先删除 App）会保留记录。卸载、更换 Bundle Identifier，或先删掉再安装，记录会一起消失。免费账号每 7 天重签一次时，直接 Run 覆盖安装。为防重装，在设置里导出一份备份。
+
+### 未签名的构建产物
+
+`.github/workflows/ios.yml` 在 GitHub 的 macOS 26 runner 上打一个未签名的 `.ipa` 和 `.xcarchive`。它只用来确认工程能编译，不能装到手机上。装到自己的 iPhone 必须在你的 Mac 上用你的 Apple ID 签名。工作流在 iOS 工程或相关构建文件有改动时运行，也可以在 Actions 页面手动运行。
 
 # 自行部署
 

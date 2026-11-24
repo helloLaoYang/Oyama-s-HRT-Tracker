@@ -97,9 +97,9 @@ estimates run in the browser.
   ecosystem; Tauri and React majors are excluded and handled by hand.
 - **CodeQL** runs on the repository; the Docker publish workflow builds for
   `linux/amd64` and `linux/arm64`.
-- The Worker, the desktop app, and the Docker image share the version in
-  `package.json` / `src-tauri/Cargo.toml`; `scripts/set_version.py` keeps them
-  in step.
+- The Worker, the desktop app, the iOS `MARKETING_VERSION`, and the Docker
+  image share the version in `package.json` / `src-tauri/Cargo.toml`;
+  `scripts/set_version.py` keeps them in step.
 
 ## Attribution and licence
 
