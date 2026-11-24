@@ -7,7 +7,8 @@ import SwiftData
 @Observable
 final class TrackerStore {
     static let schema = Schema([
-        DoseRecord.self, LabRecord.self, MedicationPlanRecord.self, DoseTemplateRecord.self, TrackerProfileRecord.self
+        DoseRecord.self, LabRecord.self, MedicationPlanRecord.self, DoseTemplateRecord.self,
+        MedicationSupplyRecord.self, TrackerProfileRecord.self
     ])
 
     @ObservationIgnored private let context: ModelContext
@@ -19,6 +20,7 @@ final class TrackerStore {
     private var labRecords: [LabRecord] = []
     private var planRecords: [MedicationPlanRecord] = []
     private var templateRecords: [DoseTemplateRecord] = []
+    private var supplyRecords: [MedicationSupplyRecord] = []
 
     init(context: ModelContext, demo: Bool = false) {
         self.context = context
@@ -112,6 +114,29 @@ final class TrackerStore {
         }
     }
 
+    var pkOverrides: [String: Double] { profile.pkOverrides }
+
+    var pkParameters: PKParameters { PKParameters(overrides: pkOverrides) }
+
+    @discardableResult
+    func savePKOverrides(_ values: [String: Double]) -> Bool {
+        let next = PKParameters.normalizedOverrides(values)
+        guard next != pkOverrides else { return true }
+        return trySave(refresh: false) {
+            profile.pkOverrides = next
+            profile.pkParamsUpdatedAt = stamp
+            profile.updatedAt = stamp
+        }
+    }
+
+    var supplyLeadDays: Int {
+        get { profile.supplyLeadDays ?? 14 }
+        set {
+            guard (1...3650).contains(newValue), newValue != supplyLeadDays else { return }
+            updateProfile { profile.supplyLeadDays = newValue }
+        }
+    }
+
     var remindersEnabled: Bool {
         get { profile.remindersEnabled }
         set { updateProfile { profile.remindersEnabled = newValue } }
@@ -153,6 +178,32 @@ final class TrackerStore {
 
     var templates: [DoseTemplate] {
         templateRecords.filter { $0.modeRaw == mode.rawValue }.compactMap(\.value).sorted { $0.createdAt > $1.createdAt }
+    }
+
+    var supplies: [MedicationSupply] {
+        supplyRecords.filter { $0.modeRaw == mode.rawValue }.compactMap(\.value).sorted {
+            if $0.startedAt == $1.startedAt { return $0.id < $1.id }
+            return $0.startedAt > $1.startedAt
+        }
+    }
+
+    @discardableResult
+    func saveSupply(_ supply: MedicationSupply) -> Bool {
+        guard supply.isValid else { return false }
+        return trySave {
+            if let record = supplyRecords.first(where: { $0.modeRaw == mode.rawValue && $0.uuid == supply.id }) {
+                record.update(supply, updatedAt: stamp)
+            } else {
+                context.insert(MedicationSupplyRecord(mode: mode, value: supply, updatedAt: stamp))
+            }
+        }
+    }
+
+    @discardableResult
+    func deleteSupply(_ id: String) -> Bool {
+        trySave {
+            supplyRecords.filter { $0.modeRaw == mode.rawValue && $0.uuid == id }.forEach { context.delete($0) }
+        }
     }
 
     @discardableResult
@@ -332,10 +383,12 @@ final class TrackerStore {
         let labs = try context.fetch(FetchDescriptor<LabRecord>())
         let plans = try context.fetch(FetchDescriptor<MedicationPlanRecord>())
         let templates = try context.fetch(FetchDescriptor<DoseTemplateRecord>())
+        let supplies = try context.fetch(FetchDescriptor<MedicationSupplyRecord>())
         doseRecords = doses
         labRecords = labs
         planRecords = plans
         templateRecords = templates
+        supplyRecords = supplies
     }
 
     private func trySave(refresh: Bool = true, _ change: () -> Void) -> Bool {
@@ -378,6 +431,9 @@ final class TrackerStore {
         snapshot.weightUpdatedAt = profile.weightUpdatedAt
         snapshot.birthYearUpdatedAt = profile.birthYearUpdatedAt
         snapshot.modelSettingsUpdatedAt = profile.modelSettingsUpdatedAt
+        snapshot.pkOverrides = pkOverrides
+        snapshot.pkParamsUpdatedAt = profile.pkParamsUpdatedAt
+        snapshot.supplyLeadDays = supplyLeadDays
         snapshot.showPrediction = showPrediction
         snapshot.appearance = appearance
         snapshot.remindersEnabled = remindersEnabled
@@ -392,7 +448,10 @@ final class TrackerStore {
                     row.value.map { ($0, row.updatedAt) }
                 },
                 templates: templateRecords.filter { $0.modeRaw == rawMode }.compactMap(\.value)
-                    .sorted { $0.createdAt > $1.createdAt }
+                    .sorted { $0.createdAt > $1.createdAt },
+                supplies: supplyRecords.filter { $0.modeRaw == rawMode }.compactMap { row in
+                    row.value.map { ($0, row.updatedAt) }
+                }.sorted { $0.value.id < $1.value.id }
             )
         }
         return try TrackerBackup.write(snapshot, at: now)
@@ -400,9 +459,24 @@ final class TrackerStore {
 
     func previewBackup(_ data: Data) throws -> BackupPreview {
         let contents = try TrackerBackup.read(data, fallbackMode: mode, currentYear: calendar.component(.year, from: now))
+        var settings: [String] = []
+        if let overrides = contents.pkOverrides, overrides != pkOverrides,
+           shouldTake(contents.pkParamsUpdatedAt, over: profile.pkParamsUpdatedAt) {
+            settings.append(String(localized: "Drug parameters"))
+        }
+        if (contents.calibrationMethod != nil && contents.calibrationMethod != calibrationMethod ||
+            contents.calibrationHistory != nil && contents.calibrationHistory != calibrationHistory ||
+            contents.ageModelEnabled != nil && contents.ageModelEnabled != ageModelEnabled),
+           shouldTake(contents.modelSettingsUpdatedAt, over: profile.modelSettingsUpdatedAt) {
+            settings.append(String(localized: "Model settings"))
+        }
+        if let leadDays = contents.supplyLeadDays, leadDays != supplyLeadDays, profile.supplyLeadDays == nil {
+            settings.append(String(localized: "Inventory warning period"))
+        }
         return BackupPreview(
             counts: reconcileBackup(contents, apply: false),
             ignoredCategories: contents.ignoredCategories.sorted(),
+            settingsToImport: settings,
             contents: contents
         )
     }
@@ -464,6 +538,16 @@ final class TrackerStore {
                     context.insert(DoseTemplateRecord(mode: mode, value: template, updatedAt: template.updatedAt))
                 }
             }
+            let currentSupplies = Dictionary(supplyRecords.filter { $0.modeRaw == rawMode }.map { ($0.uuid, $0) },
+                                             uniquingKeysWith: { first, _ in first })
+            mergeBackupRecords(incoming.supplies, existing: currentSupplies, id: { $0.value.id },
+                               incomingStamp: { $0.stamp }, localStamp: \.updatedAt, counts: &counts, apply: apply) { entry, previous in
+                if let previous {
+                    previous.update(entry.value, updatedAt: entry.stamp)
+                } else {
+                    context.insert(MedicationSupplyRecord(mode: mode, value: entry.value, updatedAt: entry.stamp))
+                }
+            }
         }
         return counts
     }
@@ -489,12 +573,13 @@ final class TrackerStore {
         }
     }
 
+    private func shouldTake(_ incoming: Double?, over local: Double?) -> Bool {
+        guard let local else { return true }
+        guard let incoming else { return false }
+        return incoming > local
+    }
+
     private func importProfile(_ backup: BackupContents) {
-        func shouldTake(_ incoming: Double?, over local: Double?) -> Bool {
-            guard let local else { return true }
-            guard let incoming else { return false }
-            return incoming > local
-        }
         if let weight = backup.weight, shouldTake(backup.weightUpdatedAt, over: profile.weightUpdatedAt) {
             profile.weight = weight
             profile.weightUpdatedAt = backup.weightUpdatedAt ?? stamp
@@ -509,6 +594,13 @@ final class TrackerStore {
             if let history = backup.calibrationHistory { profile.calibrationHistoryRaw = history.rawValue }
             if let enabled = backup.ageModelEnabled { profile.ageModelEnabled = enabled }
             profile.modelSettingsUpdatedAt = backup.modelSettingsUpdatedAt ?? stamp
+        }
+        if let overrides = backup.pkOverrides, shouldTake(backup.pkParamsUpdatedAt, over: profile.pkParamsUpdatedAt) {
+            profile.pkOverrides = overrides
+            profile.pkParamsUpdatedAt = backup.pkParamsUpdatedAt ?? stamp
+        }
+        if let leadDays = backup.supplyLeadDays, profile.supplyLeadDays == nil {
+            profile.supplyLeadDays = leadDays
         }
         if profile.updatedAt == 0 {
             if let mode = backup.mode { profile.modeRaw = mode.rawValue }

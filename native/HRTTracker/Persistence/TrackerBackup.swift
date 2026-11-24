@@ -12,6 +12,7 @@ struct BackupCounts: Equatable {
 struct BackupPreview {
     let counts: BackupCounts
     let ignoredCategories: [String]
+    let settingsToImport: [String]
     let contents: BackupContents
 
     var added: Int { counts.added }
@@ -38,6 +39,7 @@ struct BackupContents {
         var labs: [LabResult] = []
         var plans: [(value: MedicationPlan, stamp: Double?)] = []
         var templates: [DoseTemplate] = []
+        var supplies: [(value: MedicationSupply, stamp: Double?)] = []
     }
 
     var modes: [HRTMode: ModeRecords] = [:]
@@ -51,6 +53,9 @@ struct BackupContents {
     var weightUpdatedAt: Double?
     var birthYearUpdatedAt: Double?
     var modelSettingsUpdatedAt: Double?
+    var pkOverrides: [String: Double]?
+    var pkParamsUpdatedAt: Double?
+    var supplyLeadDays: Int?
     var showPrediction: Bool?
     var appearance: AppAppearance?
     var remindersEnabled: Bool?
@@ -89,9 +94,12 @@ enum TrackerBackup {
             result.birthYear = year.flatMap { (1900...currentYear).contains($0) ? $0 : nil }
             result.includesBirthYear = raw is NSNull || result.birthYear != nil
         }
-        result.calibrationMethod = ((model["calibrationMethod"] ?? model["method"]) as? String)
-            .map { ["average": "mipd", "adaptive": "ekf"][$0] ?? $0 }
-            .flatMap(CalibrationMethod.init(rawValue:))
+        if let method = (model["calibrationMethod"] ?? model["method"]) as? String {
+            result.calibrationMethod = CalibrationMethod(rawValue: ["average": "mipd", "adaptive": "ekf"][method] ?? method)
+            if result.calibrationMethod == nil {
+                result.ignoredCategories.insert(String(localized: "Unsupported calibration method"))
+            }
+        }
         result.calibrationHistory = ((model["calibrationHistoryMode"] ?? model["historyMode"]) as? String)
             .flatMap(CalibrationHistoryMode.init(rawValue:))
         result.ageModelEnabled = (model["ageModelEnabled"] ?? model["ageBeta"]) as? Bool
@@ -102,7 +110,28 @@ enum TrackerBackup {
         result.appearance = ((preferences["theme"] ?? preferences["app-theme"]) as? String).flatMap(AppAppearance.init(rawValue:))
         result.remindersEnabled = preferences["remindersEnabled"] as? Bool
         result.snoozeMinutes = integer(preferences["snoozeMinutes"]).flatMap { [10, 15, 30, 60].contains($0) ? $0 : nil }
-        if profile["pkParams"] is [String: Any] { result.ignoredCategories.insert(String(localized: "Custom PK parameters")) }
+        result.supplyLeadDays = integer(preferences["supplyLeadDays"] ?? preferences["hrt-supply-lead-days"])
+            .flatMap { (1...3650).contains($0) ? $0 : nil }
+        result.pkParamsUpdatedAt = stamp(profile["pkParamsUpdatedAt"])
+        if let raw = profile["pkParams"] {
+            if raw is NSNull {
+                result.pkOverrides = [:]
+            } else if let values = raw as? [String: Any] {
+                let overrides = values.compactMapValues { value -> Double? in
+                    if let numeric = number(value) { return numeric }
+                    guard let text = value as? String, let numeric = Double(text.trimmingCharacters(in: .whitespacesAndNewlines)),
+                          numeric.isFinite else { return nil }
+                    return numeric
+                }
+                if overrides.keys.contains(where: { PKParameters.defaults[$0] != nil }) {
+                    result.pkOverrides = PKParameters.normalizedOverrides(overrides)
+                } else {
+                    result.ignoredCategories.insert(String(localized: "Invalid custom PK parameters"))
+                }
+            } else {
+                result.ignoredCategories.insert(String(localized: "Invalid custom PK parameters"))
+            }
+        }
 
         var entryCount = 0
         if let modes = object["modes"] as? [String: Any] {
@@ -154,6 +183,13 @@ enum TrackerBackup {
                     if let updatedAt = entry.stamp { raw["updatedAt"] = updatedAt }
                     return raw
                 },
+                "supplies": try records.supplies.map { entry -> [String: Any] in
+                    guard var raw = try encode(entry.value) as? [String: Any] else {
+                        throw TrackerBackupError.unsupported
+                    }
+                    if let updatedAt = entry.stamp { raw["updatedAt"] = updatedAt }
+                    return raw
+                },
             ]
         }
         var profile: [String: Any] = [
@@ -166,6 +202,10 @@ enum TrackerBackup {
         if let at = backup.weightUpdatedAt { profile["weightUpdatedAt"] = at }
         if let at = backup.birthYearUpdatedAt { profile["birthYearUpdatedAt"] = at }
         if let at = backup.modelSettingsUpdatedAt { profile["modelSettingsUpdatedAt"] = at }
+        if let overrides = backup.pkOverrides {
+            profile["pkParams"] = overrides.isEmpty ? NSNull() as Any : overrides
+        }
+        if let at = backup.pkParamsUpdatedAt { profile["pkParamsUpdatedAt"] = at }
         return try JSONSerialization.data(withJSONObject: [
             "format": nativeFormat, "formatVersion": 1, "createdAt": ISO8601DateFormatter().string(from: date),
             "app": [
@@ -175,6 +215,7 @@ enum TrackerBackup {
             "profile": profile, "modes": blocks, "preferences": [
                 "theme": backup.appearance?.rawValue ?? "system", "showPrediction": backup.showPrediction ?? false,
                 "remindersEnabled": backup.remindersEnabled ?? false, "snoozeMinutes": backup.snoozeMinutes ?? 15,
+                "supplyLeadDays": backup.supplyLeadDays ?? 14,
             ],
         ], options: [.prettyPrinted, .sortedKeys])
     }
@@ -186,9 +227,6 @@ enum TrackerBackup {
         if let quickDoses = raw["quickDoses"] as? [Any], !quickDoses.isEmpty {
             result.ignoredCategories.insert(String(localized: "Quick doses"))
         }
-        if let supplies = raw["supplies"] as? [Any], !supplies.isEmpty {
-            result.ignoredCategories.insert(String(localized: "Supplies"))
-        }
         if let deletions = raw["deletions"] as? [String: [String: Any]],
            deletions.values.contains(where: { !$0.isEmpty }) {
             result.ignoredCategories.insert(String(localized: "Deleted record history"))
@@ -196,6 +234,9 @@ enum TrackerBackup {
         mode.doses = records(raw["events"], invalid: &result.invalid, count: &entryCount, parse: parseDose)
         mode.labs = records(raw["labResults"], invalid: &result.invalid, count: &entryCount, parse: parseLab)
         mode.templates = records(raw["doseTemplates"], invalid: &result.invalid, count: &entryCount, parse: parseTemplate)
+        mode.supplies = records(raw["supplies"], invalid: &result.invalid, count: &entryCount) { supply in
+            parseSupply(supply).map { ($0, stamp(supply["updatedAt"])) }
+        }
         let planStamp = stamp(raw["planUpdatedAt"])
         mode.plans = records(raw["plan"], invalid: &result.invalid, count: &entryCount) { rawPlan in
             parsePlan(rawPlan).map { ($0, stamp(rawPlan["updatedAt"]) ?? planStamp) }
@@ -239,6 +280,19 @@ enum TrackerBackup {
             id: fields.id, name: name, route: fields.route, ester: fields.drug, doseMG: fields.dose,
             extras: fields.extras, createdAt: stamp(raw["createdAt"]) ?? 0, updatedAt: stamp(raw["updatedAt"])
         )
+    }
+
+    private static func parseSupply(_ raw: [String: Any]) -> MedicationSupply? {
+        var normalized = raw
+        if raw["pack"] == nil, let route = raw["route"] as? String, let amount = number(raw["amount"]) {
+            normalized["pack"] = ["kind": route == Route.patchApply.rawValue ? "patch" : "bulk"]
+            normalized["count"] = amount
+        }
+        guard id(normalized["id"]) != nil,
+              let data = try? JSONSerialization.data(withJSONObject: normalized),
+              let supply = try? JSONDecoder().decode(MedicationSupply.self, from: data),
+              supply.isValid else { return nil }
+        return supply
     }
 
     private static func parsePlan(_ raw: [String: Any]) -> MedicationPlan? {

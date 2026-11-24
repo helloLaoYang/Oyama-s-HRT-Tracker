@@ -92,7 +92,7 @@ public extension HRTEngine {
         }
     }
 
-    private static func plausibleBirthYear(_ year: Int?, nowH: Double) -> Int? {
+    internal static func plausibleBirthYear(_ year: Int?, nowH: Double) -> Int? {
         guard let year, year >= 1900 else { return nil }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
@@ -101,7 +101,8 @@ public extension HRTEngine {
     }
 
     private static func makeModels(
-        _ events: [DoseEvent], recordedCount: Int, weight: Double, birthYear: Int?, parameters: PKParameters
+        _ events: [DoseEvent], recordedCount: Int, weight: Double, birthYear: Int?, parameters: PKParameters,
+        absorptionMultiplier: Double = 1
     ) -> [KineticModel] {
         let pairings = PatchWear.removals(for: events, recordedCount: recordedCount)
         let weightRatio = max(1, weight) / 70
@@ -110,8 +111,63 @@ public extension HRTEngine {
             let event = events[index]
             guard event.route != .patchRemove, let hormone = Hormone(ester: event.ester) else { return nil }
             let wear = pairings[index].map { $0 - event.timeH } ?? PatchWear.planned(event) ?? .greatestFiniteMagnitude
-            return RouteParameters.model(event, hormone: hormone, weightFactor: weightFactor, birthYear: birthYear, parameters: parameters, wear: wear)
+            return RouteParameters.model(
+                event, hormone: hormone, weightFactor: weightFactor, birthYear: birthYear, parameters: parameters,
+                wear: wear, absorptionMultiplier: absorptionMultiplier
+            )
         }
+    }
+
+    // TS: src/domain/calibration/routeCurves.ts
+    internal static func estradiolRoutes(events: [DoseEvent], projectedEvents: [DoseEvent]) -> [Route] {
+        let seen = Set((events + projectedEvents).compactMap { dose -> Route? in
+            guard dose.route != .patchRemove, Hormone(ester: dose.ester) == .e2,
+                  dose.timeH.isFinite, dose.doseMG.isFinite else { return nil }
+            return dose.route
+        })
+        return Route.allCases.filter { seen.contains($0) }
+    }
+
+    internal static func estradiolRouteCurves(
+        events: [DoseEvent], projectedEvents: [DoseEvent], weight: Double, birthYear: Int?, times: [Double], routes: [Route],
+        parameters: PKParameters, clearanceMultiplier: Double, absorptionMultiplier: Double
+    ) -> [[Double]] {
+        var curves = Array(repeating: Array(repeating: 0.0, count: times.count), count: routes.count)
+        guard !routes.isEmpty, weight.isFinite, weight > 0 else { return curves }
+        let recorded = modeledEvents(events)
+        var personalized = parameters
+        personalized.e2Clearance *= clearanceMultiplier
+        personalized.e2InjectionClearance *= clearanceMultiplier
+        let routeIndices = Dictionary(uniqueKeysWithValues: routes.enumerated().map { ($1, $0) })
+        let models = makeModels(
+            recorded + modeledEvents(projectedEvents), recordedCount: recorded.count, weight: weight,
+            birthYear: birthYear, parameters: personalized, absorptionMultiplier: absorptionMultiplier
+        ).compactMap { model -> (model: KineticModel, route: Int)? in
+            guard model.hormone == .e2, let route = routeIndices[model.dose.route] else { return nil }
+            return (model, route)
+        }
+        let scale = 1e9 / (2 * weight * 1_000)
+        var active: [(model: KineticModel, route: Int)] = []
+        var next = 0
+        for (index, time) in times.enumerated() {
+            while next < models.count && models[next].model.dose.timeH <= time {
+                active.append(models[next])
+                next += 1
+            }
+            var item = 0
+            while item < active.count {
+                if time - active[item].model.dose.timeH > active[item].model.lifetime {
+                    active.swapAt(item, active.count - 1)
+                    active.removeLast()
+                } else {
+                    item += 1
+                }
+            }
+            for entry in active {
+                curves[entry.route][index] += entry.model.amount(at: time) * scale
+            }
+        }
+        return curves
     }
 
     private static func concentrations(_ models: [KineticModel], at timeH: Double, weight: Double) -> CurveSample {

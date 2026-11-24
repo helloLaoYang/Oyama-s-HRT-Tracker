@@ -3,6 +3,7 @@ import Foundation
 public enum CalibrationMethod: String, Codable, CaseIterable, Sendable {
     case off, mipd, ekf
     case ouKalman = "ou_kalman"
+    case bayes, mcmc
 }
 
 public enum CalibrationHistoryMode: String, Codable, CaseIterable, Sendable {
@@ -15,14 +16,27 @@ public struct Calibration: Sendable {
     public let kMul: Double
     public let fitErrPct: Double?
     public let count: Int
+    public let latestInterval: ClosedRange<Double>?
+    public let discounted: Int
+    public let drift: [String: Double]?
+    public let absMul: Double?
+    public let routeScales: [Route: Double]?
+    public let rHat: Double?
     private let multiplier: @Sendable (Double) -> Double
+    private let logUncertainty: (@Sendable (Double) -> Double)?
 
     public var halfLifeDeltaPct: Double { (1 / kMul - 1) * 100 }
 
     public func factor(at timeH: Double) -> Double { multiplier(timeH) }
 
-    fileprivate init(
+    /// Posterior standard deviation of the log multiplier, where the method supplies it.
+    public func factorSD(at timeH: Double) -> Double? { logUncertainty?(timeH) }
+
+    init(
         method: CalibrationMethod, scale: Double, kMul: Double, fitErrPct: Double?, count: Int,
+        latestInterval: ClosedRange<Double>? = nil, discounted: Int = 0, drift: [String: Double]? = nil,
+        absMul: Double? = nil, routeScales: [Route: Double]? = nil, rHat: Double? = nil,
+        factorSD: (@Sendable (Double) -> Double)? = nil,
         multiplier: @escaping @Sendable (Double) -> Double
     ) {
         self.method = method
@@ -30,6 +44,13 @@ public struct Calibration: Sendable {
         self.kMul = kMul
         self.fitErrPct = fitErrPct
         self.count = count
+        self.latestInterval = latestInterval
+        self.discounted = discounted
+        self.drift = drift
+        self.absMul = absMul
+        self.routeScales = routeScales
+        self.rHat = rHat
+        self.logUncertainty = factorSD
         self.multiplier = multiplier
     }
 }
@@ -49,13 +70,19 @@ public extension HRTEngine {
             }
             guard observed.isFinite, observed > 0, let predicted = simulation?.value(at: lab.timeH)?.e2,
                   predicted.isFinite, predicted >= 1 else { return nil }
-            return FitPoint(timeH: lab.timeH, observed: observed, predicted: predicted)
+            return FitPoint(timeH: lab.timeH, observed: observed, predicted: predicted, assay: lab.assay)
         }.sorted { $0.timeH < $1.timeH }
 
         guard let simulation, !points.isEmpty, method != .off else {
             return Calibration(method: method, scale: 1, kMul: 1, fitErrPct: nil, count: points.count, multiplier: { _ in 1 })
         }
         if method == .ouKalman { return FitMath.ouKalman(points, history: history) }
+        if method == .mcmc {
+            return PersonalPKCalibration.fit(
+                simulation: simulation, events: events, projectedEvents: projectedEvents, weight: weight,
+                birthYear: birthYear ?? simulation.birthYear, points: points, history: history
+            )
+        }
 
         let times = points.map(\.timeH)
         let observations = points.map { log($0.observed) }
@@ -64,6 +91,7 @@ public extension HRTEngine {
             simulation: simulation, times: times, events: events, projectedEvents: projectedEvents, weight: weight,
             birthYear: birthYear ?? simulation.birthYear, useClearance: useClearance
         )
+        if method == .bayes { return BayesianCalibration.fit(field: field, points: points, history: history) }
 
         func fit(count: Int) -> FitParameters {
             let allowClearance = useClearance && FitMath.clearanceIdentifiable(times.prefix(count))
@@ -93,19 +121,20 @@ public extension HRTEngine {
     }
 }
 
-private struct FitPoint {
+struct FitPoint: Sendable {
     let timeH: Double
     let observed: Double
     let predicted: Double
+    let assay: String?
 }
 
-private struct FitParameters: Sendable {
+struct FitParameters: Sendable {
     let amplitude: Double
     let clearance: Double
 }
 
 // TS: src/domain/calibration/estimators.ts
-private struct ClearanceField: Sendable {
+struct ClearanceField: Sendable {
     let logK: [Double]
     let simulations: [Simulation?]
     let logConcentrations: [[Double]]
@@ -173,7 +202,12 @@ private struct ClearanceField: Sendable {
         guard let unadjusted = baseline.value(at: time)?.e2, unadjusted >= 1, abs(parameters.clearance) >= 1e-9 else {
             return FitMath.clampFactor(scale)
         }
-        let k = FitMath.clampLogK(parameters.clearance)
+        return FitMath.clampFactor((scale * exp(logConcentration(at: time, clearance: parameters.clearance))) / unadjusted)
+    }
+
+    func logConcentration(at time: Double, clearance: Double) -> Double {
+        if logK.count == 1 { return Self.knot(baseline, baseline: baseline, at: time) }
+        let k = FitMath.clampLogK(clearance)
         let upper = upperIndex(k)
         let weight = (k - logK[upper - 1]) / (logK[upper] - logK[upper - 1])
         let logValue: Double
@@ -184,25 +218,51 @@ private struct ClearanceField: Sendable {
             let high = Self.knot(simulations[upper], baseline: baseline, at: time)
             logValue = low * (1 - weight) + high * weight
         }
-        return FitMath.clampFactor((scale * exp(logValue)) / unadjusted)
+        return logValue
+    }
+
+    func slope(at time: Double, clearance: Double) -> Double {
+        if clearance < logK[0] || clearance > logK[logK.count - 1] || logK.count == 1 { return 0 }
+        let upper = upperIndex(clearance)
+        let low = Self.knot(simulations[upper - 1], baseline: baseline, at: time)
+        let high = Self.knot(simulations[upper], baseline: baseline, at: time)
+        return (high - low) / (logK[upper] - logK[upper - 1])
     }
 }
 
-private enum FitMath {
+enum FitMath {
     static let minLogK = log(0.5)
     static let maxLogK = log(2.0)
-    private static let observationSD = 0.13
-    private static let amplitudePriorSD = 0.5
-    private static let clearancePriorSD = 0.35
-    private static let minimumClusters = 3
+    static let observationSD = 0.13
+    static let amplitudePriorSD = 0.5
+    static let clearancePriorSD = 0.35
+    static let minimumClusters = 3
+    static let labClusterHours = 6.0
+    static let studentDegrees = 4.0
 
     static func clampLogK(_ k: Double) -> Double { max(minLogK, min(maxLogK, k)) }
     static func clampFactor(_ level: Double) -> Double { max(0.01, min(100, level)) }
 
+    // TS: src/domain/calibration/bayes.ts, shared by Full Bayes and Personal PK.
+    static func labLogSD(_ point: FitPoint, simulation: Simulation) -> Double {
+        let assayFloor: Double
+        switch point.assay {
+        case "lcms": assayFloor = 2
+        case "immuno": assayFloor = 8
+        default: assayFloor = 5
+        }
+        let before = simulation.value(at: point.timeH - 0.25)?.e2 ?? 0
+        let after = simulation.value(at: point.timeH + 0.25)?.e2 ?? 0
+        let slope = before > 0 && after > 0 ? (log(after) - log(before)) / 0.5 : 0
+        let relativeFloor = assayFloor / point.observed
+        let variance = observationSD * observationSD + relativeFloor * relativeFloor + slope * slope
+        return min(2, sqrt(variance))
+    }
+
     static func clearanceIdentifiable(_ hours: ArraySlice<Double>) -> Bool {
         var anchor = -Double.infinity
         var clusters = 0
-        for hour in hours where hour - anchor > 6 {
+        for hour in hours where hour - anchor > labClusterHours {
             anchor = hour
             clusters += 1
         }

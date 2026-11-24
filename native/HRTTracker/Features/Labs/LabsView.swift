@@ -229,6 +229,10 @@ struct CalibrationSettingsView: View {
         let request = CheckRequest(store: store)
         let fit = checked?.request == request ? checked?.fit : nil
         Form {
+            Section {
+                NavigationLink("How these methods work") { CalibrationGuideView(parameters: store.pkParameters) }
+                    .accessibilityIdentifier("labs.calibration.guide")
+            }
             Section(LabText.localized("Current calibration")) {
                 Text(request.caption(fit))
                     .accessibilityIdentifier("labs.calibration.summary")
@@ -237,30 +241,54 @@ struct CalibrationSettingsView: View {
                         LabText.localized("Lab results used"),
                         value: LabText.localized("\(fit.count) results")
                     )
-                    if abs(fit.halfLifeDelta) >= 0.05 {
+                    if request.method != .ouKalman {
                         let change = LabText.number(fit.halfLifeDelta, digits: 1)
                         LabeledContent(LabText.localized("Half-life change"), value: "\(change)%")
                     }
-                }
-            }
-            if store.mode == .transfem {
-                Section {
-                    Picker(LabText.localized("Calibration method"), selection: $store.calibrationMethod) {
-                        ForEach([CalibrationMethod.off, .mipd, .ekf, .ouKalman], id: \.self) { method in
-                            Text(CheckRequest.methodTitle(method)).tag(method)
+                    if let interval = fit.calibration.latestInterval {
+                        let low = LabText.number(interval.lowerBound, digits: 2)
+                        let high = LabText.number(interval.upperBound, digits: 2)
+                        LabeledContent("Latest lab posterior interval") { Text(verbatim: "×\(low)–×\(high)") }
+                    }
+                    if let absorption = fit.calibration.absMul {
+                        let change = LabText.number((absorption - 1) * 100, digits: 1)
+                        LabeledContent("Absorption rate change") { Text(verbatim: "\(change)%") }
+                    }
+                    if let routes = fit.calibration.routeScales {
+                        ForEach(routes.keys.sorted { $0.rawValue < $1.rawValue }, id: \.self) { route in
+                            LabeledContent(route.trackerTitle) {
+                                Text(verbatim: "×" + LabText.number(routes[route] ?? 1, digits: 2))
+                            }
                         }
                     }
-                    .accessibilityIdentifier("labs.calibration.method")
-                    Picker(LabText.localized("History mode"), selection: $store.calibrationHistory) {
-                        Text(LabText.localized("Retrospective")).tag(CalibrationHistoryMode.retrospective)
-                        Text(LabText.localized("Forward")).tag(CalibrationHistoryMode.forward)
+                    if let drift = fit.calibration.drift?.max(by: { $0.value < $1.value }) {
+                        LabeledContent("Most likely drift") {
+                            Text(driftTitle(drift.key))
+                        }
                     }
-                    .accessibilityIdentifier("labs.calibration.history")
-                } footer: {
-                    Text(LabText.localized(store.calibrationHistory == .forward
-                        ? "Each lab result only affects estimates after its sample time."
-                        : "Uses available lab results to adjust the past curve."))
+                    if fit.calibration.discounted > 0 {
+                        LabeledContent("Labs given lower weight", value: fit.calibration.discounted.formatted())
+                    }
                 }
+            }
+            Section {
+                Picker(LabText.localized("Calibration method"), selection: $store.calibrationMethod) {
+                    ForEach(CalibrationMethod.allCases, id: \.self) { method in
+                        Text(method.guideTitle).tag(method)
+                    }
+                }
+                .accessibilityIdentifier("labs.calibration.method")
+                Picker(LabText.localized("History mode"), selection: $store.calibrationHistory) {
+                    Text(LabText.localized("Retrospective")).tag(CalibrationHistoryMode.retrospective)
+                    Text(LabText.localized("Forward")).tag(CalibrationHistoryMode.forward)
+                }
+                .accessibilityIdentifier("labs.calibration.history")
+            } footer: {
+                Text(store.calibrationMethod.guideSummary)
+                Text(LabText.localized(store.calibrationHistory == .forward
+                    ? "Each lab result only affects estimates after its sample time."
+                    : "Uses available lab results to adjust the past curve."))
+                if store.mode == .transmasc { Text("These settings apply to estradiol calibration.") }
             }
         }
         .scrollContentBackground(.hidden)
@@ -270,6 +298,16 @@ struct CalibrationSettingsView: View {
         .task(id: request) {
             let result = await request.calculate()
             if !Task.isCancelled { checked = (request, result?.fit) }
+        }
+    }
+
+    private func driftTitle(_ key: String) -> LocalizedStringKey {
+        switch key {
+        case "none": "No drift"
+        case "weeks": "Weeks"
+        case "months": "Months"
+        case "year": "About a year"
+        default: LocalizedStringKey(key)
         }
     }
 }
@@ -282,10 +320,12 @@ private struct CheckComparison: Identifiable, Sendable {
 }
 
 private struct CheckFit: Sendable {
-    let scale: Double
-    let error: Double?
-    let count: Int
-    let halfLifeDelta: Double
+    let calibration: Calibration
+
+    var scale: Double { calibration.scale }
+    var error: Double? { calibration.fitErrPct }
+    var count: Int { calibration.count }
+    var halfLifeDelta: Double { calibration.halfLifeDeltaPct }
 }
 
 private struct CheckAnalysis: Sendable {
@@ -298,6 +338,7 @@ private struct CheckRequest: Equatable, Sendable {
     let labs: [LabResult]
     let weight: Double
     let birthYear: Int?
+    let parameters: PKParameters
     let now: Double
     let mode: HRTMode
     let method: CalibrationMethod
@@ -309,6 +350,7 @@ private struct CheckRequest: Equatable, Sendable {
         labs = store.labs
         weight = store.weight
         birthYear = store.ageModelEnabled ? store.birthYear : nil
+        parameters = store.pkParameters
         now = floor(store.now.trackerHours)
         mode = store.mode
         method = store.calibrationMethod
@@ -316,12 +358,14 @@ private struct CheckRequest: Equatable, Sendable {
     }
 
     func calculate() async -> CheckAnalysis? {
-        await Task.detached(priority: .userInitiated) { buildAnalysis() }.value
+        let task = Task.detached(priority: .userInitiated) { buildAnalysis() }
+        return await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
     }
 
     private func buildAnalysis() -> CheckAnalysis? {
         guard !labs.isEmpty,
-              let simulation = HRTEngine.simulate(events: doses, weight: weight, nowH: now, birthYear: birthYear) else {
+              let simulation = HRTEngine.simulate(events: doses, weight: weight, nowH: now,
+                                                  birthYear: birthYear, parameters: parameters) else {
             return nil
         }
         let result = mode == .transfem && method != .off ? HRTEngine.calibrate(
@@ -329,9 +373,7 @@ private struct CheckRequest: Equatable, Sendable {
             birthYear: birthYear
         ) : nil
         let fit = result.flatMap { result in
-            result.count > 0 ? CheckFit(
-                scale: result.scale, error: result.fitErrPct, count: result.count, halfLifeDelta: result.halfLifeDeltaPct
-            ) : nil
+            result.count > 0 ? CheckFit(calibration: result) : nil
         }
         let points = labs.compactMap { lab -> CheckComparison? in
             guard let sample = simulation.value(at: lab.timeH),
@@ -360,6 +402,8 @@ private struct CheckRequest: Equatable, Sendable {
         case .mipd: "Hybrid-MIPD"
         case .ekf: "EKF"
         case .ouKalman: "OU-Kalman"
+        case .bayes: label("Full Bayes")
+        case .mcmc: label("Personal PK")
         }
     }
 }

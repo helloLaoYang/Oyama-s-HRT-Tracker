@@ -22,10 +22,11 @@ struct TrackerSettingsView: View {
                 }
                 .accessibilityIdentifier("settings.data")
                 NavigationLink {
-                    TrackerAboutView()
+                    TrackerAboutView(mode: store.mode, parameters: store.pkParameters)
                 } label: {
                     row("About", description: "Concentration model and disclaimer", icon: "info.circle")
                 }
+                .accessibilityIdentifier("settings.about")
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 17)
@@ -57,12 +58,10 @@ struct TrackerSettingsView: View {
 
 private struct GeneralTrackerSettings: View {
     @Bindable var store: TrackerStore
-    @State private var birthYearText = ""
-    @FocusState private var birthYearFocused: Bool
 
     var body: some View {
         Form {
-            Section {
+            Section("What the estimates use") {
                 Picker("HRT mode", selection: $store.mode) {
                     Text("Transfeminine").tag(HRTMode.transfem)
                     Text("Transmasculine").tag(HRTMode.transmasc)
@@ -72,18 +71,37 @@ private struct GeneralTrackerSettings: View {
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
-                Toggle("Include age in the model", isOn: $store.ageModelEnabled)
-                if store.ageModelEnabled {
-                    TextField("Birth year (optional)", text: $birthYearText)
-                        .keyboardType(.numberPad)
-                        .focused($birthYearFocused)
-                        .onChange(of: birthYearText) { _, text in
-                            if text.isEmpty { store.birthYear = nil }
-                            else if let year = Int(text), (1900...Calendar.current.component(.year, from: store.now)).contains(year) {
-                                store.birthYear = year
-                            }
-                        }
+                Toggle(isOn: $store.ageModelEnabled) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Age adjustment (Beta)")
+                        Text("Adjusts the estimate by age. Evidence is stronger for testosterone than for estradiol.")
+                            .font(.footnote)
+                            .foregroundStyle(TrackerTheme.muted)
+                    }
                 }
+                if store.ageModelEnabled {
+                    NavigationLink { AgeModelSettingsView(store: store) } label: {
+                        LabeledContent("Age") {
+                            Text(store.birthYear.map { String(store.calendar.component(.year, from: store.now) - $0) }
+                                 ?? label("Not set"))
+                        }
+                    }
+                    .accessibilityIdentifier("settings.age")
+                }
+                NavigationLink { DrugParametersView(store: store) } label: {
+                    LabeledContent("Edit parameters") {
+                        if !store.pkOverrides.isEmpty { Text("Customized").foregroundStyle(TrackerTheme.accent) }
+                    }
+                }
+                .accessibilityIdentifier("settings.pkParameters")
+            }
+            Section("Inventory") {
+                NavigationLink { InventoryView(store: store) } label: {
+                    LabeledContent("Medication inventory") {
+                        if !store.supplies.isEmpty { Text(store.supplies.count.formatted()).monospacedDigit() }
+                    }
+                }
+                .accessibilityIdentifier("settings.inventory")
             }
             Section {
                 NavigationLink {
@@ -97,13 +115,62 @@ private struct GeneralTrackerSettings: View {
                 NavigationLink("Medication plan") { MedicationPlansView(store: store) }
             }
         }
-        .onAppear { birthYearText = store.birthYear.map(String.init) ?? "" }
         .navigationTitle("General settings")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct AgeModelSettingsView: View {
+    let store: TrackerStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var birthYearText: String
+
+    init(store: TrackerStore) {
+        self.store = store
+        _birthYearText = State(initialValue: store.birthYear.map(String.init) ?? "")
+    }
+
+    private var lastYear: Int { store.calendar.component(.year, from: store.now) }
+
+    private var selectedYear: Int? {
+        Int(birthYearText.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { (1900...lastYear).contains($0) ? $0 : nil }
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Birth year (optional)", text: $birthYearText).keyboardType(.numberPad)
+                if let selectedYear {
+                    LabeledContent("Age", value: (lastYear - selectedYear).formatted())
+                    if lastYear - selectedYear < 19 {
+                        Text("The model uses an extrapolation for ages below 19.")
+                            .font(.footnote)
+                            .foregroundStyle(TrackerTheme.muted)
+                    }
+                }
+            } footer: {
+                Text("The model uses the year to estimate age when each recorded dose was taken.")
+            }
+            if store.birthYear != nil {
+                Section {
+                    Button("Remove birth year", role: .destructive) {
+                        store.birthYear = nil
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .navigationTitle("Age adjustment (Beta)")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { birthYearFocused = false }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    if let selectedYear {
+                        store.birthYear = selectedYear
+                        dismiss()
+                    }
+                }
+                .disabled(selectedYear == nil)
             }
         }
     }
@@ -147,9 +214,14 @@ private extension AppAppearance {
 }
 
 private struct TrackerAboutView: View {
+    let mode: HRTMode
+    let parameters: PKParameters
+
     var body: some View {
         List {
             Section("About concentration estimates") {
+                NavigationLink("Model explanation") { ModelGuideView(mode: mode, parameters: parameters) }
+                    .accessibilityIdentifier("settings.modelGuide")
                 Text("Concentrations are model estimates and may differ substantially from laboratory results.")
             }
             Section("Disclaimer") {
@@ -207,6 +279,11 @@ private struct TrackerDataSettings: View {
                 List {
                     Section("Import preview") {
                         countRows(preview.counts)
+                    }
+                    if !preview.settingsToImport.isEmpty {
+                        Section("Settings to import") {
+                            ForEach(preview.settingsToImport, id: \.self) { Text($0) }
+                        }
                     }
                     if !preview.ignoredCategories.isEmpty {
                         Section("Skipped categories") {

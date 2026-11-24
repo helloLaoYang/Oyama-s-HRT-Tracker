@@ -398,6 +398,7 @@ struct ForecastView: View {
         }
         let timeline = TimelineRequest(events: store.doses, labs: store.labs, mode: store.mode,
                                        weight: store.weight, birthYear: store.ageModelEnabled ? store.birthYear : nil,
+                                       parameters: store.pkParameters,
                                        method: store.calibrationMethod,
                                        history: store.calibrationHistory, scheduled: plans, now: store.nowH, range: .week)
         return ForecastRequest(timeline: timeline, weeks: weeks, drafts: drafts,

@@ -5,6 +5,56 @@ final class DesignSmokeTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testWebModelSettingsAndInventory() {
+        let app = launchDemo()
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.about"].tap()
+        app.buttons["settings.modelGuide"].tap()
+        XCTAssertTrue(app.navigationBars["模型说明"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["一次用药"].exists)
+        screenshot("15-model-guide", in: app)
+        app.navigationBars["模型说明"].buttons.firstMatch.tap()
+        app.navigationBars["关于"].buttons.firstMatch.tap()
+
+        app.buttons["settings.general"].tap()
+        app.buttons["settings.pkParameters"].tap()
+        XCTAssertTrue(app.navigationBars["药物参数编辑"].waitForExistence(timeout: 8))
+        let parameter = app.textFields["pk.value.e2_ff_EB"]
+        let oldValue = parameter.value as? String ?? ""
+        XCTAssertFalse(oldValue.isEmpty)
+        parameter.tap()
+        parameter.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldValue.count) + "0.2")
+        app.buttons["pk.save"].tap()
+        XCTAssertTrue(element("pk.customized", in: app).waitForExistence(timeout: 6))
+        screenshot("16-drug-parameters", in: app)
+        app.navigationBars["药物参数编辑"].buttons.firstMatch.tap()
+
+        app.buttons["settings.inventory"].tap()
+        XCTAssertTrue(app.navigationBars["药量库存"].waitForExistence(timeout: 8))
+        app.buttons["inventory.add"].tap()
+        let count = app.textFields["inventory.count"].firstMatch
+        XCTAssertTrue(count.waitForExistence(timeout: 8))
+        count.tap()
+        count.typeText("1")
+        app.buttons["inventory.save"].tap()
+        let stock = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "inventory.supply.")).firstMatch
+        XCTAssertTrue(stock.waitForExistence(timeout: 8))
+        screenshot("17-medication-inventory", in: app)
+        app.tabBars.buttons["概览"].tap()
+        let lowStock = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "inventory.alert.")).firstMatch
+        XCTAssertTrue(lowStock.waitForExistence(timeout: 8))
+
+        app.tabBars.buttons["检查"].tap()
+        app.buttons["labs.calibration"].tap()
+        XCTAssertTrue(app.navigationBars["校准设置"].waitForExistence(timeout: 8))
+        element("labs.calibration.method", in: app).tap()
+        XCTAssertTrue(app.buttons["个人药代"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["全贝叶斯"].firstMatch.tap()
+        let fit = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "全贝叶斯 · ×")).firstMatch
+        XCTAssertTrue(fit.waitForExistence(timeout: 20))
+        screenshot("18-advanced-calibration", in: app)
+    }
+
     func testOverviewLayoutAndSimulationNavigation() {
         let app = launchDemo()
         let overview = app.scrollViews.firstMatch

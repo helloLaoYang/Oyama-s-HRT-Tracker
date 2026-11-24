@@ -1,8 +1,8 @@
 import Foundation
 
 /// Overrides use the same keys and limits as the Web PK configuration.
-public struct PKParameters: Sendable {
-    private static let defaults: [String: Double] = [
+public struct PKParameters: Equatable, Sendable {
+    public static let defaults: [String: Double] = [
         "e2_kClear": 0.41, "e2_kClearInj": 0.041,
         "e2_ff_EB": 0.1092, "e2_ff_EV": 0.0623, "e2_ff_EC": 0.1173, "e2_ff_EN": 0.12, "e2_ff_EU": 0.04,
         "e2_oral_bio": 0.03, "e2_sl_quick": 0.01, "e2_sl_casual": 0.04, "e2_sl_standard": 0.11, "e2_sl_strict": 0.18,
@@ -13,16 +13,26 @@ public struct PKParameters: Sendable {
     private var values = Self.defaults
 
     public init(overrides: [String: Double] = [:]) {
-        for (key, value) in overrides where values[key] != nil && value.isFinite {
-            switch key {
-            case "e2_kClear", "t_kClear":
-                values[key] = min(5, max(0.001, value))
-            case "e2_kClearInj", "t_kClearInj":
-                values[key] = min(1, max(0.001, value))
-            default:
-                values[key] = min(1, max(0, value))
-            }
+        for (key, value) in overrides where value.isFinite {
+            guard let range = Self.range(for: key) else { continue }
+            values[key] = min(range.upperBound, max(range.lowerBound, value))
         }
+    }
+
+    public static func range(for key: String) -> ClosedRange<Double>? {
+        guard defaults[key] != nil else { return nil }
+        switch key {
+        case "e2_kClear", "t_kClear": return 0.001...5
+        case "e2_kClearInj", "t_kClearInj": return 0.001...1
+        default: return 0...1
+        }
+    }
+
+    /// Web settings treat the old testosterone formation fractions as unset.
+    public static func normalizedOverrides(_ input: [String: Double]) -> [String: Double] {
+        let formerDefaultKeys: Set<String> = ["t_ff_TC", "t_ff_TE", "t_ff_TU"]
+        let parameters = Self(overrides: input.filter { !(formerDefaultKeys.contains($0.key) && $0.value == 0.025) })
+        return parameters.values.filter { defaults[$0.key] != $0.value }
     }
 
     fileprivate subscript(_ key: String) -> Double { values[key] ?? 0 }
@@ -101,9 +111,26 @@ struct KineticModel {
     enum Kernel {
         case single(absorption: Double, hydrolysis: Double, fraction: Double)
         case depot(share: Double, fast: Double, slow: Double, hydrolysis: Double, fraction: Double)
-        case sublingual(share: Double, slow: Double, fastHydrolysis: Double, slowHydrolysis: Double, fastFraction: Double, slowFraction: Double, fastClearance: Double?)
+        case sublingual(share: Double, fast: Double, slow: Double, fastHydrolysis: Double, slowHydrolysis: Double, fastFraction: Double, slowFraction: Double, fastClearance: Double?)
         case wear(absorption: Double, fraction: Double, release: Double, hours: Double)
         case cpa
+
+        func scalingAbsorption(by multiplier: Double) -> Self {
+            switch self {
+            case let .single(absorption, hydrolysis, fraction):
+                .single(absorption: absorption * multiplier, hydrolysis: hydrolysis, fraction: fraction)
+            case let .depot(share, fast, slow, hydrolysis, fraction):
+                .depot(share: share, fast: fast * multiplier, slow: slow * multiplier, hydrolysis: hydrolysis, fraction: fraction)
+            case let .sublingual(share, fast, slow, fastHydrolysis, slowHydrolysis, fastFraction, slowFraction, fastClearance):
+                .sublingual(
+                    share: share, fast: fast * multiplier, slow: slow * multiplier, fastHydrolysis: fastHydrolysis,
+                    slowHydrolysis: slowHydrolysis, fastFraction: fastFraction, slowFraction: slowFraction, fastClearance: fastClearance
+                )
+            case let .wear(absorption, fraction, release, hours):
+                .wear(absorption: absorption * multiplier, fraction: fraction, release: release, hours: hours)
+            case .cpa: self
+            }
+        }
     }
 
     let dose: DoseEvent
@@ -120,7 +147,7 @@ struct KineticModel {
         case let .wear(_, fraction, release, _): return release > 0 || (dose.doseMG > 0 && fraction > 0)
         case let .single(absorption, _, fraction): return dose.doseMG > 0 && absorption > 0 && fraction > 0
         case let .depot(_, fast, slow, _, fraction): return dose.doseMG > 0 && (fast > 0 || slow > 0) && fraction > 0
-        case let .sublingual(share, _, _, _, fastFraction, slowFraction, _):
+        case let .sublingual(share, _, _, _, _, fastFraction, slowFraction, _):
             return dose.doseMG > 0 && (share * fastFraction > 0 || (1 - share) * slowFraction > 0)
         case .cpa: return dose.doseMG > 0
         }
@@ -143,8 +170,8 @@ struct KineticModel {
             rates = [absorption, hydrolysis, clearance]
         case let .depot(_, fast, slow, hydrolysis, _):
             rates = [fast, slow, hydrolysis, clearance]
-        case let .sublingual(_, slow, fastHydrolysis, slowHydrolysis, _, _, fastClearance):
-            rates = [1.8, slow, fastHydrolysis, slowHydrolysis, clearance, fastClearance ?? 0]
+        case let .sublingual(_, fast, slow, fastHydrolysis, slowHydrolysis, _, _, fastClearance):
+            rates = [fast, slow, fastHydrolysis, slowHydrolysis, clearance, fastClearance ?? 0]
         case let .wear(absorption, _, _, _):
             rates = [absorption, clearance]
         case .cpa:
@@ -162,8 +189,8 @@ struct KineticModel {
         case let .depot(share, fast, slow, hydrolysis, fraction):
             return KineticMath.amount(elapsed, amount * share, fraction, fast, hydrolysis, clearance)
                 + KineticMath.amount(elapsed, amount * (1 - share), fraction, slow, hydrolysis, clearance)
-        case let .sublingual(share, slow, fastHydrolysis, slowHydrolysis, fastFraction, slowFraction, fastClearance):
-            return KineticMath.amount(elapsed, amount * share, fastFraction, 1.8, fastHydrolysis, fastClearance ?? clearance)
+        case let .sublingual(share, fast, slow, fastHydrolysis, slowHydrolysis, fastFraction, slowFraction, fastClearance):
+            return KineticMath.amount(elapsed, amount * share, fastFraction, fast, fastHydrolysis, fastClearance ?? clearance)
                 + KineticMath.amount(elapsed, amount * (1 - share), slowFraction, slow, slowHydrolysis, clearance)
         case let .wear(absorption, fraction, release, hours):
             let delivery = min(elapsed, hours)
@@ -200,7 +227,8 @@ enum RouteParameters {
     static let sublingualTiers = ["quick", "casual", "standard", "strict"]
 
     static func model(
-        _ event: DoseEvent, hormone: Hormone, weightFactor: Double, birthYear: Int?, parameters: PKParameters, wear: Double
+        _ event: DoseEvent, hormone: Hormone, weightFactor: Double, birthYear: Int?, parameters: PKParameters, wear: Double,
+        absorptionMultiplier: Double = 1
     ) -> KineticModel {
         let clearance: Double
         let kernel: KineticModel.Kernel
@@ -217,7 +245,9 @@ enum RouteParameters {
             clearance = base * ageFactor(birthYear, event.timeH, slope: log(1821.0 / 1390) / 40) * weightFactor
             kernel = testosterone(event, parameters: parameters, wear: wear)
         }
-        return KineticModel(dose: event, hormone: hormone, clearance: clearance, kernel: kernel, wear: wear)
+        let personalKernel = hormone == .e2 && absorptionMultiplier != 1
+            ? kernel.scalingAbsorption(by: absorptionMultiplier) : kernel
+        return KineticModel(dose: event, hormone: hormone, clearance: clearance, kernel: personalKernel, wear: wear)
     }
 
     private static func estradiol(
@@ -243,7 +273,7 @@ enum RouteParameters {
                 theta = parameters["e2_sl_\(tier)"]
             }
             return .sublingual(
-                share: theta, slow: oralAbsorption, fastHydrolysis: hydrolysis, slowHydrolysis: oralHydrolysis,
+                share: theta, fast: 1.8, slow: oralAbsorption, fastHydrolysis: hydrolysis, slowHydrolysis: oralHydrolysis,
                 fastFraction: equivalent, slowFraction: oralFraction, fastClearance: hydrolysis == 0 ? clearance * (1.2 / 0.41) : nil
             )
         case .gel:

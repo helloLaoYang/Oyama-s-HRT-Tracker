@@ -136,6 +136,7 @@ struct TimelineRequest: Equatable, Sendable {
     let mode: HRTMode
     let weight: Double
     let birthYear: Int?
+    let parameters: PKParameters
     let method: CalibrationMethod
     let history: CalibrationHistoryMode
     let scheduled: [ScheduledMedication]
@@ -177,7 +178,8 @@ struct TimelineModel: Sendable {
     static func calculate(_ request: TimelineRequest) -> Self? {
         let now = request.now
         guard !Task.isCancelled, let recorded = HRTEngine.simulate(
-            events: request.events, weight: request.weight, nowH: now, birthYear: request.birthYear
+            events: request.events, weight: request.weight, nowH: now, birthYear: request.birthYear,
+            parameters: request.parameters
         ), let modelEnd = recorded.points.last?.timeH else { return nil }
         let first = min(now, request.events.map(\.timeH).min() ?? now) - 24
         let span = request.range.hours ?? modelEnd - first
@@ -189,7 +191,7 @@ struct TimelineModel: Sendable {
             .filter(HRTEngine.supportsConcentration)
         let projected = scheduled.isEmpty ? nil : HRTEngine.simulate(
             events: request.events, weight: request.weight, nowH: now,
-            birthYear: request.birthYear, throughH: chartEnd, projectedEvents: scheduled
+            birthYear: request.birthYear, throughH: chartEnd, parameters: request.parameters, projectedEvents: scheduled
         )
         let projectedCalibration = projected.flatMap {
             request.calibration(for: $0, events: request.events, projectedEvents: scheduled)

@@ -36,6 +36,7 @@ struct OverviewView: View {
                 }
                 currentLevel
                 todayPlan
+                InventoryAlertsView(store: store)
                 Divider().overlay(TrackerTheme.separator)
                 if let timeline, !timeline.traces.isEmpty {
                     ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
@@ -127,6 +128,7 @@ struct OverviewView: View {
             : []
         return TimelineRequest(events: store.doses, labs: store.labs, mode: store.mode,
                                weight: store.weight, birthYear: store.ageModelEnabled ? store.birthYear : nil,
+                               parameters: store.pkParameters,
                                method: store.calibrationMethod,
                                history: store.calibrationHistory, scheduled: scheduled, now: store.now.trackerHours,
                                range: range)

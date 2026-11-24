@@ -231,6 +231,27 @@ final class DoseTemplateRecord {
 }
 
 @Model
+final class MedicationSupplyRecord {
+    var uuid: String = ""
+    var modeRaw: String = "transfem"
+    var content: Data?
+    var updatedAt: Double?
+
+    init(mode: HRTMode, value: MedicationSupply, updatedAt: Double?) {
+        modeRaw = mode.rawValue
+        update(value, updatedAt: updatedAt)
+    }
+
+    var value: MedicationSupply? { decodeRecord(MedicationSupply.self, from: content) }
+
+    func update(_ value: MedicationSupply, updatedAt: Double?) {
+        uuid = value.id
+        content = encodeRecord(value)
+        self.updatedAt = updatedAt
+    }
+}
+
+@Model
 final class TrackerProfileRecord {
     var modeRaw: String = "transfem"
     var weight: Double = 70
@@ -245,7 +266,15 @@ final class TrackerProfileRecord {
     var weightUpdatedAt: Double?
     var birthYearUpdatedAt: Double?
     var modelSettingsUpdatedAt: Double?
+    var pkOverridesData: Data?
+    var pkParamsUpdatedAt: Double?
+    var supplyLeadDays: Int?
     var updatedAt: Double = 0
+
+    var pkOverrides: [String: Double] {
+        get { decodeRecord([String: Double].self, from: pkOverridesData) ?? [:] }
+        set { pkOverridesData = newValue.isEmpty ? nil : encodeRecord(newValue) }
+    }
 
     init() {}
 }

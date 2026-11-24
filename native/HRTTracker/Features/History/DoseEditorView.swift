@@ -84,7 +84,9 @@ struct DoseEditorView: View {
         _patchMG = State(initialValue: savedDose.map { Self.inputText($0 / Double(count)) } ?? "")
         _patchCount = State(initialValue: count)
         _wearDays = State(initialValue: extras[HistoryText.wearKey].map { Self.inputText($0 / 24) } ?? "")
-        let hold = extras[HistoryText.thetaKey].map { HRTEngine.sublingualHoldMinutes(fromTheta: $0) }
+        let hold = extras[HistoryText.thetaKey].map {
+            HRTEngine.sublingualHoldMinutes(fromTheta: $0, parameters: store.pkParameters)
+        }
         _sublingualTier = State(initialValue: hold == nil
             ? Tier(rawValue: Self.boundedIndex(extras[HistoryText.tierKey], through: 3, default: 2)) ?? .standard : .custom)
         _holdMinutes = State(initialValue: hold.map(Self.inputText) ?? "10")
@@ -419,7 +421,7 @@ struct DoseEditorView: View {
         wearDays = template.extras[HistoryText.wearKey].map { Self.inputText($0 / 24) } ?? ""
         if let theta = template.extras[HistoryText.thetaKey] {
             sublingualTier = .custom
-            holdMinutes = Self.inputText(HRTEngine.sublingualHoldMinutes(fromTheta: theta))
+            holdMinutes = Self.inputText(HRTEngine.sublingualHoldMinutes(fromTheta: theta, parameters: store.pkParameters))
         } else {
             sublingualTier = Tier(rawValue: Self.boundedIndex(template.extras[HistoryText.tierKey], through: 3, default: 2)) ?? .standard
         }
@@ -457,7 +459,7 @@ struct DoseEditorView: View {
                     formError = HistoryText.localized("Enter a hold time of at least 1 minute.")
                     return nil
                 }
-                extras[HistoryText.thetaKey] = HRTEngine.sublingualTheta(fromHoldMinutes: minutes)
+                extras[HistoryText.thetaKey] = HRTEngine.sublingualTheta(fromHoldMinutes: minutes, parameters: store.pkParameters)
             } else {
                 extras[HistoryText.tierKey] = Double(sublingualTier.rawValue)
             }

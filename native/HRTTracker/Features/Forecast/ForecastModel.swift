@@ -131,7 +131,8 @@ struct ForecastResult: Sendable {
         let end = now + Double(input.weeks * 7 * 24)
         let series: ConcentrationSeries = request.mode == .transfem ? .e2 : .testosterone
         let actual = request.events
-        let recorded = HRTEngine.simulate(events: actual, weight: request.weight, nowH: now, birthYear: request.birthYear)
+        let recorded = HRTEngine.simulate(events: actual, weight: request.weight, nowH: now,
+                                          birthYear: request.birthYear, parameters: request.parameters)
         let calibration = recorded.flatMap { request.calibration(for: $0, events: actual) }
         let history = recorded.map {
             TimelineModel.plotPoints($0, in: (now - 14 * 24)...now, series: series, calibration: calibration)
@@ -172,7 +173,7 @@ struct ForecastResult: Sendable {
         let events = fixed + future
         guard events.contains(where: series.canPlot),
               let simulation = HRTEngine.simulate(events: fixed, weight: request.weight, nowH: request.now,
-                                                 birthYear: request.birthYear, throughH: end,
+                                                 birthYear: request.birthYear, throughH: end, parameters: request.parameters,
                                                  projectedEvents: future) else { return nil }
         let scenarioCalibration = request.calibration(for: simulation, events: fixed, projectedEvents: future)
         let window = request.now...end
@@ -185,18 +186,21 @@ struct ForecastResult: Sendable {
         let steadyHour = steadyState(simulation, start: start, end: end, cycle: cycle,
                                      series: series, calibration: scenarioCalibration)
         let sigma = log1p(max(0, calibration?.fitErrPct ?? 0) / 100)
-        guard sigma > 0 || (habits.missRate > 0 || habits.timingSpread > 0) && !future.isEmpty else {
+        let hasPosterior = scenarioCalibration?.factorSD(at: request.now) != nil
+        guard hasPosterior || sigma > 0 || (habits.missRate > 0 || habits.timingSpread > 0) && !future.isEmpty else {
             return ForecastOutcome(id: id, expected: expected, band: [], metrics: metrics, steadyHour: steadyHour, runs: 1)
         }
 
         let grid = Array(stride(from: request.now, through: end, by: 1))
+        let deviations = hasPosterior ? grid.map { scenarioCalibration?.factorSD(at: $0) ?? sigma } :
+                                        Array(repeating: sigma, count: grid.count)
         var perHour = grid.map { _ in [Double]() }
         let recent = fixed.filter { $0.timeH >= request.now - 120 * 24 }
         var random = ForecastNoise(seed: UInt64(id + 1) + UInt64(max(0, request.now.rounded(.down))))
         var runs = 0
         for _ in 0..<48 {
             guard !Task.isCancelled else { return nil }
-            let scale = exp(sigma * random.normal())
+            let draw = random.normal()
             let shifted = future.compactMap { event -> DoseEvent? in
                 guard random.uniform() >= habits.missRate else { return nil }
                 var event = event
@@ -205,11 +209,11 @@ struct ForecastResult: Sendable {
                 return event
             }
             guard let run = HRTEngine.simulate(events: recent, weight: request.weight, nowH: request.now,
-                                               birthYear: request.birthYear, throughH: end,
+                                               birthYear: request.birthYear, throughH: end, parameters: request.parameters,
                                                projectedEvents: shifted) else { continue }
             for (index, hour) in grid.enumerated() {
                 if let sample = run.value(at: hour) {
-                    perHour[index].append(series.value(sample, calibration: scenarioCalibration) * scale)
+                    perHour[index].append(series.value(sample, calibration: scenarioCalibration) * exp(deviations[index] * draw))
                 }
             }
             runs += 1
