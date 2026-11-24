@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Info, Share, ChevronRight } from '../components/icons';
+import { Info, ChevronRight } from '../components/icons';
 import {
     DoseEvent,
     Ester,
@@ -18,15 +18,13 @@ import RollingNumber from '../components/RollingNumber';
 import LevelRail from '../components/LevelRail';
 import PixelCat from '../components/PixelCat';
 import DoseDoodle from '../components/DoseDoodle';
-import CommunityVotePrompt from '../components/CommunityVotePrompt';
 import Doodle from '../components/Doodle';
 import Tick from '../components/Tick';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { usePixelCats } from '../contexts/PixelCatContext';
 import { useDialog } from '../contexts/DialogContext';
-import { AppTheme } from '../constants';
 import { useTranslation } from '../contexts/LanguageContext';
-import { getShareCopy } from '../i18n/share';
+import { AppTheme } from '../constants';
 import { Regimen, Supply, supplyStatus } from '../utils/regimen';
 import { PlanItem, planStatus, matchesItem } from '../utils/plan';
 import { planItemLabel, supplyLabel, dueLabel, fill, fillNodes } from '../utils/regimenText';
@@ -50,9 +48,6 @@ interface HomeProps {
     theme: AppTheme;
     onNavigateToHistory: () => void;
     onNavigateToLab: () => void;
-    onNavigateToShare: () => void;
-    authToken: string | null;
-    onAuthRequired: () => void;
     regimens: Regimen[];
     supplies: Supply[];
     nowH: number;
@@ -67,9 +62,6 @@ interface HomeProps {
     onNavigateToPlan: () => void;
     /** Where a running-low line leads: the stock it is about, to recount or restock. */
     onNavigateToSupplies: () => void;
-    /** Bottom-of-page community vote nudge; opens the vote page or sign-in. */
-    onNavigateToCommunityVote: () => void;
-    onCommunityVoteSignIn: () => void;
 }
 
 const Home: React.FC<HomeProps> = ({
@@ -88,9 +80,6 @@ const Home: React.FC<HomeProps> = ({
     theme,
     onNavigateToHistory,
     onNavigateToLab,
-    onNavigateToShare,
-    authToken,
-    onAuthRequired,
     regimens,
     supplies,
     nowH,
@@ -102,8 +91,6 @@ const Home: React.FC<HomeProps> = ({
     onUndoPlanLog,
     onNavigateToPlan,
     onNavigateToSupplies,
-    onNavigateToCommunityVote,
-    onCommunityVoteSignIn,
 }) => {
     const isDarkMode =
         theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -113,7 +100,6 @@ const Home: React.FC<HomeProps> = ({
     const { showCats } = usePixelCats();
     const { lang } = useTranslation();
     const { showDialog } = useDialog();
-    const shareCopy = getShareCopy(lang);
     // Ties each plan row's buttons to the drug they log (aria-describedby).
     const rowIdBase = React.useId();
 
@@ -341,21 +327,6 @@ const Home: React.FC<HomeProps> = ({
                                             size={13}
                                             className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
                                         />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (!authToken) {
-                                                onAuthRequired();
-                                                return;
-                                            }
-                                            onNavigateToShare();
-                                        }}
-                                        className={`${muted} tap-target inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 -mr-2 text-xs font-medium hover:text-[var(--text)] hover:bg-[var(--surface-hover)]`}
-                                        title={shareCopy.modalDescription}
-                                    >
-                                        <Share size={14} strokeWidth={1.75} />
-                                        {shareCopy.action}
                                     </button>
                                 </div>
 
@@ -799,7 +770,6 @@ const Home: React.FC<HomeProps> = ({
                         </button>
                     </div>
                 )}
-                <CommunityVotePrompt onVote={onNavigateToCommunityVote} onSignIn={onCommunityVoteSignIn} />
             </main>
         </div>
     );

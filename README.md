@@ -37,7 +37,7 @@
   - [Doses and plans](#doses-and-plans)
   - [Lab results](#lab-results)
   - [Supplies](#supplies)
-  - [Backup and sharing](#backup-and-sharing)
+  - [Backup](#backup)
   - [Where the model comes from](#where-the-model-comes-from)
 - [Command-line tools](#command-line-tools)
 - [Install on your own iPhone](#install-on-your-own-iphone)
@@ -80,7 +80,7 @@ See [DONATE.md](./DONATE.md) for how donations are split (40% project, 30% @fant
 
 ## Why it is different
 
-- **Private by default**: your records stay in your browser unless you turn on cloud backup or make a share link, and both are end-to-end encrypted.
+- **Private by default**: your records stay on this device. There is no account, no cloud backup, and no share link. Export a file when you want a copy.
 - **Open source**: every line is public under the MIT License, so anyone can check how the estimates are made.
 - **Free**: no subscriptions, no paid features, no ads. Donations are optional and never unlock anything; see [DONATE.md](./DONATE.md).
 - **Speaks your language**: Simplified Chinese, Traditional Chinese, Cantonese, English, Japanese, Korean, Turkish, Russian and Ukrainian.
@@ -108,10 +108,9 @@ See [DONATE.md](./DONATE.md) for how donations are split (40% project, 30% @fant
 - Keep track of how much of each medicine you have
 - Logged doses are subtracted automatically, and the overview warns you before you run out
 
-## Backup and sharing
+## Backup
 
-- Back up to the cloud with end-to-end encryption, or export a file
-- Share a read-only link to your dose history and curve; the key lives only in the link, and lab results, weight and account details are never included
+- Export a file of your records, or import one you exported earlier. The file stays on your device until you move it yourself
 - Read the [privacy notice](./PRIVACY.md) for every detail
 
 ## Where the model comes from
@@ -150,7 +149,7 @@ iOS only offers this for https (or localhost). A plain http address on your LAN 
 
 The iPhone app is the same web app inside a Capacitor 8 shell. It runs in WKWebView. Doses, labs, and supplies stay in that app's own localStorage. The project points at no server and adds no new network calls.
 
-Signing in, cloud backup, share links, and the site notice still contact the existing server when you use them. Offline, or when that server is down, those features fail and the records already on the phone stay put. The iOS build omits the service worker so it cannot intercept the bundled pages. If a normal web build is copied into the shell, the app sees Capacitor and does not register the worker.
+The iOS app is the same local tracker. It does not sign in, sync to a server, or show the WebView address (`localhost`). The iOS build omits the service worker so it cannot intercept the bundled pages. If a normal web build is copied into the shell, the app sees Capacitor and does not register the worker.
 
 The icon and splash image are generated from `public/pwa-512x512.png`, the same artwork as the website and the desktop app.
 
@@ -276,10 +275,10 @@ docker compose up -d --build
 To open the app over plain http from another device (for example
 `http://192.168.1.5:8787`), set `HRT_BIND_HOST=0.0.0.0` in `.env` or run
 `./docker-install.sh --mode lan --port 18787`, or put the container behind a
-reverse proxy first. Backups, exports and share links stay end-to-end encrypted
-over plain http too. Browsers do hold back a few features until the page is
-served over https (or opened as `localhost`): installing it as an app, offline
-use, and passkey sign-in. To get those, put the container behind any https
+reverse proxy first. An exported backup is a file on your device. Browsers do
+hold back a few features until the page is served over https (or opened as
+`localhost`): installing it as an app, and offline use. To get those, put the
+container behind any https
 reverse proxy, such as [Caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy)
 (`caddy reverse-proxy --from your.domain --to localhost:8787`) or
 [Tailscale Serve](https://tailscale.com/kb/1312/serve).
@@ -404,9 +403,9 @@ repository.
    ```
 
    Wrangler prints a `workers.dev` address. To use your own domain, add it under
-   the Worker's Settings, Domains & Routes in the Cloudflare dashboard. If share
-   links should use a different address than the one people open, set the
-   variable `PUBLIC_APP_ORIGIN` (for example `https://hrt.example.com`).
+   the Worker's Settings, Domains & Routes in the Cloudflare dashboard. If the
+   site should be known by a different address than the one people open, set
+   `PUBLIC_APP_ORIGIN` (for example `https://hrt.example.com`).
 
 7. **Set the secrets**
 

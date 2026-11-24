@@ -64,9 +64,9 @@ both bundles can import them.
 
 Important product constraints:
 
-- **Local-first.** Dose, lab, weight, and supply records live in the browser by
-  default. Do not add a feature that uploads health data without a clear,
-  explicit user choice.
+- **Local-only.** Dose, lab, weight, and supply records live on the device.
+  The app has no account, cloud backup, or share link. Do not add a feature
+  that uploads health data.
 - **End-to-end encryption.** Cloud backups and share snapshots are encrypted in
   the browser. The Worker stores ciphertext and the metadata needed to route
   it; it does not receive the passphrase or plaintext snapshot.

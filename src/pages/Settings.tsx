@@ -12,6 +12,7 @@ import Tabs, { useSwitchAnimation } from '../components/Tabs';
 import { fill } from '../utils/regimenText';
 import { voteStatusAt } from '../../communityVote';
 import { navDepth, pushNavEntry, readNavEntry, replaceNavEntry, stepBack, TAB_RESELECT } from '../hooks/navHistory';
+import { isNativeAppShell } from '../utils/nativeShell';
 
 interface SettingsProps {
     t: (key: string) => string;
@@ -42,9 +43,6 @@ interface SettingsProps {
     onNavigateToAge: () => void;
     onNavigateToExport: () => void;
     onNavigateToImport: () => void;
-    autoSync: boolean;
-    setAutoSync: (v: boolean) => void;
-    isLoggedIn: boolean;
     devMode: boolean;
     setDevMode: (v: boolean) => void;
     hideSiteLabel: boolean;
@@ -54,8 +52,6 @@ interface SettingsProps {
     onNavigateToMilkTea: () => void;
     onNavigateToCatStates: () => void;
     onNavigateToSimulator: () => void;
-    isAdmin: boolean;
-    onNavigateToAdmin: () => void;
     onNavigateToSupplies: () => void;
     supplyCount: number;
 }
@@ -176,9 +172,6 @@ const Settings: React.FC<SettingsProps> = ({
     onNavigateToAge,
     onNavigateToExport,
     onNavigateToImport,
-    autoSync,
-    setAutoSync,
-    isLoggedIn,
     devMode,
     setDevMode,
     hideSiteLabel,
@@ -188,8 +181,6 @@ const Settings: React.FC<SettingsProps> = ({
     onNavigateToMilkTea,
     onNavigateToCatStates,
     onNavigateToSimulator,
-    isAdmin,
-    onNavigateToAdmin,
     onNavigateToSupplies,
     supplyCount,
 }) => {
@@ -380,36 +371,11 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
                 )}
             </div>
-
-            {/* Desktop reaches the admin area from the left nav rail; on mobile that
-                rail doesn't exist, so this is the only way in. */}
-            {isAdmin && (
-                <div className="md:hidden">
-                    <SectionHeading title={t('settings.section.admin')} />
-                    <div className={section}>
-                        <NavRow label={t('admin.dashboard')} onClick={() => navTo(onNavigateToAdmin, 'general')} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 
     const renderData = () => (
         <div className="space-y-8">
-            {isLoggedIn && (
-                <div>
-                    <SectionHeading title={t('settings.section.sync')} />
-                    <div className={section}>
-                        <SwitchRow
-                            label={t('settings.auto_sync')}
-                            desc={t('settings.auto_sync_desc')}
-                            checked={autoSync}
-                            onChange={setAutoSync}
-                        />
-                    </div>
-                </div>
-            )}
-
             <SectionHeading title={t('settings.section.backup')} />
             <div className={section}>
                 <NavRow label={t('export.title')} onClick={() => navTo(onNavigateToExport, 'data')} />
@@ -473,7 +439,7 @@ const Settings: React.FC<SettingsProps> = ({
                     checked={devMode}
                     onChange={setDevMode}
                 />
-                {devMode && (
+                {devMode && !isNativeAppShell(window) && (
                     <SwitchRow
                         label={t('settings.hide_site_label')}
                         desc={t('settings.hide_site_label_desc')}

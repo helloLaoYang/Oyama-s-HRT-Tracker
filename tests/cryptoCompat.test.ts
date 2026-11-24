@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { decryptCloudPayload, decryptData, deriveCloudKey, encryptCloudPayload, encryptData } from '../logic';
-import {
-    decryptShareSnapshot,
-    encryptShareSnapshot,
-    generateShareKey,
-    unwrapShareKey,
-    wrapShareKey,
-} from '../src/services/shareCrypto';
 import { pbkdf2Sha256, setCryptoFallbackForTests } from '../src/utils/cryptoCompat';
 
 // A self-host opened over plain http has no `crypto.subtle`, so the app falls
@@ -22,15 +15,6 @@ const withFallback = async <T>(on: boolean, run: () => Promise<T>): Promise<T> =
     } finally {
         setCryptoFallbackForTests(false);
     }
-};
-
-const snapshot = {
-    version: 1,
-    mode: 'transfem',
-    timezone: 'Europe/Berlin',
-    createdAt: 1_760_000_000_000,
-    events: [{ id: 'a', route: 'injection', timeH: 489_000, doseMG: 5, ester: 'EV', extras: {} }],
-    simulation: null,
 };
 
 const cloudKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
@@ -76,16 +60,4 @@ describe('crypto without Web Crypto (plain-http self-host)', () => {
         const { data, password } = await withFallback(true, () => encryptData('export body'));
         expect(await decryptData(data, password)).toBe('export body');
     }, 60_000);
-
-    it('opens share links and wrapped link keys across paths', async () => {
-        const key = generateShareKey();
-        const sealed = await withFallback(true, () => encryptShareSnapshot(snapshot, key));
-        expect(await decryptShareSnapshot(sealed, key)).toEqual(snapshot);
-
-        const fromWeb = await encryptShareSnapshot(snapshot, key);
-        expect(await withFallback(true, () => decryptShareSnapshot(fromWeb, key))).toEqual(snapshot);
-
-        const wrapped = await withFallback(true, () => wrapShareKey(key, 'transfem', cloudKey));
-        expect(await unwrapShareKey(wrapped, cloudKey)).toEqual({ key, mode: 'transfem' });
-    });
 });

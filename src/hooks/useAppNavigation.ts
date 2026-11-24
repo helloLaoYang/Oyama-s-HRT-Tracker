@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
-import { House, Log, Labs, Gear, Account, Shield, Users } from '../components/icons';
+import { House, Log, Labs, Gear, Users } from '../components/icons';
 import { voteStatusAt } from '../../communityVote';
 import { runViewMove, type ViewMove } from '../motion/viewMove';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -165,7 +165,7 @@ interface NavItem {
     badge?: boolean;
 }
 
-export const useAppNavigation = (user: any) => {
+export const useAppNavigation = () => {
     const { t } = useTranslation();
 
     // --- State ---
@@ -376,17 +376,12 @@ export const useAppNavigation = (user: any) => {
         { id: 'history', label: t('nav.history'), icon: Log },
         { id: 'lab', label: t('nav.lab'), icon: Labs },
         { id: 'settings', label: t('nav.settings'), icon: Gear },
-        { id: 'account', label: t('nav.account'), icon: Account },
     ];
 
     // The funding vote is a page of Settings, but while ballots are open it
     // gets a door of its own. The dot goes when the box closes with it.
     if (voteOpen) {
         navItems.push({ id: 'settings-community', label: t('settings.community'), icon: Users, badge: true });
-    }
-
-    if (user?.isAdmin) {
-        navItems.push({ id: 'admin', label: t('nav.admin'), icon: Shield });
     }
 
     return {

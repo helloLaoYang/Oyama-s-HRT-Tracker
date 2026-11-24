@@ -1,7 +1,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation, LanguageProvider } from './contexts/LanguageContext';
 import { useDialog, DialogProvider } from './contexts/DialogContext';
-import { HRTModeProvider, useHRTMode } from './contexts/HRTModeContext';
+import { HRTModeProvider } from './contexts/HRTModeContext';
 import { PixelCatProvider } from './contexts/PixelCatContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageLoading from './components/PageLoading';
@@ -9,7 +9,6 @@ import { AppTheme } from './constants';
 import { DoseEvent, decompressData, encryptData, decryptData } from '../logic';
 import { v4 as uuidv4 } from 'uuid';
 import { PlanItem, planEvent } from './utils/plan';
-import { parseCloudBackup } from './utils/cloudBackup';
 import {
     COMPLETE_BACKUP_FORMAT,
     classifyCompleteBackupOutcome,
@@ -30,22 +29,15 @@ import {
 } from './utils/backupWarnings';
 import { useAppData } from './hooks/useAppData';
 import { useAppNavigation, tabForView, ViewKey } from './hooks/useAppNavigation';
-import { useLiveShareSync } from './hooks/useLiveShareSync';
-import { describeSyncError, useCloudSync } from './hooks/useCloudSync';
-import { syncNativeStatusBar } from './utils/nativeShell';
+import { isNativeAppShell, syncNativeStatusBar } from './utils/nativeShell';
 
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import PasswordPrompt from './components/PasswordPrompt';
 import { supportsViewTransitions } from './motion/viewMove';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { cloudService } from './services/cloud';
-
 // Pages
 import Home from './pages/Home';
-import PublicShare from './pages/PublicShare';
 import Onboarding, { markOnboardingSeen, shouldShowOnboarding } from './pages/Onboarding';
-import { parseShareFragment } from './services/shareCrypto';
 import {
     Plan,
     Forecast,
@@ -54,16 +46,6 @@ import {
     Lab,
     CalibrationSettings,
     Settings,
-    Account,
-    Admin,
-    SessionsPage,
-    HrtSecurityPage,
-    F2fPage,
-    TwoFactorPage,
-    ChangePasswordPage,
-    DeleteAccountPage,
-    EditProfilePage,
-    EditAvatarPage,
     PKParamsPage,
     HRTModeSettings,
     LanguageSettings,
@@ -83,19 +65,29 @@ import {
     MilkTeaEasterEgg,
     CatStates,
     Simulator,
-    ShareSettings,
 } from './routes/lazyPages';
 import SiteNoticeBanner from './components/SiteNotice';
 import JsDependencyNotice from './components/JsDependencyNotice';
 import UpdatePrompt from './components/UpdatePrompt';
 import { copyText } from './utils/clipboard';
 
+/** A leftover signed-in profile, used only to keep that device's backup wording. */
+const rememberedAccount = (): { username: string } | null => {
+    try {
+        const raw = localStorage.getItem('auth_user');
+        if (!raw) return null;
+        const username = (JSON.parse(raw) as { username?: unknown }).username;
+        if (typeof username === 'string' && username.trim()) return { username: username.trim() };
+    } catch {
+        /* the local store has no account name */
+    }
+    return null;
+};
+
 const AppContent = () => {
     const { t, lang, setLang } = useTranslation();
     const { showDialog } = useDialog();
-    const { mode } = useHRTMode();
-    const { user, token, logout } = useAuth();
-    const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+    const nativeApp = isNativeAppShell(typeof window === 'undefined' ? undefined : window);
 
     // --- Prediction curve: the Overview chart carried on past "now", dashed,
     // on the plan's doses. Off unless switched on in Settings; a display
@@ -125,7 +117,6 @@ const AppContent = () => {
         setCalibrationHistoryMode,
         ageBeta,
         setAgeBeta,
-        modelSettings,
         calibration,
         currentLevel,
         currentCPA,
@@ -155,15 +146,11 @@ const AppContent = () => {
         setPkParams,
         clearPkParams,
         processImportedData,
-        mergeImportedData,
         buildExportPayload,
         buildCompleteBackupBundle,
         previewCompleteBackupBundle,
         applyCompleteBackupBundle,
         replaceCompleteBackupBundle,
-        applySyncedState,
-        scope,
-        readyScope,
         currentTime,
         regimens,
         supplies,
@@ -180,16 +167,8 @@ const AppContent = () => {
         localStorage.setItem('hrt-supply-lead-days', String(d));
     };
 
-    useLiveShareSync({
-        authToken: token,
-        mode,
-        events,
-        simulation,
-        calibrationFn,
-    });
-
     const { currentView, currentTab, move, handleViewChange, handleTabSelect, mainScrollRef, navItems } =
-        useAppNavigation(user);
+        useAppNavigation();
 
     // --- Local UI state ---
     // A dose on the Overview's chart sent here to be changed: History opens
@@ -198,58 +177,13 @@ const AppContent = () => {
     const [isPasswordInputOpen, setIsPasswordInputOpen] = useState(false);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [isQuickAddLabOpen, setIsQuickAddLabOpen] = useState(false);
-    // Signing in happens on Account, the one place its form lives. A feature
-    // that needs an account (Share) sends people there and says why, and once
-    // they're in, carries on to where they were going instead of leaving them
-    // to find the button they had already pressed.
-    const [afterSignIn, setAfterSignIn] = useState<ViewKey | null>(null);
-    const [signInReason, setSignInReason] = useState<'share' | 'vote' | undefined>(undefined);
-    // The vote page can be opened from Settings or from the Overview nudge;
-    // its Back button returns to wherever it was opened from.
+    // The vote page can be opened from Settings; its Back button returns there.
     const [communityVoteReturn, setCommunityVoteReturn] = useState<ViewKey>('settings');
-    // Navigating to Account can be deferred while the history entry it was
-    // opened from unwinds. Only clear the reason once Account was actually
-    // reached and then left; otherwise this effect runs on the page that sent
-    // the user there and wipes the reason before the form can show it.
-    const accountVisited = useRef(false);
-    const requireSignIn = (reason?: 'share' | 'vote', then?: ViewKey) => {
-        setSignInReason(reason);
-        setAfterSignIn(then ?? null);
-        handleViewChange('account');
-    };
     const openCommunityVote = (from: ViewKey) => {
         setCommunityVoteReturn(from);
         handleViewChange('settings-community');
     };
-    const signInForCommunityVote = (from: ViewKey) => {
-        setCommunityVoteReturn(from);
-        requireSignIn('vote', 'settings-community');
-    };
-    useEffect(() => {
-        if (!user || !afterSignIn) return;
-        const next = afterSignIn;
-        setAfterSignIn(null);
-        setSignInReason(undefined);
-        handleViewChange(next);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, afterSignIn]);
-    // Left Account without signing in: the reason no longer applies.
-    useEffect(() => {
-        if (currentView === 'account') {
-            accountVisited.current = true;
-            return;
-        }
-        if (!accountVisited.current) return;
-        accountVisited.current = false;
-        setAfterSignIn(null);
-        setSignInReason(undefined);
-    }, [currentView]);
     const [pendingImportText, setPendingImportText] = useState<string | null>(null);
-
-    // --- Auto-sync preference ---
-    // Storage key kept from when this only ever uploaded, so an existing
-    // preference carries over rather than silently resetting to on.
-    const [autoSync, setAutoSync] = useState<boolean>(() => localStorage.getItem('app-auto-backup') !== 'false');
 
     // --- First run ---
     const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
@@ -260,24 +194,31 @@ const AppContent = () => {
         localStorage.setItem('app-dev-mode', String(devMode));
     }, [devMode]);
 
-    // A page whose guard below has gone false (signed out, developer mode
-    // off) renders nothing, leaving a blank screen. The browser's Forward can
-    // land on one after a sign-out, and an expired sign-in can leave one open,
-    // so step up to the page it belongs to.
+    // A page whose guard has gone false (developer mode off, age beta off, or
+    // a removed account/share screen still sitting in history) renders nothing.
+    // Step up to a page that still exists.
+    const retiredView =
+        currentView === 'share' ||
+        currentView === 'account' ||
+        currentView === 'admin' ||
+        currentView === 'sessions' ||
+        currentView === 'hrt-security' ||
+        currentView === 'f2f' ||
+        currentView === 'two-factor' ||
+        currentView === 'change-password' ||
+        currentView === 'delete-account' ||
+        currentView === 'edit-profile' ||
+        currentView === 'edit-avatar';
     const pageGone =
-        (!token &&
-            (currentView === 'share' ||
-                currentView === 'sessions' ||
-                currentView === 'two-factor' ||
-                currentView === 'edit-avatar')) ||
         (!devMode &&
             (currentView === 'settings-milk-tea' ||
                 currentView === 'settings-cat-states' ||
                 currentView === 'settings-simulator')) ||
         (!ageBeta && currentView === 'settings-age');
     useEffect(() => {
-        if (pageGone) handleViewChange(tabForView(currentView));
-    }, [pageGone, currentView, handleViewChange]);
+        if (retiredView) handleViewChange(currentView === 'share' ? 'home' : 'settings');
+        else if (pageGone) handleViewChange(tabForView(currentView));
+    }, [retiredView, pageGone, currentView, handleViewChange]);
 
     // --- Site label: the host name strip above the mobile view. Switched off
     // from Settings while developer mode is on, and kept off after that. ---
@@ -323,34 +264,6 @@ const AppContent = () => {
     // Same reading as the Overview's: an explicit dark theme, or the system's under "system".
     const isDarkMode =
         theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    useEffect(() => {
-        localStorage.setItem('app-auto-backup', String(autoSync));
-    }, [autoSync]);
-
-    // Two-way sync with the cloud backup: pull, reconcile, push. Replaces both
-    // the upload-only auto-backup and the startup "your data differs" prompt —
-    // the prompt could only add records the cloud had and this device lacked, so
-    // edits and deletions stayed unresolved and it reappeared every launch.
-    const syncState = useCloudSync({
-        token,
-        userId: user?.id ?? null,
-        enabled: autoSync,
-        // Never touch the cloud while the data layer is mid-switch between
-        // accounts or modes: the payload would mix one account's in-memory
-        // records with another's storage keys.
-        ready: readyScope === scope,
-        buildPayload: buildExportPayload,
-        applyRemote: applySyncedState,
-        events,
-        labResults,
-        doseTemplates,
-        weight,
-        birthYear,
-        pkParams,
-        plan,
-        modelSettings,
-    });
 
     // --- Theme Effect ---
     useEffect(() => {
@@ -472,7 +385,7 @@ const AppContent = () => {
             const openPreview = (current: CompleteBackupPreview) => {
                 showDialog(
                     'confirm',
-                    describeCompleteBackupPreview(current, { t, lang, user }),
+                    describeCompleteBackupPreview(current, { t, lang, user: rememberedAccount() }),
                     () => {
                         // The active arrays can change while a dialog is open.
                         // Recompute at confirm time; if the visible outcome
@@ -578,7 +491,7 @@ const AppContent = () => {
             const open = (current: CompleteBackupPreview, fingerprint: string) => {
                 showDialog(
                     'confirm',
-                    describeCompleteBackupReplace(current, { t, lang, user }),
+                    describeCompleteBackupReplace(current, { t, lang, user: rememberedAccount() }),
                     () => {
                         // The active arrays can change while the dialog is open.
                         // Replacing them without showing the new contents would
@@ -789,96 +702,6 @@ const AppContent = () => {
         );
     };
 
-    // Reconcile, then upload — not a plain upload. Every save inserts a new
-    // newest revision with no "only if unchanged", so writing without reading
-    // first would let one device's press erase a dose another device deleted.
-    // Works with auto-sync switched off; refuses when the cloud copy is
-    // encrypted and unreadable here, rather than replacing it with plaintext.
-    const handleCloudSave = async () => {
-        if (!token) {
-            requireSignIn();
-            return;
-        }
-        const { outcome, errorCode } = await syncState.syncNow();
-        // A locked cloud copy is not a failure to retry — it is a password this
-        // device hasn't been given. Say so, rather than the flat "save failed"
-        // that sent people pressing the button again to no effect. A failure
-        // likewise names its cause: the worker's error code picks the line.
-        if (outcome === 'error') {
-            showDialog('alert', `${t('account.cloud_save_failed')} ${describeSyncError(errorCode, t)}`);
-            return;
-        }
-        showDialog(
-            'alert',
-            t(
-                outcome === 'synced'
-                    ? 'account.cloud_save_success'
-                    : outcome === 'locked'
-                      ? 'account.cloud_save_locked'
-                      : 'account.cloud_save_failed',
-            ),
-        );
-    };
-
-    const handleCloudLoad = async (backupId?: string) => {
-        if (!token) {
-            requireSignIn();
-            return;
-        }
-        try {
-            let parsed: unknown;
-            let timestamp: number;
-            if (backupId) {
-                const backup = await cloudService.loadOne(token, backupId);
-                parsed = await parseCloudBackup(backup.data);
-                timestamp = backup.created_at;
-            } else {
-                // Metadata first, then fetch only the newest body.
-                const metas = await cloudService.listMeta(token);
-                if (!metas || metas.length === 0) {
-                    showDialog('alert', t('account.no_cloud_backups'));
-                    return;
-                }
-                const newest = metas.reduce((a, b) => (b.created_at > a.created_at ? b : a));
-                const latest = await cloudService.loadOne(token, newest.id);
-                parsed = await parseCloudBackup(latest.data);
-                timestamp = latest.created_at;
-            }
-            if (!parsed) {
-                showDialog('alert', t('account.cloud_load_failed'));
-                return;
-            }
-            showDialog(
-                'confirm',
-                (t('account.load_confirm') as string).replace('{time}', new Date(timestamp * 1000).toLocaleString()),
-                () => {
-                    processImportedData(parsed);
-                },
-                { danger: true },
-            );
-        } catch (e) {
-            showDialog('alert', t('account.cloud_load_failed'));
-        }
-    };
-
-    const handleCloudMerge = async (backupId: string) => {
-        if (!token) {
-            requireSignIn();
-            return;
-        }
-        try {
-            const backup = await cloudService.loadOne(token, backupId);
-            const parsed = await parseCloudBackup(backup.data);
-            if (!parsed) {
-                showDialog('alert', t('account.merge_cloud_failed'));
-                return;
-            }
-            mergeImportedData(parsed);
-        } catch (e) {
-            showDialog('alert', t('account.merge_cloud_failed'));
-        }
-    };
-
     // Takes over the whole screen rather than sitting in the view stack: the
     // intro is where language and HRT mode get chosen, and leaving the nav up
     // would let someone tab away with both still on their defaults.
@@ -922,9 +745,9 @@ const AppContent = () => {
                     it still keeps its top padding, which is what holds the content
                     clear of a notch or status bar. */}
                 <div
-                    className={`md:hidden shrink-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${hideSiteLabel ? '' : 'pb-1 text-center text-xs font-medium tracking-wide text-muted select-none'}`}
+                    className={`md:hidden shrink-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${hideSiteLabel || nativeApp ? '' : 'pb-1 text-center text-xs font-medium tracking-wide text-muted select-none'}`}
                 >
-                    {!hideSiteLabel && window.location.hostname}
+                    {!hideSiteLabel && !nativeApp && window.location.hostname}
                 </div>
 
                 {/* Operator banner. Outside the scroller and keyed off nothing in
@@ -969,9 +792,6 @@ const AppContent = () => {
                                     setIsQuickAddLabOpen(true);
                                     handleViewChange('lab');
                                 }}
-                                onNavigateToShare={() => handleViewChange('share')}
-                                authToken={token}
-                                onAuthRequired={() => requireSignIn('share', 'share')}
                                 regimens={regimens}
                                 plan={plan}
                                 onLogPlanItem={handleLogPlanItem}
@@ -983,8 +803,6 @@ const AppContent = () => {
                                 nowH={nowH}
                                 onNavigateToForecast={() => handleViewChange('forecast')}
                                 supplyLeadDays={supplyLeadDays}
-                                onNavigateToCommunityVote={() => openCommunityVote('home')}
-                                onCommunityVoteSignIn={() => signInForCommunityVote('home')}
                             />
                         )}
 
@@ -1012,17 +830,6 @@ const AppContent = () => {
                                 nowH={nowH}
                                 isDarkMode={isDarkMode}
                                 onSaveTemplate={addTemplate}
-                            />
-                        )}
-
-                        {currentView === 'share' && token && (
-                            <ShareSettings
-                                onBack={() => handleViewChange('home')}
-                                authToken={token}
-                                mode={mode}
-                                events={events}
-                                simulation={simulation}
-                                calibrationFn={calibrationFn}
                             />
                         )}
 
@@ -1118,9 +925,6 @@ const AppContent = () => {
                                 onNavigateToAge={() => handleViewChange('settings-age')}
                                 onNavigateToExport={() => handleViewChange('settings-export')}
                                 onNavigateToImport={() => handleViewChange('settings-import')}
-                                autoSync={autoSync}
-                                setAutoSync={setAutoSync}
-                                isLoggedIn={!!user}
                                 devMode={devMode}
                                 setDevMode={setDevMode}
                                 hideSiteLabel={hideSiteLabel}
@@ -1130,8 +934,6 @@ const AppContent = () => {
                                 onNavigateToMilkTea={() => handleViewChange('settings-milk-tea')}
                                 onNavigateToCatStates={() => handleViewChange('settings-cat-states')}
                                 onNavigateToSimulator={() => handleViewChange('settings-simulator')}
-                                isAdmin={!!user?.isAdmin}
-                                onNavigateToAdmin={() => handleViewChange('admin')}
                                 onNavigateToSupplies={() => handleViewChange('supplies')}
                                 supplyCount={supplies.length}
                             />
@@ -1195,67 +997,6 @@ const AppContent = () => {
                             />
                         )}
 
-                        {currentView === 'account' && (
-                            <Account
-                                t={t}
-                                user={user}
-                                token={token}
-                                onLogout={logout}
-                                onCloudSave={handleCloudSave}
-                                onCloudLoad={handleCloudLoad}
-                                onCloudMerge={handleCloudMerge}
-                                localData={{ events, labResults, doseTemplates, weight }}
-                                onNavigate={v => handleViewChange(v as ViewKey)}
-                                twoFAEnabled={twoFAEnabled}
-                                onTwoFAStatusChange={setTwoFAEnabled}
-                                syncStatus={syncState.status}
-                                syncErrorCode={syncState.errorCode}
-                                lastSyncedAt={syncState.lastSyncedAt}
-                                signInReason={signInReason}
-                            />
-                        )}
-
-                        {currentView === 'sessions' && token && (
-                            <SessionsPage token={token} onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'hrt-security' && token && (
-                            <HrtSecurityPage token={token} onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'f2f' && token && (
-                            <F2fPage token={token} onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'two-factor' && token && (
-                            <TwoFactorPage
-                                token={token}
-                                enabled={twoFAEnabled}
-                                onStatusChange={setTwoFAEnabled}
-                                onBack={() => handleViewChange('account')}
-                            />
-                        )}
-
-                        {currentView === 'change-password' && (
-                            <ChangePasswordPage onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'delete-account' && (
-                            <DeleteAccountPage onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'edit-profile' && (
-                            <EditProfilePage onBack={() => handleViewChange('account')} />
-                        )}
-
-                        {currentView === 'edit-avatar' && user && token && (
-                            <EditAvatarPage
-                                username={user.username}
-                                token={token}
-                                onBack={() => handleViewChange('account')}
-                            />
-                        )}
-
                         {currentView === 'settings-transparency' && (
                             <TransparencySettings onBack={() => handleViewChange('settings')} />
                         )}
@@ -1263,10 +1004,7 @@ const AppContent = () => {
                         {currentView === 'settings-credits' && <Credits onBack={() => handleViewChange('settings')} />}
 
                         {currentView === 'settings-community' && (
-                            <CommunityVote
-                                onBack={() => handleViewChange(communityVoteReturn)}
-                                onSignIn={() => signInForCommunityVote(communityVoteReturn)}
-                            />
+                            <CommunityVote onBack={() => handleViewChange(communityVoteReturn)} />
                         )}
 
                         {currentView === 'settings-opsec' && <OpSec onBack={() => handleViewChange('settings')} />}
@@ -1315,10 +1053,6 @@ const AppContent = () => {
                                 onBack={() => handleViewChange('settings')}
                             />
                         )}
-
-                        {currentView === 'admin' && user?.isAdmin && (
-                            <Admin onBack={() => handleViewChange('settings')} />
-                        )}
                     </Suspense>
                 </div>
 
@@ -1327,8 +1061,8 @@ const AppContent = () => {
                     the one that reads as current. The funding vote keeps its
                     page under Settings too, so it never adds a sixth tab. */}
                 <BottomNav
-                    tabs={navItems.filter(item => item.id !== 'admin' && item.id !== 'settings-community')}
-                    activeTab={currentView === 'admin' ? 'settings' : currentTab}
+                    tabs={navItems.filter(item => item.id !== 'settings-community')}
+                    activeTab={currentTab}
                     onSelect={id => handleTabSelect(id as ViewKey)}
                     pageKey={currentView}
                 />
@@ -1348,52 +1082,18 @@ const AppContent = () => {
     );
 };
 
-const getShareRoute = (): { isShareRoute: boolean; token: string | null; shareKey: string | null } => {
-    if (!/^\/share\/?$/.test(window.location.pathname)) {
-        return { isShareRoute: false, token: null, shareKey: null };
-    }
-
-    // `#<token>.<key>`: the token finds the link on the server, the key
-    // decrypts it and never leaves this page. Links made before share
-    // encryption have a token only.
-    const fragment = window.location.hash.slice(1).replace(/^\/+/, '').split(/[/?]/, 1)[0];
-    const { token, key } = parseShareFragment(fragment);
-
-    return { isShareRoute: true, token, shareKey: key };
-};
-
-const App = () => {
-    const [shareRoute, setShareRoute] = useState(getShareRoute);
-    useEffect(() => {
-        const updateRoute = () => setShareRoute(getShareRoute());
-        window.addEventListener('hashchange', updateRoute);
-        window.addEventListener('popstate', updateRoute);
-        return () => {
-            window.removeEventListener('hashchange', updateRoute);
-            window.removeEventListener('popstate', updateRoute);
-        };
-    }, []);
-    return (
-        <LanguageProvider>
-            <HRTModeProvider>
-                {shareRoute.isShareRoute ? (
+const App = () => (
+    <LanguageProvider>
+        <HRTModeProvider>
+            <DialogProvider>
+                <PixelCatProvider>
                     <ErrorBoundary>
-                        <PublicShare token={shareRoute.token} shareKey={shareRoute.shareKey} />
+                        <AppContent />
                     </ErrorBoundary>
-                ) : (
-                    <DialogProvider>
-                        <AuthProvider>
-                            <PixelCatProvider>
-                                <ErrorBoundary>
-                                    <AppContent />
-                                </ErrorBoundary>
-                            </PixelCatProvider>
-                        </AuthProvider>
-                    </DialogProvider>
-                )}
-            </HRTModeProvider>
-        </LanguageProvider>
-    );
-};
+                </PixelCatProvider>
+            </DialogProvider>
+        </HRTModeProvider>
+    </LanguageProvider>
+);
 
 export default App;
