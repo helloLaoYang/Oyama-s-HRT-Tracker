@@ -69,8 +69,6 @@ extension Date {
     init(trackerHours: Double) { self.init(timeIntervalSince1970: trackerHours * 3600) }
 }
 
-func label(_ key: String.LocalizationValue) -> String { String(localized: key) }
-
 func trackerDrugName(_ ester: String) -> String {
     switch ester {
     case "E2": label("Estradiol")

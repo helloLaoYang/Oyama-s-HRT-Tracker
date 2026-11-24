@@ -245,7 +245,7 @@ enum HistoryText {
     ]
 
     static func localized(_ key: String.LocalizationValue) -> String {
-        String(localized: key, table: "History")
+        label(key, table: "History")
     }
 
     static func amount(_ number: Double) -> String {

@@ -475,5 +475,5 @@ private func stockNumber(_ value: Double) -> String {
 }
 
 private func inventoryText(_ key: String.LocalizationValue) -> String {
-    String(localized: key, table: "Inventory")
+    label(key, table: "Inventory")
 }

@@ -18,6 +18,7 @@ struct PhoneWatchInputs: Equatable, Sendable {
     let planVersions: [String: String]
     let day: Date
     let timeZone: TimeZone
+    let appLanguage: AppLanguage
     let refreshPeriod: Int
 
     @MainActor init(store: TrackerStore, at date: Date) {
@@ -35,6 +36,7 @@ struct PhoneWatchInputs: Equatable, Sendable {
         let calendar = store.calendar
         day = calendar.startOfDay(for: date)
         timeZone = calendar.timeZone
+        appLanguage = AppLanguage.selection
         refreshPeriod = Int(date.timeIntervalSince1970 / Self.refreshInterval)
     }
 

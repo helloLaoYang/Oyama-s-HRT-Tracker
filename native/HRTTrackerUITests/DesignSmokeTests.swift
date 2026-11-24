@@ -55,6 +55,68 @@ final class DesignSmokeTests: XCTestCase {
         screenshot("18-advanced-calibration", in: app)
     }
 
+    func testAppLanguagesAndOpenSourceLicenses() {
+        let app = launchDemo()
+        app.tabBars.buttons["设置"].tap()
+
+        let settings = [("de", "Einstellungen"), ("fr", "Réglages"), ("ja", "設定"),
+                        ("en", "Settings"), ("zh-Hans", "设置"), ("system", "设置")]
+        for (language, title) in settings {
+            app.buttons["settings.general"].tap()
+            app.buttons["settings.language"].tap()
+            let choice = app.buttons["language.\(language)"]
+            XCTAssertTrue(choice.waitForExistence(timeout: 6))
+            choice.tap()
+            XCTAssertTrue(app.tabBars.buttons[title].waitForExistence(timeout: 6))
+
+            if language == "fr" {
+                app.terminate()
+                app.launch()
+                app.tabBars.buttons["Historique"].tap()
+                XCTAssertEqual(app.buttons["history.select"].label, "Sélectionner")
+                app.tabBars.buttons[title].tap()
+            }
+        }
+
+        app.buttons["settings.about"].tap()
+        XCTAssertTrue(element("settings.projectWebsite", in: app).exists)
+        app.buttons["settings.licenses"].tap()
+        XCTAssertTrue(app.navigationBars["开源许可"].waitForExistence(timeout: 6))
+        XCTAssertTrue(element("licenses.pkSource", in: app).exists)
+        let license = app.staticTexts["licenses.mit"]
+        XCTAssertTrue(license.exists)
+        XCTAssertTrue(license.label.contains("Copyright (c) 2025 Joseph Smirnova Oyama"))
+        screenshot("23-open-source-licenses", in: app)
+    }
+
+    func testFeedbackFromAbout() {
+        let app = launchDemo()
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.about"].tap()
+        app.buttons["settings.feedback"].tap()
+
+        XCTAssertTrue(app.navigationBars["意见反馈"].waitForExistence(timeout: 6))
+        let submit = app.buttons["feedback.submit"]
+        if app.staticTexts["feedback.unavailable"].exists {
+            XCTAssertFalse(submit.exists)
+            return
+        }
+
+        XCTAssertTrue(app.staticTexts["feedback.publicNotice"].exists)
+        XCTAssertTrue(submit.exists)
+        XCTAssertFalse(submit.isEnabled)
+
+        let title = app.textFields["feedback.title"]
+        title.tap()
+        title.typeText("Example title")
+        XCTAssertFalse(submit.isEnabled)
+
+        let body = element("feedback.body", in: app)
+        body.tap()
+        body.typeText("Example description")
+        XCTAssertTrue(submit.isEnabled)
+    }
+
     func testOverviewLayoutAndSimulationNavigation() {
         let app = launchDemo()
         let overview = app.scrollViews.firstMatch

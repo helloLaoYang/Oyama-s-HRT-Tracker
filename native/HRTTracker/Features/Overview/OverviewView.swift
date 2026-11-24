@@ -329,9 +329,9 @@ struct OverviewView: View {
         case .taken:
             label("Recorded today")
         case .due(let done, let total):
-            total > 1 ? String(localized: "\(done) of \(total) recorded") : label("Due today")
+            total > 1 ? label("\(done) of \(total) recorded") : label("Due today")
         case .rest(let next):
-            String(localized: "Next \(next.formatted(.dateTime.month(.defaultDigits).day().timeZone(store.calendar.timeZone)))")
+            label("Next \(next.formatted(.dateTime.month(.defaultDigits).day().timeZone(store.calendar.timeZone)))")
         }
     }
 

@@ -9,6 +9,24 @@
             "state": "translated",
             "value": "%@ mg"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mg"
+          }
         }
       }
     },
@@ -19,6 +37,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ µg/天"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ µg/Tag"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ µg/jour"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ µg/日"
           }
         }
       }
@@ -31,6 +67,24 @@
             "state": "translated",
             "value": "%@ × %lld 片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ × %lld Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ × %2$lld patchs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ × %lld 枚"
+          }
         }
       }
     },
@@ -41,6 +95,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增用药记录"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosis erfassen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une prise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与記録を追加"
           }
         }
       }
@@ -53,6 +125,24 @@
             "state": "translated",
             "value": "添加快捷剂量"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosis-Kurzbefehl hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un raccourci de prise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与ショートカットを追加"
+          }
         }
       }
     },
@@ -63,6 +153,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "涂抹部位"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anwendungsstelle"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site d’application"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "塗布部位"
           }
         }
       }
@@ -75,6 +183,24 @@
             "state": "translated",
             "value": "贴上贴片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster aufkleben"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poser un patch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付"
+          }
         }
       }
     },
@@ -85,6 +211,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "手臂"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arm"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bras"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腕"
           }
         }
       }
@@ -97,6 +241,24 @@
             "state": "translated",
             "value": "批量添加"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrere Einträge hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter plusieurs prises"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一括追加"
+          }
         }
       }
     },
@@ -107,6 +269,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "比卡鲁胺"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bicalutamid"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bicalutamide"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビカルタミド"
           }
         }
       }
@@ -119,6 +299,24 @@
             "state": "translated",
             "value": "取消"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
+          }
         }
       }
     },
@@ -129,6 +327,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "随意 5 分钟"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locker · 5 Minuten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Souple · 5 min"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やや短め · 5分"
           }
         }
       }
@@ -141,6 +357,24 @@
             "state": "translated",
             "value": "无法更新用药记录"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einträge konnten nicht aktualisiert werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de mettre à jour les enregistrements"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を更新できませんでした"
+          }
         }
       }
     },
@@ -151,6 +385,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "自定义"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzerdefiniert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personnalisé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム"
           }
         }
       }
@@ -163,6 +415,24 @@
             "state": "translated",
             "value": "醋酸环丙孕酮"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cyproteronacetat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acétate de cyprotérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "酢酸シプロテロン"
+          }
         }
       }
     },
@@ -173,6 +443,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
           }
         }
       }
@@ -185,6 +473,24 @@
             "state": "translated",
             "value": "删除所选用药记录？"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Einträge löschen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer les enregistrements sélectionnés ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した記録を削除しますか？"
+          }
         }
       }
     },
@@ -195,6 +501,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
           }
         }
       }
@@ -207,6 +531,24 @@
             "state": "translated",
             "value": "每片剂量 (mg)"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosis pro Pflaster (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dose par patch (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1枚あたりの含有量 (mg)"
+          }
         }
       }
     },
@@ -217,6 +559,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "给药时间"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitpunkt der Gabe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure de la prise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与時刻"
           }
         }
       }
@@ -229,6 +589,24 @@
             "state": "translated",
             "value": "等效 E2 (mg)"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradioläquivalent (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Équivalent E2 (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E2換算量 (mg)"
+          }
         }
       }
     },
@@ -239,6 +617,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "编辑用药记录"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosiseintrag bearbeiten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier la prise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与記録を編集"
           }
         }
       }
@@ -251,6 +647,24 @@
             "state": "translated",
             "value": "编辑记录"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eintrag bearbeiten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier l’enregistrement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を編集"
+          }
         }
       }
     },
@@ -261,6 +675,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入大于 0 且不超过 10000 的剂量。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine Dosis über 0 und höchstens 10.000 ein."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez une dose supérieure à 0 et inférieure ou égale à 10 000."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0より大きく10000以下の投与量を入力してください。"
           }
         }
       }
@@ -273,6 +705,24 @@
             "state": "translated",
             "value": "请输入至少 1 分钟的含服时间。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine Haltezeit von mindestens 1 Minute ein."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez une durée de maintien d’au moins 1 minute."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持時間は1分以上で入力してください。"
+          }
         }
       }
     },
@@ -283,6 +733,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入大于 0 的佩戴时长，或留空。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine positive Tragedauer ein oder lass das Feld leer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez une durée de port positive ou laissez le champ vide."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0より大きい貼付期間を入力するか、空欄にしてください。"
           }
         }
       }
@@ -295,6 +763,24 @@
             "state": "translated",
             "value": "请输入模板名称。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Namen für die Vorlage ein."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez un nom de modèle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレート名を入力してください。"
+          }
         }
       }
     },
@@ -305,6 +791,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入有效剂量后再添加快捷剂量。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine gültige Dosis ein, bevor du einen Kurzbefehl hinzufügst."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez une dose valide avant d’ajouter un raccourci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカットを追加する前に、有効な投与量を入力してください。"
           }
         }
       }
@@ -317,6 +821,24 @@
             "state": "translated",
             "value": "请输入有效的记录间隔。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib ein gültiges Intervall zwischen den Einträgen ein."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez un intervalle valide entre les prises."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録間の有効な間隔を入力してください。"
+          }
         }
       }
     },
@@ -327,6 +849,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "雌二醇"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiol"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エストラジオール"
           }
         }
       }
@@ -339,6 +879,24 @@
             "state": "translated",
             "value": "苯甲酸雌二醇"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiolbenzoat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benzoate d’estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安息香酸エストラジオール"
+          }
         }
       }
     },
@@ -349,6 +907,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "环戊丙酸雌二醇"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiolcypionat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cypionate d’estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シピオン酸エストラジオール"
           }
         }
       }
@@ -361,6 +937,24 @@
             "state": "translated",
             "value": "庚酸雌二醇"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiolenantat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Énanthate d’estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エナント酸エストラジオール"
+          }
         }
       }
     },
@@ -371,6 +965,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "十一酸雌二醇"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiolundecylat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undécylate d’estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウンデシル酸エストラジオール"
           }
         }
       }
@@ -383,6 +995,24 @@
             "state": "translated",
             "value": "戊酸雌二醇"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estradiolvalerat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valérate d’estradiol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "吉草酸エストラジオール"
+          }
         }
       }
     },
@@ -393,6 +1023,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "凝胶"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゲル"
           }
         }
       }
@@ -405,6 +1053,24 @@
             "state": "translated",
             "value": "含服方式"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halteprofil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau d’absorption"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舌下保持設定"
+          }
         }
       }
     },
@@ -415,6 +1081,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "含服时间（分钟）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haltezeit (Minuten)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durée de maintien (minutes)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持時間（分）"
           }
         }
       }
@@ -427,6 +1111,24 @@
             "state": "translated",
             "value": "植入"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Implantat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Implant"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "埋め込み"
+          }
         }
       }
     },
@@ -434,6 +1136,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注射"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Injektion"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Injection"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "注射"
@@ -449,6 +1169,24 @@
             "state": "translated",
             "value": "间隔天数"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervall in Tagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervalle en jours"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "間隔（日）"
+          }
         }
       }
     },
@@ -459,6 +1197,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "佩戴时长可留空，之后单独记录一次移除。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass die Tragedauer leer, um die Entfernung separat zu erfassen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laissez la durée de port vide pour enregistrer le retrait séparément."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剥離を別に記録する場合は、貼付期間を空欄にしてください。"
           }
         }
       }
@@ -471,6 +1227,24 @@
             "state": "translated",
             "value": "亮丙瑞林"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leuprorelin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leuproréline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リュープロレリン"
+          }
         }
       }
     },
@@ -481,6 +1255,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "加载模板"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlage laden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charger un modèle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレートを読み込む"
           }
         }
       }
@@ -493,6 +1285,24 @@
             "state": "translated",
             "value": "手动移除"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuelle Entfernung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrait manuel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剥離を手動で記録"
+          }
         }
       }
     },
@@ -503,6 +1313,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "药物类型"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medikament"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Médicament"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薬剤"
           }
         }
       }
@@ -515,6 +1343,24 @@
             "state": "translated",
             "value": "药物剂量 (mg)"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arzneimitteldosis (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dose de médicament (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与量 (mg)"
+          }
         }
       }
     },
@@ -525,6 +1371,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "醋酸甲羟孕酮"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medroxyprogesteronacetat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acétate de médroxyprogestérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "酢酸メドロキシプロゲステロン"
           }
         }
       }
@@ -537,6 +1401,24 @@
             "state": "translated",
             "value": "更多记录操作"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Aktionen für den Eintrag"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres actions sur l’enregistrement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録のその他の操作"
+          }
         }
       }
     },
@@ -547,6 +1429,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "鼻用"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nasal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voie nasale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "経鼻"
           }
         }
       }
@@ -559,6 +1459,24 @@
             "state": "translated",
             "value": "暂无用药记录"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Dosen erfasst"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune prise enregistrée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与記録がありません"
+          }
         }
       }
     },
@@ -569,6 +1487,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有符合条件的记录"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine passenden Einträge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun enregistrement correspondant"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致する記録がありません"
           }
         }
       }
@@ -581,6 +1517,24 @@
             "state": "translated",
             "value": "记录次数"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzahl der Einträge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre d’enregistrements"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録件数"
+          }
         }
       }
     },
@@ -591,6 +1545,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "好"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
@@ -603,6 +1575,24 @@
             "state": "translated",
             "value": "口服"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oral"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voie orale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "経口"
+          }
         }
       }
     },
@@ -613,6 +1603,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "贴片剂量"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflasterdosis"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dose du patch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付剤の投与量"
           }
         }
       }
@@ -625,6 +1633,24 @@
             "state": "translated",
             "value": "贴片片数"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Patchs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付枚数"
+          }
         }
       }
     },
@@ -635,6 +1661,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "快速 2 分钟"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurz · 2 Minuten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapide · 2 min"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "短め · 2分"
           }
         }
       }
@@ -647,6 +1691,24 @@
             "state": "translated",
             "value": "雷洛昔芬"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raloxifen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raloxifène"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ラロキシフェン"
+          }
         }
       }
     },
@@ -657,6 +1719,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "再记一次"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut erfassen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer une nouvelle prise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度記録"
           }
         }
       }
@@ -669,6 +1749,24 @@
             "state": "translated",
             "value": "记录移除时间即可，剂量会根据佩戴时长自动计算。"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfasse nur den Zeitpunkt der Entfernung. Das Modell berücksichtigt die Tragedauer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrez seulement l’heure du retrait. Le modèle utilise la durée de port."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剥離時刻だけを記録します。モデルは実際の貼付時間を用います。"
+          }
         }
       }
     },
@@ -679,6 +1777,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "记录"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokoll"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録"
           }
         }
       }
@@ -691,6 +1807,24 @@
             "state": "translated",
             "value": "释放速率"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freisetzungsrate"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Débit de libération"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放出速度"
+          }
         }
       }
     },
@@ -701,6 +1835,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "每片释放速率 (µg/天)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freisetzungsrate pro Pflaster (µg/Tag)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Débit de libération par patch (µg/jour)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1枚あたりの放出速度 (µg/日)"
           }
         }
       }
@@ -713,6 +1865,24 @@
             "state": "translated",
             "value": "揭下贴片"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster entfernen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer un patch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剥離"
+          }
         }
       }
     },
@@ -723,6 +1893,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "按间隔添加同一用药记录"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieselbe Dosis in regelmäßigen Abständen wiederholen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Répéter la même prise à intervalles réguliers"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じ投与量を一定間隔で繰り返す"
           }
         }
       }
@@ -735,6 +1923,24 @@
             "state": "translated",
             "value": "给药途径"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anwendungsart"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voie d’administration"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投与経路"
+          }
         }
       }
     },
@@ -742,6 +1948,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "保存"
@@ -757,6 +1981,24 @@
             "state": "translated",
             "value": "保存为模板"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Vorlage speichern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer comme modèle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレートとして保存"
+          }
         }
       }
     },
@@ -767,6 +2009,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "阴囊"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrotal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrotum"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "陰嚢"
           }
         }
       }
@@ -779,6 +2039,24 @@
             "state": "translated",
             "value": "搜索药物或途径"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medikament oder Anwendungsart suchen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher un médicament ou une voie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薬剤または投与経路を検索"
+          }
         }
       }
     },
@@ -789,6 +2067,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionner"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択"
           }
         }
       }
@@ -801,6 +2097,24 @@
             "state": "translated",
             "value": "螺内酯"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spironolacton"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spironolactone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スピロノラクトン"
+          }
         }
       }
     },
@@ -811,6 +2125,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "标准 10 分钟"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard · 10 Minuten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard · 10 min"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準 · 10分"
           }
         }
       }
@@ -823,6 +2155,24 @@
             "state": "translated",
             "value": "严格 15 分钟"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strikt · 15 Minuten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict · 15 min"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長め · 15分"
+          }
         }
       }
     },
@@ -830,6 +2180,24 @@
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "皮下注射"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subkutan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voie sous-cutanée"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "皮下注射"
@@ -845,6 +2213,24 @@
             "state": "translated",
             "value": "舌下"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sublingual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voie sublinguale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舌下"
+          }
         }
       }
     },
@@ -855,6 +2241,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "模板名称"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlagenname"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom du modèle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレート名"
           }
         }
       }
@@ -867,6 +2271,24 @@
             "state": "translated",
             "value": "已保存模板"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlage gespeichert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle enregistré"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレートを保存しました"
+          }
         }
       }
     },
@@ -877,6 +2299,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "睾酮"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testosteron"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testostérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テストステロン"
           }
         }
       }
@@ -889,6 +2329,24 @@
             "state": "translated",
             "value": "环戊丙酸睾酮"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testosteroncypionat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cypionate de testostérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シピオン酸テストステロン"
+          }
         }
       }
     },
@@ -899,6 +2357,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "庚酸睾酮"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testosteronenantat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Énanthate de testostérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エナント酸テストステロン"
           }
         }
       }
@@ -911,6 +2387,24 @@
             "state": "translated",
             "value": "等效睾酮 (mg)"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testosteronäquivalent (mg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Équivalent testostérone (mg)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テストステロン換算量 (mg)"
+          }
         }
       }
     },
@@ -921,6 +2415,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "十一酸睾酮"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testosteronundecanoat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undécanoate de testostérone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウンデカン酸テストステロン"
           }
         }
       }
@@ -933,6 +2445,24 @@
             "state": "translated",
             "value": "大腿"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oberschenkel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuisse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大腿部"
+          }
         }
       }
     },
@@ -943,6 +2473,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "总剂量"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamtdosis"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dose totale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "総投与量"
           }
         }
       }
@@ -955,6 +2503,24 @@
             "state": "translated",
             "value": "总释放速率"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamtfreisetzung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Débit total de libération"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "総放出速度"
+          }
         }
       }
     },
@@ -965,6 +2531,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "曲普瑞林"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Triptorelin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Triptoréline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トリプトレリン"
           }
         }
       }
@@ -977,6 +2561,24 @@
             "state": "translated",
             "value": "每周两次 (3.5 d)"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zweimal wöchentlich (3,5 Tg.)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux fois par semaine (3,5 j)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週2回（3.5日間隔）"
+          }
         }
       }
     },
@@ -987,6 +2589,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "佩戴 %@ 天"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Tage tragen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Port : %@ j"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 日間貼付"
           }
         }
       }
@@ -999,6 +2619,24 @@
             "state": "translated",
             "value": "佩戴时长（天）"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tragedauer (Tage)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durée de port (jours)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼付期間（日）"
+          }
         }
       }
     },
@@ -1009,6 +2647,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "每周一次 (7 d)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wöchentlich (7 Tg.)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque semaine (7 j)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週1回（7日間隔）"
           }
         }
       }

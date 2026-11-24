@@ -1,0 +1,11 @@
+"Metric" = "Indicateur";
+"Follow iPhone" = "Suivre l’iPhone";
+"Estradiol" = "Estradiol";
+"Cyproterone acetate" = "Acétate de cyprotérone";
+"Testosterone" = "Testostérone";
+"Current concentration" = "Concentration actuelle";
+"Concentration" = "Concentration";
+"Concentration hidden" = "Concentration masquée";
+"No current %@ estimate" = "Aucune estimation actuelle pour %@";
+"%@ model estimate, %@ %@" = "%1$@ : estimation du modèle, %2$@ %3$@";
+"Show the current model estimate for one concentration." = "Affiche l’estimation actuelle d’une concentration calculée par le modèle.";

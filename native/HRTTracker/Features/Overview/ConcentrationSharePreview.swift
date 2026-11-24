@@ -17,7 +17,7 @@ struct ConcentrationSharePreview: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
     @FocusState private var editingCaption: Bool
-    @State private var caption = String(localized: "My concentration trend · HRT Tracker (model estimate)")
+    @State private var caption = label("My concentration trend · HRTrace (model estimate)")
     @State private var copiedCaption = false
     @State private var image: UIImage?
     @State private var imageFailed = false
@@ -68,7 +68,7 @@ struct ConcentrationSharePreview: View {
         .task { prepareImage() }
         .onChange(of: caption) { copiedCaption = false }
         .fileExporter(isPresented: $exportingImage, document: exportFile, contentType: .png,
-                      defaultFilename: "HRT-Tracker-Concentration") { result in
+                      defaultFilename: "HRTrace-Concentration") { result in
             if case .failure = result { exportFailed = true }
         }
         .alert("Could not save image", isPresented: $exportFailed) {

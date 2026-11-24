@@ -1,0 +1,11 @@
+"Metric" = "表示項目";
+"Follow iPhone" = "iPhoneの設定に従う";
+"Estradiol" = "エストラジオール";
+"Cyproterone acetate" = "酢酸シプロテロン";
+"Testosterone" = "テストステロン";
+"Current concentration" = "現在の濃度";
+"Concentration" = "濃度";
+"Concentration hidden" = "濃度を非表示";
+"No current %@ estimate" = "%@ の現在の推定値はありません";
+"%@ model estimate, %@ %@" = "%@ のモデル推定値、%@ %@";
+"Show the current model estimate for one concentration." = "選択した項目の現在の推定濃度を表示します。";

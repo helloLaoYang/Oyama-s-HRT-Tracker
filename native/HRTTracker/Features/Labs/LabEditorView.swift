@@ -133,7 +133,7 @@ struct LabEditorView: View {
 
 enum LabText {
     static func localized(_ key: String.LocalizationValue) -> String {
-        String(localized: key, table: "Labs")
+        label(key, table: "Labs")
     }
 
     static func units(_ mode: HRTMode) -> [String] {

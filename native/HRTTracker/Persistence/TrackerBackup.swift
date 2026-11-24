@@ -26,9 +26,9 @@ enum TrackerBackupError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupported: String(localized: "This file is not a supported HRT Tracker backup.")
-        case .encrypted: String(localized: "Open this encrypted backup in the web app and export a JSON copy to import.")
-        case .tooLarge: String(localized: "The backup exceeds the supported size.")
+        case .unsupported: label("This file is not a supported HRTrace backup.")
+        case .encrypted: label("Open this encrypted backup in the web app and export a JSON copy to import.")
+        case .tooLarge: label("The backup exceeds the supported size.")
         }
     }
 }
@@ -97,7 +97,7 @@ enum TrackerBackup {
         if let method = (model["calibrationMethod"] ?? model["method"]) as? String {
             result.calibrationMethod = CalibrationMethod(rawValue: ["average": "mipd", "adaptive": "ekf"][method] ?? method)
             if result.calibrationMethod == nil {
-                result.ignoredCategories.insert(String(localized: "Unsupported calibration method"))
+                result.ignoredCategories.insert(label("Unsupported calibration method"))
             }
         }
         result.calibrationHistory = ((model["calibrationHistoryMode"] ?? model["historyMode"]) as? String)
@@ -126,10 +126,10 @@ enum TrackerBackup {
                 if overrides.keys.contains(where: { PKParameters.defaults[$0] != nil }) {
                     result.pkOverrides = PKParameters.normalizedOverrides(overrides)
                 } else {
-                    result.ignoredCategories.insert(String(localized: "Invalid custom PK parameters"))
+                    result.ignoredCategories.insert(label("Invalid custom PK parameters"))
                 }
             } else {
-                result.ignoredCategories.insert(String(localized: "Invalid custom PK parameters"))
+                result.ignoredCategories.insert(label("Invalid custom PK parameters"))
             }
         }
 
@@ -225,11 +225,11 @@ enum TrackerBackup {
     ) -> BackupContents.ModeRecords {
         var mode = BackupContents.ModeRecords()
         if let quickDoses = raw["quickDoses"] as? [Any], !quickDoses.isEmpty {
-            result.ignoredCategories.insert(String(localized: "Quick doses"))
+            result.ignoredCategories.insert(label("Quick doses"))
         }
         if let deletions = raw["deletions"] as? [String: [String: Any]],
            deletions.values.contains(where: { !$0.isEmpty }) {
-            result.ignoredCategories.insert(String(localized: "Deleted record history"))
+            result.ignoredCategories.insert(label("Deleted record history"))
         }
         mode.doses = records(raw["events"], invalid: &result.invalid, count: &entryCount, parse: parseDose)
         mode.labs = records(raw["labResults"], invalid: &result.invalid, count: &entryCount, parse: parseLab)

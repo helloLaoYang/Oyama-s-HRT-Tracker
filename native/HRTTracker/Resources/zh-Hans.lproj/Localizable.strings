@@ -35,7 +35,7 @@
 "Share preview" = "分享预览";
 "Share image and text" = "分享图文";
 "Caption" = "配文";
-"My concentration trend · HRT Tracker (model estimate)" = "我的浓度趋势 · HRT Tracker（模型估算）";
+"My concentration trend · HRTrace (model estimate)" = "我的浓度趋势 · HRTrace（模型估算）";
 "Model estimate" = "模型估算";
 "Copy caption" = "复制配文";
 "Caption copied" = "已复制配文";
@@ -112,10 +112,16 @@
 "Could not save changes" = "未能保存更改";
 "OK" = "好";
 "General settings" = "常规设置";
+"Language" = "语言";
+"Follow system" = "跟随系统";
 "Weight, appearance, and projection" = "体重、外观、预测曲线";
 "Data management" = "数据管理";
 "Import, export, and backup" = "导入、导出、备份";
 "About" = "关于";
+"Open-source licenses" = "开源许可";
+"Project license" = "项目许可证";
+"Original pharmacokinetic model" = "原始药代动力学模型";
+"License text could not be loaded." = "未能加载许可证全文。";
 "Concentration model and disclaimer" = "模型估算、免责声明";
 "HRT mode" = "HRT 模式";
 "Transfeminine" = "跨性别女性";
@@ -194,7 +200,7 @@
 "Steady by week %lld" = "第 %lld 周稳态";
 "Not steady within %lld weeks" = "%lld 周内未稳态";
 "In target" = "目标内";
-"This file is not a supported HRT Tracker backup." = "此文件的备份格式暂不受支持。";
+"This file is not a supported HRTrace backup." = "此文件的备份格式暂不受支持。";
 "Open this encrypted backup in the web app and export a JSON copy to import." = "请先在 Web 版解密备份，再导出 JSON 文件以供导入。";
 "The backup exceeds the supported size." = "备份文件超出大小限制。";
 "Every %@ hours" = "每 %@ 小时";
