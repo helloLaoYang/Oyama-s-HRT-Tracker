@@ -2,18 +2,34 @@ name: HRTTracker
 options:
   deploymentTarget:
     iOS: "17.0"
+    watchOS: "10.0"
   developmentLanguage: en
   knownRegions: [en, zh-Hans]
 packages:
   HRTEngine:
     path: Packages/HRTEngine
+targetTemplates:
+  WatchTarget:
+    platform: watchOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: 5.0
+        TARGETED_DEVICE_FAMILY: "4"
+        CODE_SIGN_ENTITLEMENTS: WatchShared/Watch.entitlements
 targets:
   HRTTracker:
     type: application
     platform: iOS
-    sources: [HRTTracker]
+    sources:
+      - HRTTracker
+      - WatchShared/WatchSnapshot.swift
     dependencies:
       - package: HRTEngine
+      - target: HRTTrackerWatch
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev
@@ -25,6 +41,39 @@ targets:
         SWIFT_VERSION: 5.0
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+  HRTTrackerWatch:
+    templates: [WatchTarget]
+    type: application
+    sources:
+      - path: HRTTrackerWatch
+        excludes: [Info.plist]
+      - WatchShared/WatchSnapshot.swift
+      - WatchShared/Localization
+    dependencies:
+      - target: HRTTrackerWatchWidgets
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.watchkitapp
+        INFOPLIST_FILE: HRTTrackerWatch/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: HRT Tracker
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
+  HRTTrackerWatchWidgets:
+    templates: [WatchTarget]
+    type: app-extension
+    sources:
+      - path: HRTTrackerWatchWidgets
+        excludes: [Info.plist]
+      - WatchShared/WatchSnapshot.swift
+      - WatchShared/Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.watchkitapp.widgets
+        INFOPLIST_FILE: HRTTrackerWatchWidgets/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: HRT Tracker
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
   HRTTrackerUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -43,3 +92,7 @@ schemes:
         HRTTracker: all
     test:
       targets: [HRTTrackerUITests]
+  HRTTrackerWatch:
+    build:
+      targets:
+        HRTTrackerWatch: all
