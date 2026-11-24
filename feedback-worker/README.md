@@ -31,5 +31,6 @@ npx wrangler deploy --config feedback-worker/wrangler.toml \
   --secrets-file /path/outside/repository/hrtrace-feedback-secrets.json
 ```
 
-Set the iPhone build's `HRT_FEEDBACK_ENDPOINT_URL` to the deployed HTTPS URL
+Set `HRT_FEEDBACK_ENDPOINT_URL` in the iPhone app's
+[`Feedback.xcconfig`](../native/Feedback.xcconfig) to the deployed HTTPS URL
 with `/feedback` appended. See the [native build instructions](../native/README.md#feedback).

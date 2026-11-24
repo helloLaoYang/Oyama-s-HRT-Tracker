@@ -23,6 +23,9 @@ targets:
   HRTTracker:
     type: application
     platform: iOS
+    configFiles:
+      Debug: Feedback.xcconfig
+      Release: Feedback.xcconfig
     sources:
       - path: HRTTracker
         excludes: [Info.plist]
@@ -38,7 +41,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: HRTTracker/Info.plist
-        HRT_FEEDBACK_ENDPOINT_URL: ""
         INFOPLIST_KEY_CFBundleDisplayName: HRTrace
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"

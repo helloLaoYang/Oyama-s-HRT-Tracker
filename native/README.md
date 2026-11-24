@@ -19,16 +19,18 @@ an account, device identifier, or any data from the user's health records.
 Cloudflare processes the request IP for rate limiting. The relay does not
 include the IP in the Issue.
 
-Set the `HRT_FEEDBACK_ENDPOINT_URL` build setting to the deployed HTTPS URL,
-including `/feedback`, when building or archiving the iPhone app. For example,
-from this directory:
+After deploying the Worker, set `HRT_FEEDBACK_ENDPOINT_URL` in
+[`Feedback.xcconfig`](./Feedback.xcconfig) to the public HTTPS URL, including
+`/feedback`. Use `https:/$()/` so Xcode keeps both slashes instead of reading
+`//` as a comment.
 
-```sh
-xcodebuild -scheme HRTTracker -destination 'generic/platform=iOS' \
-  HRT_FEEDBACK_ENDPOINT_URL=https://feedback.example.com/feedback build
+```xcconfig
+HRT_FEEDBACK_ENDPOINT_URL = https:/$()/feedback.example.com/feedback
 ```
 
-Builds with an empty endpoint show feedback as unavailable.
+The configuration applies to both Debug and Release. Rebuild the iPhone app
+after changing the URL. Builds with an empty endpoint show feedback as
+unavailable. Keep GitHub App credentials in the Worker's Cloudflare Secrets.
 
 ## Check
 
