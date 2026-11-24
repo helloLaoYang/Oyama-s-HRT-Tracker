@@ -53,7 +53,16 @@
 "Record ahead of schedule?" = "提前记录？";
 "Record now" = "现在记录";
 "Cancel" = "取消";
-"Current estimate" = "当前估算水平";
+"Current estimated level" = "当前估算血药浓度";
+"In male range" = "处于男性参考范围";
+"In GAHT target range" = "达到非针剂女性向 GAHT 目标";
+"Follicular-phase level" = "相当于女性卵泡期";
+"Luteal-phase level" = "相当于女性黄体期";
+"Above reference range" = "高于参考范围";
+"Below reference range" = "低于参考范围";
+"Below male reference" = "低于男性参考范围";
+"Below testosterone target range" = "未达目标范围";
+"Near upper limit" = "接近上限";
 "Below target range" = "低于目标范围";
 "Above target range" = "高于目标范围";
 "Within target range" = "在目标范围内";

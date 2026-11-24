@@ -62,6 +62,14 @@ final class DesignSmokeTests: XCTestCase {
         let cpa = element("timeline.plot.cpa", in: app)
         let heatmap = app.staticTexts["用药统计"]
 
+        let share = app.buttons["overview.share"]
+        waitUntilEnabled(share)
+        let estimate = app.buttons["overview.estimate.info"]
+        XCTAssertEqual(estimate.label, "当前估算血药浓度")
+        XCTAssertEqual(estimate.frame.midY, share.frame.midY, accuracy: 2)
+        XCTAssertLessThan(estimate.frame.maxX, share.frame.minX)
+        XCTAssertEqual(app.staticTexts["overview.estimate.status"].label, "相当于女性卵泡期")
+        XCTAssertFalse(app.buttons["添加血检结果"].exists)
         XCTAssertTrue(app.staticTexts["今日方案"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["更换雌二醇贴片"].exists)
         XCTAssertTrue(app.staticTexts["醋酸环丙孕酮"].exists)
@@ -138,6 +146,32 @@ final class DesignSmokeTests: XCTestCase {
         ))
         XCTAssertTrue(shareActions.firstMatch.waitForExistence(timeout: 6), app.debugDescription)
         screenshot("20-system-share-sheet", in: app)
+    }
+
+    func testOverviewSingleReadingHeader() {
+        let app = launchDemo()
+        app.tabBars.buttons["记录"].tap()
+        let search = app.searchFields.firstMatch
+        search.tap()
+        search.typeText("CPA\n")
+
+        let prefix = "history.record."
+        let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))
+        let identifiers = records.allElementsBoundByIndex.map(\.identifier)
+        XCTAssertEqual(identifiers.count, 3)
+        for identifier in identifiers {
+            let recordID = identifier.dropFirst(prefix.count)
+            app.buttons["history.recordActions.\(recordID)"].tap()
+            app.buttons["删除"].tap()
+            XCTAssertTrue(app.staticTexts["删除所选用药记录？"].waitForExistence(timeout: 5))
+            app.buttons["删除"].tap()
+            XCTAssertTrue(app.buttons[identifier].waitForNonExistence(timeout: 5))
+        }
+
+        app.tabBars.buttons["概览"].tap()
+        waitUntilEnabled(app.buttons["overview.share"])
+        XCTAssertEqual(app.staticTexts["overview.estimate.status"].label, "相当于女性卵泡期")
+        screenshot("22-overview-single-reading", in: app)
     }
 
     func testDarkAppearanceAndNativeEntrySheets() {
