@@ -267,6 +267,13 @@ const fixtures = [
         events: repeat(6, i => ev(Route.injection, Ester.TC, i * 168, 100)),
         sampleOffsetsH: [12, 48, 168, 840, 900, 1008, 1100],
     },
+    {
+        name: 'te_sc_73_9mg_q7d',
+        weight: 70,
+        birthYear: null,
+        events: repeat(12, i => ev(Route.sc, Ester.TE, i * 168, 73.9)),
+        sampleOffsetsH: [12, 48, 168, 1848, 1860, 1893, 2016],
+    },
 ];
 // Calibration fixtures: lab results against the patch regimen.
 const calBase = fixtures[0];

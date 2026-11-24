@@ -3066,6 +3066,170 @@
           "simT": 233.30835355
         }
       ]
+    },
+    {
+      "name": "te_sc_73_9mg_q7d",
+      "weight": 70,
+      "birthYear": null,
+      "pk": null,
+      "events": [
+        {
+          "id": "e175",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 498192,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e176",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 498360,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e177",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 498528,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e178",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 498696,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e179",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 498864,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e180",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499032,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e181",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499200,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e182",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499368,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e183",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499536,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e184",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499704,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e185",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 499872,
+          "doseMG": 73.9,
+          "extras": {}
+        },
+        {
+          "id": "e186",
+          "route": "sc",
+          "ester": "TE",
+          "timeH": 500040,
+          "doseMG": 73.9,
+          "extras": {}
+        }
+      ],
+      "gridLen": 2352,
+      "auc": 0,
+      "samples": [
+        {
+          "offsetH": 12,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 182.899076919
+        },
+        {
+          "offsetH": 48,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 479.130129683
+        },
+        {
+          "offsetH": 168,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 202.3181341
+        },
+        {
+          "offsetH": 1848,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 343.985854638
+        },
+        {
+          "offsetH": 1860,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 500.93338569
+        },
+        {
+          "offsetH": 1893,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 736.252281838
+        },
+        {
+          "offsetH": 2016,
+          "exactE2": 0,
+          "exactCPA": 0,
+          "simE2": 0,
+          "simCPA": 0,
+          "simT": 344.067885305
+        }
+      ]
     }
   ],
   "calibration": [
@@ -3406,5 +3570,5 @@
       ]
     }
   ],
-  "sourceCommit": "90103d23a92c0a1bf4e765181aeef8dde947765c"
+  "sourceCommit": "165859ee9db86c38032366b12f98253f85eacc11"
 }

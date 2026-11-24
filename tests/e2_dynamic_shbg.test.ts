@@ -26,6 +26,18 @@ describe('dynamic SHBG wired into SimulationResult (A2)', () => {
         }
     });
 
+    it('includes the swallowed estradiol contribution when only dynamic SHBG is requested', () => {
+        const events = [dose(Route.oral, Ester.E2, 2, NOW_H - 100)];
+        const dynamic = runSimulation(events, BW, null, { dynamicShbg: true })!;
+        const explicit = runSimulation(events, BW, null, { dynamicShbg: true, swallowedE2: true })!;
+        const sample = dynamic.timeH.indexOf(NOW_H);
+
+        expect(dynamic.concPGmL_E2_swallowed?.[sample]).toBeGreaterThan(0);
+        expect(dynamic.concPGmL_E2_swallowed?.[sample]).toBe(dynamic.concPGmL_E2[sample]);
+        expect(dynamic.shbgNM?.[sample]).toBe(explicit.shbgNM?.[sample]);
+        expect(dynamic.concPGmL_E2_free_dynamic?.[sample]).toBe(explicit.concPGmL_E2_free_dynamic?.[sample]);
+    });
+
     it('does not populate shbgNM when not requested', () => {
         const sim = runSimulation([dose(Route.oral, Ester.E2, 2, NOW_H - 100)], BW)!;
         expect(sim.shbgNM).toBeUndefined();
