@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { format, resolveConfig } from 'prettier';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const output = new URL('../Tests/HRTEngineTests/Resources/bayes-golden.json', import.meta.url);
@@ -24,19 +25,38 @@ function load(id) {
     if (!definition) throw new Error('Unknown compiled module ' + id);
     const exports = {};
     modules.set(id, exports);
-    definition.factory(...definition.dependencies.map(key => key === 'require' ? load : key === 'exports' ? exports : load(key)));
+    definition.factory(
+        ...definition.dependencies.map(key => (key === 'require' ? load : key === 'exports' ? exports : load(key))),
+    );
     return exports;
 }
 
 try {
     const amd = join(scratch, 'reference.js');
     const projectCompiler = join(root, 'node_modules', '.bin', 'tsc');
-    execFileSync(existsSync(projectCompiler) ? projectCompiler : 'tsc', [
-        '--module', 'amd', '--moduleResolution', 'node', '--target', 'ES2022', '--skipLibCheck', '--strict', '--outFile', amd,
-        'src/domain/simulation/runSimulation.ts', 'src/domain/simulation/interpolate.ts', 'src/domain/calibration/index.ts',
-    ], { cwd: root, stdio: 'inherit' });
+    execFileSync(
+        existsSync(projectCompiler) ? projectCompiler : 'tsc',
+        [
+            '--module',
+            'amd',
+            '--moduleResolution',
+            'node',
+            '--target',
+            'ES2022',
+            '--skipLibCheck',
+            '--strict',
+            '--outFile',
+            amd,
+            'src/domain/simulation/runSimulation.ts',
+            'src/domain/simulation/interpolate.ts',
+            'src/domain/calibration/index.ts',
+        ],
+        { cwd: root, stdio: 'inherit' },
+    );
     class FixedDate extends Date {
-        static now() { return nowMs; }
+        static now() {
+            return nowMs;
+        }
     }
     new Function('define', 'Date', readFileSync(amd, 'utf8'))(define, FixedDate);
 } finally {
@@ -47,8 +67,12 @@ const { runSimulation } = load('src/domain/simulation/runSimulation');
 const { interpolateConcentration_E2 } = load('src/domain/simulation/interpolate');
 const { computeCalibration } = load('src/domain/calibration/index');
 const events = Array.from({ length: 10 }, (_, index) => ({
-    id: 'e' + index, route: 'injection', ester: 'EV',
-    timeH: nowH - 84 - (9 - index) * 168, doseMG: 5, extras: {},
+    id: 'e' + index,
+    route: 'injection',
+    ester: 'EV',
+    timeH: nowH - 84 - (9 - index) * 168,
+    doseMG: 5,
+    extras: {},
 }));
 const weight = 70;
 const simulation = runSimulation(events, weight);
@@ -79,11 +103,21 @@ const cases = scenarios.map(([name, history, labs]) => {
         return { timeH, factor: fit.factorFn(timeH), sd: fit.factorSdFn(timeH) };
     });
     return {
-        name, history, labs, scale: fit.scale, kMul: fit.kMul, fitErrPct: fit.fitErrPct,
-        interval: fit.latestInterval, discounted: fit.discounted, drift: fit.drift, samples,
+        name,
+        history,
+        labs,
+        scale: fit.scale,
+        kMul: fit.kMul,
+        fitErrPct: fit.fitErrPct,
+        interval: fit.latestInterval,
+        discounted: fit.discounted,
+        drift: fit.drift,
+        samples,
     };
 });
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const fixture = { sourceCommit, source: 'src/domain/calibration/bayes.ts', nowH, events, cases };
-writeFileSync(output, JSON.stringify(fixture, null, 2) + '\n');
+const filepath = fileURLToPath(output);
+const config = await resolveConfig(filepath);
+writeFileSync(output, await format(JSON.stringify(fixture), { ...config, filepath }));
 console.log('Generated ' + cases.length + ' Full Bayes calibration fixtures.');
