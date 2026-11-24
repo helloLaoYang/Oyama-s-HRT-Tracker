@@ -112,6 +112,34 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["编辑试算方案"].waitForExistence(timeout: 5))
     }
 
+    func testOverviewSharePreviewAndSystemSheet() {
+        let app = launchDemo()
+        let share = app.buttons["overview.share"]
+        waitUntilEnabled(share)
+        share.tap()
+
+        let title = app.navigationBars["分享预览"]
+        let image = app.images["overview.share.image"]
+        XCTAssertTrue(title.waitForExistence(timeout: 6))
+        XCTAssertTrue(image.waitForExistence(timeout: 6))
+        screenshot("19-share-preview", in: app)
+
+        let caption = element("overview.share.caption", in: app)
+        XCTAssertFalse((caption.value as? String ?? "").isEmpty)
+        caption.tap()
+        caption.typeText(" Share test")
+        XCTAssertTrue((caption.value as? String ?? "").contains("Share test"))
+
+        app.buttons["overview.share.send"].tap()
+        let shareActions = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier IN %@ OR label IN %@",
+            ["ActivityListView", "UIActivityContentView"],
+            ["Copy", "拷贝", "复制", "Save to Files", "存储到“文件”"]
+        ))
+        XCTAssertTrue(shareActions.firstMatch.waitForExistence(timeout: 6), app.debugDescription)
+        screenshot("20-system-share-sheet", in: app)
+    }
+
     func testDarkAppearanceAndNativeEntrySheets() {
         let app = launchDemo()
         app.tabBars.buttons["设置"].tap()
@@ -122,19 +150,30 @@ final class DesignSmokeTests: XCTestCase {
         screenshot("05-appearance-dark", in: app)
 
         app.tabBars.buttons["概览"].tap()
-        XCTAssertTrue(app.buttons["overview.addDose"].waitForExistence(timeout: 6))
+        let share = app.buttons["overview.share"]
+        waitUntilEnabled(share)
         screenshot("06-overview-dark", in: app)
-        scroll(app.scrollViews.firstMatch, until: element("timeline.plot.cpa", in: app))
+        share.tap()
+        XCTAssertTrue(app.images["overview.share.image"].waitForExistence(timeout: 6))
+        screenshot("21-share-preview-dark", in: app)
+        app.buttons["overview.share.close"].tap()
+        XCTAssertTrue(app.navigationBars["分享预览"].waitForNonExistence(timeout: 6))
+        let overview = app.scrollViews.firstMatch
+        let aboveChart = overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.54))
+        let top = overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.24))
+        aboveChart.press(forDuration: 0.05, thenDragTo: top)
+        XCTAssertTrue(element("timeline.plot.cpa", in: app).isHittable)
         screenshot("07-concentration-curves-dark", in: app)
-        app.scrollViews.firstMatch.swipeDown()
-        app.buttons["overview.addDose"].tap()
+
+        app.tabBars.buttons["记录"].tap()
+        let addDose = app.buttons["history.addDose"]
+        XCTAssertTrue(addDose.waitForExistence(timeout: 6))
+        screenshot("09-records-dark", in: app)
+        addDose.tap()
         XCTAssertTrue(app.buttons["dose.save"].waitForExistence(timeout: 6))
         screenshot("08-dose-entry-drawer", in: app)
         app.buttons["dose.cancel"].tap()
 
-        app.tabBars.buttons["记录"].tap()
-        XCTAssertTrue(app.buttons["history.addDose"].waitForExistence(timeout: 6))
-        screenshot("09-records-dark", in: app)
         app.tabBars.buttons["检查"].tap()
         XCTAssertTrue(app.buttons["labs.addLab"].waitForExistence(timeout: 6))
         screenshot("10-checks-dark", in: app)
@@ -158,6 +197,12 @@ final class DesignSmokeTests: XCTestCase {
 
     private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
+    private func waitUntilEnabled(_ element: XCUIElement) {
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"),
+                                                object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 8), .completed)
     }
 
     private func scroll(_ view: XCUIElement, until target: XCUIElement) {

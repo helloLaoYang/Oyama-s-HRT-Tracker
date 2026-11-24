@@ -1,9 +1,24 @@
 import SwiftUI
 
+struct ConcentrationShareCard: View {
+    let model: TimelineModel
+    let calendar: Calendar
+    let range: TrackerChartRange
+
+    var body: some View {
+        ConcentrationTimeline(model: model, calendar: calendar, range: .constant(range), isShareCard: true)
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .foregroundStyle(TrackerTheme.ink)
+            .background(TrackerTheme.background)
+    }
+}
+
 struct ConcentrationTimeline: View {
     let model: TimelineModel
     let calendar: Calendar
     @Binding var range: TrackerChartRange
+    var isShareCard = false
     @State private var cursor: Double?
     @ScaledMetric(relativeTo: .caption2) private var gutter: CGFloat = 39
     @ScaledMetric(relativeTo: .caption2) private var axisSize: CGFloat = 10
@@ -13,6 +28,7 @@ struct ConcentrationTimeline: View {
     private var selected: Double { cursor ?? model.now }
 
     var body: some View {
+        let plotHeights: (primary: CGFloat, secondary: CGFloat) = isShareCard ? (164, 88) : (195, 108)
         VStack(alignment: .leading, spacing: 12) {
             header
 
@@ -21,7 +37,7 @@ struct ConcentrationTimeline: View {
                     let color = trace.kind == .cpa ? TrackerTheme.secondaryChart : TrackerTheme.chartLine
                     seriesHeader(trace.kind, color: color)
                     plot(trace, color: color, secondary: index > 0)
-                        .frame(height: index == 0 ? 195 : 108)
+                        .frame(height: index == 0 ? plotHeights.primary : plotHeights.secondary)
                         .accessibilityIdentifier("timeline.plot.\(trace.kind.rawValue)")
                 }
                 timeAxis.frame(height: axisSize + 6)
@@ -39,38 +55,56 @@ struct ConcentrationTimeline: View {
         .accessibilityIdentifier("overview.timeline")
     }
 
+    @ViewBuilder
     private var header: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
+        if isShareCard {
+            VStack(alignment: .leading, spacing: 5) {
                 TrackerSectionTitle(title: "Hormone concentration over time")
-                    .fixedSize(horizontal: true, vertical: false)
-                Spacer(minLength: 0)
-                rangePicker.fixedSize()
+                HStack(spacing: 5) {
+                    Text(rangeTitle(range))
+                    Text(verbatim: "·")
+                    Text("Model estimate")
+                    Spacer(minLength: 8)
+                    Text(verbatim: "HRT Tracker")
+                }
+                .font(.caption)
+                .foregroundStyle(TrackerTheme.muted)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                TrackerSectionTitle(title: "Hormone concentration over time")
-                rangePicker.frame(maxWidth: .infinity, alignment: .trailing)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    TrackerSectionTitle(title: "Hormone concentration over time")
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    rangePicker.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    TrackerSectionTitle(title: "Hormone concentration over time")
+                    rangePicker.frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
         }
     }
 
     private var rangePicker: some View {
-        TrackerSegment(options: TrackerChartRange.allCases, selection: $range, compact: true) { option in
-            switch option {
-            case .week: "7 days"
-            case .month: "30 days"
-            case .all: "All"
-            }
+        TrackerSegment(options: TrackerChartRange.allCases, selection: $range, compact: true, title: rangeTitle)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("timeline.range")
+    }
+
+    private func rangeTitle(_ range: TrackerChartRange) -> LocalizedStringKey {
+        switch range {
+        case .week: "7 days"
+        case .month: "30 days"
+        case .all: "All"
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("timeline.range")
     }
 
     private func seriesHeader(_ kind: ConcentrationSeries, color: Color) -> some View {
         let items = HStack(spacing: 8) {
             legend(Text(verbatim: kind.name + " · " + kind.unit), color: color)
-            legend(Text(futureLegendTitle), color: futureColor(color), dash: futureDash)
-            if kind != .cpa {
+            legend(Text(isShareCard ? "Expected" : futureLegendTitle), color: futureColor(color), dash: futureDash)
+            if !isShareCard, kind != .cpa {
                 Label("Lab result", systemImage: "diamond.fill")
                     .symbolRenderingMode(.monochrome)
             }
@@ -78,19 +112,25 @@ struct ConcentrationTimeline: View {
         .fixedSize(horizontal: true, vertical: false)
         let calibration = calibrationLabel(kind)
 
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
+        return Group {
+            if isShareCard {
                 items
-                Spacer(minLength: 0)
-                calibration.fixedSize(horizontal: true, vertical: false)
-            }
-            VStack(alignment: .trailing, spacing: 4) {
-                ScrollView(.horizontal) {
-                    items
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        items
+                        Spacer(minLength: 0)
+                        calibration.fixedSize(horizontal: true, vertical: false)
+                    }
+                    VStack(alignment: .trailing, spacing: 4) {
+                        ScrollView(.horizontal) {
+                            items
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .scrollIndicators(.hidden)
+                        calibration
+                    }
                 }
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollIndicators(.hidden)
-                calibration
             }
         }
         .font(.caption)
@@ -131,42 +171,42 @@ struct ConcentrationTimeline: View {
     }
 
     private func plot(_ trace: TimelineTrace, color: Color, secondary: Bool) -> some View {
-        GeometryReader { geometry in
-            Canvas { context, size in
-                let scale = ValueAxis(trace: trace, steps: secondary ? 3 : 4)
-                let bounds = CGRect(x: gutter, y: 8, width: max(1, size.width - gutter - trailingInset),
-                                    height: max(1, size.height - 16))
-                func x(_ hour: Double) -> CGFloat { plotX(hour, width: size.width) }
-                func y(_ value: Double) -> CGFloat {
-                    bounds.maxY - (value - scale.minimum) / (scale.maximum - scale.minimum) * bounds.height
+        let canvas = Canvas { context, size in
+            let scale = ValueAxis(trace: trace, steps: secondary ? 3 : 4, includesMeasurements: !isShareCard)
+            let bounds = CGRect(x: gutter, y: 8, width: max(1, size.width - gutter - trailingInset),
+                                height: max(1, size.height - 16))
+            func x(_ hour: Double) -> CGFloat { plotX(hour, width: size.width) }
+            func y(_ value: Double) -> CGFloat {
+                bounds.maxY - (value - scale.minimum) / (scale.maximum - scale.minimum) * bounds.height
+            }
+
+            if let target = trace.kind.target {
+                let top = y(min(target.upperBound, scale.maximum))
+                let bottom = y(max(target.lowerBound, scale.minimum))
+                if bottom > top {
+                    context.fill(Path(CGRect(x: bounds.minX, y: top, width: bounds.width,
+                                             height: bottom - top)),
+                                 with: .color(TrackerTheme.band.opacity(0.52)))
                 }
+            }
+            for tick in scale.ticks {
+                let height = y(tick)
+                drawLine(context, from: CGPoint(x: bounds.minX, y: height),
+                         to: CGPoint(x: bounds.maxX, y: height), color: TrackerTheme.separator)
+                let number = tick.formatted(.number.precision(.fractionLength(0...2)))
+                context.draw(Text(verbatim: number).font(.system(size: axisSize).monospacedDigit())
+                    .foregroundStyle(TrackerTheme.muted),
+                             at: CGPoint(x: bounds.minX - 6, y: height), anchor: .trailing)
+            }
 
-                if let target = trace.kind.target {
-                    let top = y(min(target.upperBound, scale.maximum))
-                    let bottom = y(max(target.lowerBound, scale.minimum))
-                    if bottom > top {
-                        context.fill(Path(CGRect(x: bounds.minX, y: top, width: bounds.width,
-                                                 height: bottom - top)),
-                                     with: .color(TrackerTheme.band.opacity(0.52)))
-                    }
-                }
-                for tick in scale.ticks {
-                    let height = y(tick)
-                    drawLine(context, from: CGPoint(x: bounds.minX, y: height),
-                             to: CGPoint(x: bounds.maxX, y: height), color: TrackerTheme.separator)
-                    let number = tick.formatted(.number.precision(.fractionLength(0...2)))
-                    context.draw(Text(verbatim: number).font(.system(size: axisSize).monospacedDigit())
-                        .foregroundStyle(TrackerTheme.muted),
-                                 at: CGPoint(x: bounds.minX - 6, y: height), anchor: .trailing)
-                }
+            drawLine(context, from: CGPoint(x: x(model.now), y: bounds.minY),
+                     to: CGPoint(x: x(model.now), y: bounds.maxY),
+                     color: TrackerTheme.muted.opacity(0.7), dash: [2, 4])
 
-                drawLine(context, from: CGPoint(x: x(model.now), y: bounds.minY),
-                         to: CGPoint(x: x(model.now), y: bounds.maxY),
-                         color: TrackerTheme.muted.opacity(0.7), dash: [2, 4])
+            drawTrace(context, trace.past, color: color, x: x, y: y)
+            drawTrace(context, trace.future, color: futureColor(color), dash: futureDash, x: x, y: y)
 
-                drawTrace(context, trace.past, color: color, x: x, y: y)
-                drawTrace(context, trace.future, color: futureColor(color), dash: futureDash, x: x, y: y)
-
+            if !isShareCard {
                 for point in trace.doses {
                     let center = CGPoint(x: x(point.hour), y: y(point.value))
                     drawDot(context, center: center, radius: 2.6, color: color)
@@ -182,34 +222,43 @@ struct ConcentrationTimeline: View {
                     }
                     context.fill(diamond, with: .color(TrackerTheme.accent))
                 }
+            }
 
-                if let value = model.value(trace.kind, at: selected) {
-                    if cursor != nil {
-                        drawLine(context, from: CGPoint(x: x(selected), y: bounds.minY),
-                                 to: CGPoint(x: x(selected), y: bounds.maxY),
-                                 color: color.opacity(0.75), dash: [2, 4])
-                    }
-                    if (scale.minimum...scale.maximum).contains(value) {
-                        drawDot(context, center: CGPoint(x: x(selected), y: y(value)), radius: 3.2, color: color)
-                    }
+            if let value = model.value(trace.kind, at: selected) {
+                if cursor != nil {
+                    drawLine(context, from: CGPoint(x: x(selected), y: bounds.minY),
+                             to: CGPoint(x: x(selected), y: bounds.maxY),
+                             color: color.opacity(0.75), dash: [2, 4])
+                }
+                if (scale.minimum...scale.maximum).contains(value) {
+                    drawDot(context, center: CGPoint(x: x(selected), y: y(value)), radius: 3.2, color: color)
                 }
             }
-            .contentShape(Rectangle())
-            .onTapGesture { location in select(location.x, width: geometry.size.width) }
-            .simultaneousGesture(DragGesture(minimumDistance: 6).onChanged { drag in
-                guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                select(drag.location.x, width: geometry.size.width)
-            })
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: trace.kind.name + " · " + trace.kind.unit))
-        .accessibilityValue(Text(verbatim: readout))
-        .accessibilityAdjustableAction { direction in
-            let step = (model.window.upperBound - model.window.lowerBound) / 30
-            switch direction {
-            case .increment: cursor = min(model.window.upperBound, selected + step)
-            case .decrement: cursor = max(model.window.lowerBound, selected - step)
-            @unknown default: break
+        return Group {
+            if isShareCard {
+                canvas
+            } else {
+                GeometryReader { geometry in
+                    canvas
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in select(location.x, width: geometry.size.width) }
+                        .simultaneousGesture(DragGesture(minimumDistance: 6).onChanged { drag in
+                            guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
+                            select(drag.location.x, width: geometry.size.width)
+                        })
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: trace.kind.name + " · " + trace.kind.unit))
+                .accessibilityValue(Text(verbatim: readout))
+                .accessibilityAdjustableAction { direction in
+                    let step = (model.window.upperBound - model.window.lowerBound) / 30
+                    switch direction {
+                    case .increment: cursor = min(model.window.upperBound, selected + step)
+                    case .decrement: cursor = max(model.window.lowerBound, selected - step)
+                    @unknown default: break
+                    }
+                }
             }
         }
     }
@@ -292,8 +341,9 @@ private struct ValueAxis {
     let maximum: Double
     let ticks: [Double]
 
-    init(trace: TimelineTrace, steps: Double) {
-        let values = (trace.past + trace.future + trace.measurements).map(\.value).filter(\.isFinite)
+    init(trace: TimelineTrace, steps: Double, includesMeasurements: Bool) {
+        let measurements = includesMeasurements ? trace.measurements : []
+        let values = (trace.past + trace.future + measurements).map(\.value).filter(\.isFinite)
         var low = max(0, values.min() ?? 0)
         var high = max(low, values.max() ?? 0)
         if high - low < trace.kind.axisFloor {
