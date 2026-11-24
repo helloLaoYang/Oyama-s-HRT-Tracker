@@ -32,6 +32,22 @@ The configuration applies to both Debug and Release. Rebuild the iPhone app
 after changing the URL. Builds with an empty endpoint show feedback as
 unavailable. Keep GitHub App credentials in the Worker's Cloudflare Secrets.
 
+## Record assistant
+
+The central AI tab item opens a sheet from the current screen. Review and visit
+reports are available from the on-device records. Q&A uses Apple’s on-device
+model when available, or an HTTPS OpenAI-compatible service selected by the user
+in Settings → AI models. Provider credentials remain in the device Keychain.
+
+One conversation, its compacted summaries, and user-saved memories remain in a
+separate local store outside the health backup and cloud sync. The app uses a
+256,000-token ceiling, limited by the active model and space for its answer.
+Each compatible-service request shows its destination and data before sending.
+Previous messages stay local. The user can explicitly include a compacted memory
+summary in that request. The selected service's own retention policy still
+applies to the data it receives. Clear chat and memory in the assistant to delete
+the local AI data.
+
 ## Check
 
 - Run `swift test --package-path Packages/HRTEngine` for Swift engine regressions and

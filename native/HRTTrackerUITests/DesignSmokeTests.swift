@@ -117,6 +117,49 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertTrue(submit.isEnabled)
     }
 
+    func testRecordAssistantSheetAndModelSettings() {
+        let app = launchDemo()
+        let tabs = app.tabBars.firstMatch
+        let records = tabs.buttons["记录"]
+        let assistant = tabs.buttons["AI"]
+        let checks = tabs.buttons["检查"]
+        XCTAssertTrue(assistant.waitForExistence(timeout: 8))
+        XCTAssertLessThan(records.frame.midX, assistant.frame.midX)
+        XCTAssertLessThan(assistant.frame.midX, checks.frame.midX)
+
+        checks.tap()
+        XCTAssertTrue(app.buttons["labs.calibration"].waitForExistence(timeout: 6))
+        assistant.tap()
+        let done = app.buttons["ai.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 8))
+        XCTAssertTrue(element("ai.range", in: app).exists)
+        XCTAssertTrue(element("ai.segment.recap", in: app).exists)
+        screenshot("24-record-assistant-sheet", in: app)
+
+        element("ai.segment.report", in: app).tap()
+        XCTAssertTrue(element("ai.report.edit", in: app).waitForExistence(timeout: 8))
+        element("ai.report.preview", in: app).tap()
+        XCTAssertTrue(element("ai.report.export", in: app).waitForExistence(timeout: 8))
+        app.navigationBars["导出预览"].buttons.firstMatch.tap()
+
+        done.tap()
+        XCTAssertTrue(app.buttons["labs.calibration"].waitForExistence(timeout: 6))
+        screenshot("25-central-ai-entry", in: app)
+
+        tabs.buttons["设置"].tap()
+        app.buttons["settings.aiModels"].tap()
+        let fetch = element("ai.models.fetch", in: app)
+        XCTAssertTrue(fetch.waitForExistence(timeout: 8))
+        XCTAssertFalse(fetch.isEnabled)
+        XCTAssertTrue(element("ai.models.reasoning", in: app).exists)
+        let address = app.textFields["ai.models.address"]
+        address.tap()
+        address.typeText("https://localhost:19443/v1")
+        XCTAssertTrue(fetch.isEnabled)
+        XCTAssertFalse(element("ai.models.save", in: app).isEnabled)
+        screenshot("26-ai-model-settings", in: app)
+    }
+
     func testOverviewLayoutAndSimulationNavigation() {
         let app = launchDemo()
         let overview = app.scrollViews.firstMatch

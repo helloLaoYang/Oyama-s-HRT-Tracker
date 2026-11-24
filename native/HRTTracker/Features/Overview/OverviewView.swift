@@ -3,6 +3,7 @@ import SwiftUI
 
 struct OverviewView: View {
     let store: TrackerStore
+    let concentrationScrollRequest: Int
     @State private var range: TrackerChartRange = .week
     @State private var timeline: TimelineModel?
     @State private var loadedRequest: TimelineRequest?
@@ -17,47 +18,12 @@ struct OverviewView: View {
     var body: some View {
         let request = timelineRequest
         let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if !request.events.isEmpty {
-                    currentLevel(request: request, shareableTimeline: shareableTimeline)
+        ScrollViewReader { proxy in
+            overviewContent(request: request, shareableTimeline: shareableTimeline)
+                .onChange(of: concentrationScrollRequest, initial: true) { _, request in
+                    guard request > 0 else { return }
+                    proxy.scrollTo("overview.concentration", anchor: .top)
                 }
-                todayPlan
-                InventoryAlertsView(store: store)
-                Divider().overlay(TrackerTheme.separator)
-                if let timeline, !timeline.traces.isEmpty {
-                    ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
-                } else if request.events.isEmpty {
-                    VStack(alignment: .leading, spacing: 7) {
-                        TrackerSectionTitle(title: "Hormone concentration over time")
-                        Text("No dose records yet")
-                            .font(.footnote)
-                            .foregroundStyle(TrackerTheme.muted)
-                        Button("Record dose") { showDose = true }
-                            .font(.subheadline)
-                    }
-                } else if loadedRequest != request {
-                    ProgressView().frame(maxWidth: .infinity, minHeight: 100)
-                } else {
-                    Text("No supported concentration model for these records.")
-                        .font(.footnote)
-                        .foregroundStyle(TrackerTheme.muted)
-                }
-                Divider().overlay(TrackerTheme.separator)
-                DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
-                NavigationLink {
-                    ForecastView(store: store)
-                } label: {
-                    TrackerLinkLabel(title: "Regimen simulation")
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .accessibilityIdentifier("overview.forecast")
-            }
-            .padding(.horizontal, 17)
-            .padding(.vertical, 12)
-            .frame(maxWidth: 600)
-            .frame(maxWidth: .infinity)
         }
         .background(TrackerTheme.background.ignoresSafeArea())
         .foregroundStyle(TrackerTheme.ink)
@@ -103,6 +69,54 @@ struct OverviewView: View {
         ), titleVisibility: .visible, presenting: earlyPlan) { plan in
             Button("Record now") { complete(plan) }
             Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private func overviewContent(request: TimelineRequest, shareableTimeline: TimelineModel?) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if !request.events.isEmpty {
+                    currentLevel(request: request, shareableTimeline: shareableTimeline)
+                }
+                todayPlan
+                InventoryAlertsView(store: store)
+                Divider().overlay(TrackerTheme.separator)
+                Group {
+                    if let timeline, !timeline.traces.isEmpty {
+                        ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
+                    } else if request.events.isEmpty {
+                        VStack(alignment: .leading, spacing: 7) {
+                            TrackerSectionTitle(title: "Hormone concentration over time")
+                            Text("No dose records yet")
+                                .font(.footnote)
+                                .foregroundStyle(TrackerTheme.muted)
+                            Button("Record dose") { showDose = true }
+                                .font(.subheadline)
+                        }
+                    } else if loadedRequest != request {
+                        ProgressView().frame(maxWidth: .infinity, minHeight: 100)
+                    } else {
+                        Text("No supported concentration model for these records.")
+                            .font(.footnote)
+                            .foregroundStyle(TrackerTheme.muted)
+                    }
+                }
+                .id("overview.concentration")
+                Divider().overlay(TrackerTheme.separator)
+                DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
+                NavigationLink {
+                    ForecastView(store: store)
+                } label: {
+                    TrackerLinkLabel(title: "Regimen simulation")
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityIdentifier("overview.forecast")
+            }
+            .padding(.horizontal, 17)
+            .padding(.vertical, 12)
+            .frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
         }
     }
 

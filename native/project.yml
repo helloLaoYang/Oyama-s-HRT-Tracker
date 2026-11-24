@@ -92,13 +92,26 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.uitests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: 5.0
+  HRTTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [HRTTrackerTests]
+    dependencies:
+      - target: HRTTracker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 5.0
 schemes:
   HRTTracker:
     build:
       targets:
         HRTTracker: all
     test:
-      targets: [HRTTrackerUITests]
+      targets: [HRTTrackerTests, HRTTrackerUITests]
+      commandLineArguments:
+        --demo: true
   HRTTrackerWatch:
     build:
       targets:

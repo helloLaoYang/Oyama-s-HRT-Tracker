@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct TrackerSettingsView: View {
     let store: TrackerStore
+    let modelSettings: AIModelSettings
 
     var body: some View {
         ScrollView {
@@ -22,6 +23,12 @@ struct TrackerSettingsView: View {
                 }
                 .accessibilityIdentifier("settings.data")
                 NavigationLink {
+                    AIModelSettingsView(settings: modelSettings)
+                } label: {
+                    row("AI models", description: "On-device and compatible models", icon: "sparkles", table: "AIMain")
+                }
+                .accessibilityIdentifier("settings.aiModels")
+                NavigationLink {
                     TrackerAboutView(mode: store.mode, parameters: store.pkParameters)
                 } label: {
                     row("About", description: "Concentration model and disclaimer", icon: "info.circle")
@@ -39,12 +46,13 @@ struct TrackerSettingsView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private func row(_ title: LocalizedStringKey, description: LocalizedStringKey, icon: String) -> some View {
+    private func row(_ title: LocalizedStringKey, description: LocalizedStringKey, icon: String,
+                     table: String? = nil) -> some View {
         HStack(spacing: 12) {
             TrackerIcon(systemName: icon)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.subheadline)
-                Text(description).font(.footnote).foregroundStyle(TrackerTheme.muted)
+                Text(title, tableName: table).font(.subheadline)
+                Text(description, tableName: table).font(.footnote).foregroundStyle(TrackerTheme.muted)
             }
             Spacer()
             Image(systemName: "chevron.right")

@@ -6,7 +6,15 @@ import UIKit
 @main
 @MainActor
 struct HRTTrackerApp: App {
-    private let startup: Result<(container: ModelContainer, store: TrackerStore, watchSync: PhoneWatchSync), Error>
+    private let startup: Result<Startup, Error>
+
+    private struct Startup {
+        let container: ModelContainer
+        let store: TrackerStore
+        let watchSync: PhoneWatchSync
+        let modelSettings: AIModelSettings
+        let conversation: AIConversationStore
+    }
 
     init() {
         let navigationBar = UINavigationBar.appearance()
@@ -22,7 +30,9 @@ struct HRTTrackerApp: App {
                 configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: memoryOnly)
             )
             let store = TrackerStore(context: container.mainContext, demo: memoryOnly)
-            return (container, store, PhoneWatchSync(store: store))
+            return Startup(container: container, store: store, watchSync: PhoneWatchSync(store: store),
+                           modelSettings: AIModelSettings(inMemory: memoryOnly),
+                           conversation: AIConversationStore(inMemory: memoryOnly))
         }
     }
 
@@ -30,7 +40,8 @@ struct HRTTrackerApp: App {
         WindowGroup {
             switch startup {
             case .success(let state):
-                TrackerRoot(store: state.store, watchSync: state.watchSync)
+                TrackerRoot(store: state.store, watchSync: state.watchSync,
+                            modelSettings: state.modelSettings, conversation: state.conversation)
                     .modelContainer(state.container)
             case .failure:
                 ContentUnavailableView("Cannot open tracker data", systemImage: "exclamationmark.triangle",
@@ -41,12 +52,13 @@ struct HRTTrackerApp: App {
 }
 
 private enum TrackerTab: String, CaseIterable {
-    case overview, history, labs, settings
+    case overview, history, assistant, labs, settings
 
     var title: LocalizedStringKey {
         switch self {
         case .overview: "Overview"
         case .history: "Records"
+        case .assistant: "AI"
         case .labs: "Checks"
         case .settings: "Settings"
         }
@@ -56,6 +68,7 @@ private enum TrackerTab: String, CaseIterable {
         switch self {
         case .overview: TrackerTheme.navigationIcon("house")
         case .history: TrackerTheme.navigationIcon("list.bullet.rectangle.portrait")
+        case .assistant: TrackerTheme.navigationIcon("sparkles")
         case .labs: TrackerTheme.labNavigationIcon
         case .settings: TrackerTheme.navigationIcon("gearshape")
         }
@@ -65,14 +78,21 @@ private enum TrackerTab: String, CaseIterable {
 private struct TrackerRoot: View {
     let store: TrackerStore
     let watchSync: PhoneWatchSync
+    let modelSettings: AIModelSettings
+    let conversation: AIConversationStore
     @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var systemLocale
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab: TrackerTab = .overview
+    @State private var showsAssistant = false
+    @State private var opensCurveAfterAssistant = false
+    @State private var concentrationScrollRequest = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack { OverviewView(store: store) }
+        TabView(selection: tabSelection) {
+            NavigationStack { OverviewView(store: store, concentrationScrollRequest: concentrationScrollRequest) }
+                .id(concentrationScrollRequest)
                 .tabItem { tab(.overview) }
                 .tag(TrackerTab.overview)
                 .accessibilityIdentifier("tab.overview")
@@ -82,17 +102,30 @@ private struct TrackerRoot: View {
                 .tag(TrackerTab.history)
                 .accessibilityIdentifier("tab.history")
 
+            Color.clear
+                .tabItem { tab(.assistant) }
+                .tag(TrackerTab.assistant)
+                .accessibilityIdentifier("tab.assistant")
+
             NavigationStack { LabsView(store: store) }
                 .tabItem { tab(.labs) }
                 .tag(TrackerTab.labs)
                 .accessibilityIdentifier("tab.labs")
 
-            NavigationStack { TrackerSettingsView(store: store) }
+            NavigationStack { TrackerSettingsView(store: store, modelSettings: modelSettings) }
                 .tabItem { tab(.settings) }
                 .tag(TrackerTab.settings)
                 .accessibilityIdentifier("tab.settings")
         }
         .id(language)
+        .sheet(isPresented: $showsAssistant, onDismiss: assistantDismissed) {
+            AIAssistantView(store: store, modelSettings: modelSettings, conversation: conversation) {
+                opensCurveAfterAssistant = true
+                showsAssistant = false
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .environment(\.locale, language.locale ?? systemLocale)
         .tint(TrackerTheme.accent)
         .preferredColorScheme(preferredScheme)
@@ -117,6 +150,23 @@ private struct TrackerRoot: View {
         }
     }
 
+    private var tabSelection: Binding<TrackerTab> {
+        Binding(get: { selectedTab }, set: { tab in
+            if tab == .assistant {
+                showsAssistant = true
+            } else {
+                selectedTab = tab
+            }
+        })
+    }
+
+    private func assistantDismissed() {
+        guard opensCurveAfterAssistant else { return }
+        opensCurveAfterAssistant = false
+        concentrationScrollRequest += 1
+        selectedTab = .overview
+    }
+
     private var preferredScheme: ColorScheme? {
         switch store.appearance {
         case .light: .light
@@ -129,8 +179,31 @@ private struct TrackerRoot: View {
         Label {
             Text(tab.title)
         } icon: {
-            tab.icon
+            if tab == .assistant {
+                assistantIcon
+            } else {
+                tab.icon
+            }
         }
+    }
+
+    private var assistantIcon: Image {
+        let size = CGSize(width: 28, height: 28)
+        let style: UIUserInterfaceStyle = (preferredScheme ?? colorScheme) == .dark ? .dark : .light
+        let traits = UITraitCollection(userInterfaceStyle: style)
+        let monochrome = store.appearance == .mono
+        let fill = UIColor(monochrome ? TrackerTheme.subtle : TrackerTheme.wash).resolvedColor(with: traits)
+        let tint = UIColor(monochrome ? TrackerTheme.ink : TrackerTheme.accent).resolvedColor(with: traits)
+        let configuration = UIImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+        let icon = UIImage(systemName: "sparkles", withConfiguration: configuration)?.withTintColor(tint, renderingMode: .alwaysOriginal)
+        let image = UIGraphicsImageRenderer(size: size).image { _ in
+            fill.setFill()
+            UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).fill()
+            if let icon {
+                icon.draw(at: CGPoint(x: (size.width - icon.size.width) / 2, y: (size.height - icon.size.height) / 2))
+            }
+        }
+        return Image(uiImage: image.withRenderingMode(.alwaysOriginal))
     }
 }
 
