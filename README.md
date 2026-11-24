@@ -20,6 +20,8 @@
   &nbsp;&nbsp;&nbsp;
   <a href="https://github.com/xunxunProjects/Oyama-s-HRT-Tracker/releases/latest"><b>macOS and Windows</b></a>
   &nbsp;&nbsp;&nbsp;
+  <a href="#install-on-your-own-iphone"><b>Your own iPhone</b></a>
+  &nbsp;&nbsp;&nbsp;
   <a href="#docker"><b>Self-host with Docker</b></a>
   &nbsp;&nbsp;&nbsp;
   <a href="#support-the-project"><b>Buy us a coffee</b></a>
@@ -38,6 +40,7 @@
   - [Backup and sharing](#backup-and-sharing)
   - [Where the model comes from](#where-the-model-comes-from)
 - [Command-line tools](#command-line-tools)
+- [Install on your own iPhone](#install-on-your-own-iphone)
 - [Self-hosting](#self-hosting)
 - [Contributing](#contributing)
 - [For AI contributors](#for-ai-contributors)
@@ -48,7 +51,7 @@
 
 **Oyama's HRT Tracker** is a privacy-focused tool for logging hormone replacement therapy and simulating the hormone levels your doses produce. It has a feminizing mode (estradiol, plus cyproterone acetate) and a masculinizing mode (testosterone), and it can log other adjunct drugs too.
 
-**Runs in the browser, as an installable app, on macOS and Windows, or on your own server.**
+**Runs in the browser, as an installable app, on macOS, Windows, and your own iPhone, or on your own server.**
 
 <p align="center">
   <picture>
@@ -127,6 +130,88 @@ The offline tools live in the separate **[Oyama-s-HRT-Tracker-Tools](https://git
 - the vault, sessions and named connections are encrypted at rest.
 
 The CLI is experimental; the website does not depend on it and never handles OpenPGP keys or passphrases. Build and release downloads are in the [Tools repository](https://github.com/xunxunProjects/Oyama-s-HRT-Tracker-Tools).
+
+# Install on your own iPhone
+
+Two ways. Add the site to the Home Screen, or build the native app on your own Mac and install it on your iPhone. Dose records stay on the device either way. The Chinese steps, with the same commands, are in [README.zh-CN.md](./README.zh-CN.md#在-iphone-上安装).
+
+## Add to the Home Screen
+
+The site is an installable PWA (a web app manifest, Home Screen icons, and `apple-mobile-web-app-capable`).
+
+1. Open <https://hrt.mahiro.uk>, or your own **https** address, in Safari on the iPhone.
+2. Tap the Share button.
+3. Tap Add to Home Screen. Leave the name as HRT Tracker.
+4. Open it from the Home Screen. It runs in its own window, and records stay in Safari's website data.
+
+iOS only offers this for https (or localhost). A plain http address on your LAN will not. This needs no Mac and no Apple Developer account. Those records are separate from the native app below.
+
+## Build it with Xcode
+
+The iPhone app is the same web app inside a Capacitor 8 shell. It runs in WKWebView. Doses, labs, and supplies stay in that app's own localStorage. The project points at no server and adds no new network calls.
+
+Signing in, cloud backup, share links, and the site notice still contact the existing server when you use them. Offline, or when that server is down, those features fail and the records already on the phone stay put. The iOS build omits the service worker so it cannot intercept the bundled pages. If a normal web build is copied into the shell, the app sees Capacitor and does not register the worker.
+
+The icon and splash image are generated from `public/pwa-512x512.png`, the same artwork as the website and the desktop app.
+
+### Prerequisites
+
+- An Apple silicon Mac
+- [Xcode 26](https://apps.apple.com/app/xcode/id497799835) or newer (Capacitor 8 requires it), from the App Store. Then run `xcode-select --install` once; skip it if the command-line tools are already installed
+- Node.js 22 or newer
+- An iPhone connected with a cable. Tap Trust on the phone the first time
+- This project uses Swift Package Manager. The first time Xcode opens it, Xcode downloads `capacitor-swift-pm` from GitHub, so that step needs a network. CocoaPods is not required. You would need `brew install cocoapods` only if you deleted `ios/` and recreated it with `npx cap add ios --packagemanager CocoaPods`
+
+### Build and open in Xcode
+
+From the repository root:
+
+```bash
+git clone https://github.com/xunxunProjects/Oyama-s-HRT-Tracker.git
+cd Oyama-s-HRT-Tracker
+npm install
+npm run build:ios
+npx cap open ios
+```
+
+`npm run build:ios` builds the web app into `dist-ios/` with `CAPACITOR_BUILD=1` (no service worker), then runs `npx cap sync ios`, which copies those files to `ios/App/App/public` and writes `capacitor.config.json`.
+
+When the web bundle is already built and you only want to copy it again:
+
+```bash
+npm run cap:sync
+```
+
+That does not rebuild the web app. If `dist-ios/` does not exist yet, use `npm run build:ios`.
+
+You can also double-click `ios/App/App.xcodeproj` in Finder. This is an SPM project, so you open the `.xcodeproj`. There is no CocoaPods `App.xcworkspace` in the repo. Wait until Swift packages finish resolving before you build.
+
+The version shown on the phone matches `package.json`. It lives in the Xcode `MARKETING_VERSION`, and `python3 scripts/set_version.py` updates it with the other version fields.
+
+### Sign and install
+
+1. In the Xcode toolbar, choose your iPhone as the run destination.
+2. Select the blue App project, select the **App** target, and open **Signing & Capabilities**.
+3. Turn on **Automatically manage signing**.
+4. Set **Team** to your Personal Team, or to a paid developer team. If Team is empty, open **Xcode → Settings → Accounts** and sign in with an Apple ID. A free Apple ID creates a Personal Team.
+5. The bundle identifier is `com.hellolaoyang.hrttracker`. If Xcode says it is already taken, change `appId` in `capacitor.config.ts`, run `npm run cap:sync`, and confirm the new identifier on the Signing tab.
+6. Press Run. The first launch on the phone asks you to trust the developer: **Settings → General → VPN & Device Management** (some iOS versions say Device Management).
+
+A free personal Apple ID:
+
+- The provisioning profile expires after about 7 days. The icon remains, and the app stops launching until you open this project on the same Mac and press Run again. Installing over the existing app keeps its records.
+- You can have about three apps signed this way at once.
+- A Personal Team cannot use a few capabilities that require a paid account. This app does not need them.
+
+An Apple Developer Program membership (99 USD a year) makes the profile last about a year, and you can use TestFlight. Either way you sign on your own Mac. The repository holds no certificates.
+
+### Where the records live
+
+They live in this app's WKWebView, separate from Safari and from the desktop app. Installing a new build over the existing app keeps them. Deleting the app, changing the bundle identifier, or deleting it before you install again removes them. When the free profile expires, press Run and install over the app. Export a backup from Settings before you reinstall.
+
+### Unsigned build artifact
+
+`.github/workflows/ios.yml` builds an unsigned `.ipa` and `.xcarchive` on a GitHub-hosted macOS 26 runner. The artifact shows that the project compiles. It cannot be installed on an iPhone. Installing on your phone still means signing with your Apple ID on your Mac. The workflow runs when the iOS project or its build files change, and you can run it by hand from the Actions tab.
 
 # Self-hosting
 

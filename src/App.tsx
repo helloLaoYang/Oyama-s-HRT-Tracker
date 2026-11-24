@@ -32,6 +32,7 @@ import { useAppData } from './hooks/useAppData';
 import { useAppNavigation, tabForView, ViewKey } from './hooks/useAppNavigation';
 import { useLiveShareSync } from './hooks/useLiveShareSync';
 import { describeSyncError, useCloudSync } from './hooks/useCloudSync';
+import { syncNativeStatusBar } from './utils/nativeShell';
 
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
@@ -368,6 +369,7 @@ const AppContent = () => {
             document
                 .querySelectorAll('meta[name="theme-color"]')
                 .forEach(meta => meta.setAttribute('content', isDark ? '#181714' : '#ffffff'));
+            syncNativeStatusBar(isDark);
         };
 
         // Mono renders as light with a grayscale filter (see html.mono in index.css)

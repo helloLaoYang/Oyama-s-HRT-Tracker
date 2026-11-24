@@ -119,6 +119,22 @@ Rust 工具链以及对应平台的 Tauri 系统依赖，然后运行：
 npm run tauri:dev
 ```
 
+### iPhone
+
+The iPhone app is a Capacitor shell around a service-worker-free web build.
+Install steps, including a free Apple ID, are in
+[README.zh-CN.md](./README.zh-CN.md#在-iphone-上安装) and
+[README.md](./README.md#install-on-your-own-iphone). From a checkout:
+
+iPhone 上的 App 是 Capacitor 外壳，包的是一份不含 Service Worker 的网页构建。
+安装步骤（含免费 Apple ID）见
+[README.zh-CN.md](./README.zh-CN.md#在-iphone-上安装)。在已克隆的仓库里：
+
+```bash
+npm run build:ios
+npx cap open ios
+```
+
 ---
 
 ## Codebase map 代码结构
@@ -139,6 +155,7 @@ npm run tauri:dev
 | `migrations/`                           | D1 schema. Add a new numbered file; never edit one that has shipped. D1 数据库结构。新增带编号的文件，不要修改已发布的迁移。                                                       |
 | `wrangler.toml`                         | Worker configuration and bindings. Worker 配置与绑定。                                                                                                                             |
 | `src-tauri/`                            | Tauri desktop app (Rust). Tauri 桌面应用（Rust）。                                                                                                                                 |
+| `ios/`, `capacitor.config.ts`           | Capacitor iOS app. Capacitor iOS 应用。                                                                                                                                            |
 | `Dockerfile`, `docker/`, `compose.yaml` | Self-hosted image. 自托管镜像。                                                                                                                                                    |
 | `scripts/set_version.py`                | Keeps every version field in step. 保持各文件版本号一致。                                                                                                                          |
 | `.github/workflows/`                    | CI, CodeQL, Docker publishing and releases. CI、CodeQL、Docker 发布与版本发布。                                                                                                    |

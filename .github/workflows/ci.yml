@@ -35,8 +35,9 @@ jobs:
         run: npm ci
 
       - name: Versions agree
-        # package.json, package-lock.json, tauri.conf.json, Cargo.toml and
-        # Cargo.lock must all carry one version; set_version.py writes them.
+        # package.json, package-lock.json, tauri.conf.json, Cargo.toml,
+        # Cargo.lock and the iOS MARKETING_VERSION must all carry one version;
+        # set_version.py writes them.
         run: python3 scripts/set_version.py --check
 
       - name: Lint

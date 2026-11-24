@@ -111,6 +111,7 @@ const LIBRARIES: Entry[] = [
     { name: 'Vite PWA', href: 'https://vite-pwa-org.netlify.app/', note: 'MIT' },
     { name: 'Workbox', href: 'https://developer.chrome.com/docs/workbox', note: 'MIT' },
     { name: 'Tauri', href: 'https://tauri.app/', note: 'Apache-2.0 / MIT' },
+    { name: 'Capacitor', href: 'https://capacitorjs.com/', note: 'MIT' },
 ];
 
 const heading = 'mt-8 mb-1 text-xs font-medium text-[var(--text-muted)]';
