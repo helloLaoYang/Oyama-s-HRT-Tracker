@@ -11,7 +11,7 @@ export function stockMoney(amount: number, currency: StockCurrency, unit = false
     return new Intl.NumberFormat(appLocale(), {
         style: 'currency',
         currency,
-        ...(unit ? { maximumFractionDigits: 6 } : {}),
+        ...(unit ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {}),
     }).format(amount);
 }
 

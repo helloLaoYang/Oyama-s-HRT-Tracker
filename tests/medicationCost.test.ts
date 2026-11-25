@@ -1,14 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { costStart, stockForecast, stockLedger, stockSpecifications, stockTotals } from '../src/utils/stockLedger';
+import {
+    costStart,
+    stockForecast,
+    stockLedger,
+    stockSpecifications,
+    stockTotals,
+    stockUnitPrice,
+} from '../src/utils/stockLedger';
 import { draftToItem, itemToDraft, normalizePlanItem, planEvent, regimensFromPlan } from '../src/utils/plan';
 import { Route, Ester } from '../logic';
-import { specLabel } from '../src/components/StockPurchaseFields';
+import { specLabel, stockMoney } from '../src/components/StockPurchaseFields';
 import { regimenLabel, patchStrengthLabel } from '../src/utils/regimenText';
 import { TRANSLATIONS } from '../src/i18n/translations';
 import type { Supply } from '../src/utils/regimen';
 import { parsePurchase, priceDraft } from '../src/components/StockPurchaseFields';
 
 describe('medication cost', () => {
+    it('displays unit prices to two decimal places and calculates from the full purchase price', () => {
+        const price = stockUnitPrice({ currency: 'CNY', unitsPerPack: 8, packCount: 1, totalMinor: 1001 })!;
+        expect(stockMoney(price, 'CNY', true)).toMatch(/1[.,]25(?:\D|$)/);
+        expect(stockMoney(2, 'JPY', true)).toMatch(/2[.,]00(?:\D|$)/);
+        expect(stockMoney(price * 8, 'CNY')).toMatch(/10[.,]01(?:\D|$)/);
+    });
     it('matches two 50 µg/day patches by per-patch release, even with a 100 µg/day box on the shelf', () => {
         const lot = (rate: number): Supply => ({
             id: 'patch-' + rate,

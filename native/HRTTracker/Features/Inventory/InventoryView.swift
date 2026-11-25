@@ -614,7 +614,9 @@ func stockNumber(_ value: Double) -> String {
 }
 
 func stockMoney(_ value: Decimal, _ currency: StockCurrency, unit: Bool = false) -> String {
-    value.formatted(.currency(code: currency.rawValue).precision(.fractionLength(currency.fractionDigits...(unit ? 6 : currency.fractionDigits))))
+    value.formatted(.currency(code: currency.rawValue)
+        .locale(AppLanguage.selection.locale ?? .autoupdatingCurrent)
+        .precision(.fractionLength(unit ? 2 : currency.fractionDigits)))
 }
 
 func stockPriceLabel(_ supply: MedicationSupply) -> String {

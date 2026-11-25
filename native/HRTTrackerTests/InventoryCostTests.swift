@@ -134,6 +134,21 @@ final class InventoryCostTests: XCTestCase {
         XCTAssertEqual(StockPurchase.minorAmount("12,50", currency: .CNY, locale: locale), 1250)
     }
 
+    func testUnitPriceDisplaysTwoDecimalsAndKeepsThePurchaseTotal() throws {
+        let previous = UserDefaults.standard.string(forKey: AppLanguage.preferenceKey)
+        defer { UserDefaults.standard.set(previous, forKey: AppLanguage.preferenceKey) }
+        let purchase = StockPurchase(unitsPerPack: 8, packCount: 1, totalMinor: 1001, currency: .CNY)
+        let unitPrice = try XCTUnwrap(purchase.unitPrice)
+        for (language, price, total) in [("en", "1.25", "10.01"), ("de", "1,25", "10,01")] {
+            UserDefaults.standard.set(language, forKey: AppLanguage.preferenceKey)
+            let displayed = stockMoney(unitPrice, .CNY, unit: true).filter { $0.isNumber || ".,".contains($0) }
+            XCTAssertEqual(displayed, price)
+            XCTAssertTrue(stockMoney(unitPrice * 8, .CNY).contains(total))
+        }
+        UserDefaults.standard.set("en", forKey: AppLanguage.preferenceKey)
+        XCTAssertTrue(stockMoney(2, .JPY, unit: true).contains("2.00"))
+    }
+
     func testWebBackupAndNativeRoundTripUseTheSameStock() throws {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "medication-cost-backup", withExtension: "json"))
         let incoming = try TrackerBackup.read(Data(contentsOf: url), fallbackMode: .transfem, currentYear: 2026)
