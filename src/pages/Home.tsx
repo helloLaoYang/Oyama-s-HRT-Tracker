@@ -14,8 +14,9 @@ import {
 import ResultChart from '../components/ResultChart';
 import DoseHeatmap from '../components/DoseHeatmap';
 import MedicationCost from '../components/MedicationCost';
-import { type StockTarget } from '../components/StockPurchaseFields';
-import { stockGroup, stockLedger, type CostRange } from '../utils/stockLedger';
+import CustomSelect from '../components/CustomSelect';
+import { specLabel, stockChoiceLabel, type StockTarget } from '../components/StockPurchaseFields';
+import { stockForecast, stockLedger, stockSpecifications, type CostRange } from '../utils/stockLedger';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import RollingNumber from '../components/RollingNumber';
 import LevelRail from '../components/LevelRail';
@@ -28,7 +29,7 @@ import { usePixelCats } from '../contexts/PixelCatContext';
 import { useDialog } from '../contexts/DialogContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { AppTheme } from '../constants';
-import { Regimen, Supply, supplyStatus } from '../utils/regimen';
+import { Regimen, Supply } from '../utils/regimen';
 import { PlanItem, planStatus, matchesItem } from '../utils/plan';
 import { planItemLabel, supplyLabel, dueLabel, fill, fillNodes } from '../utils/regimenText';
 import { headerAction, headerActionAccent } from '../components/PageHeader';
@@ -117,21 +118,14 @@ const Home: React.FC<HomeProps> = ({
 
     // A supply nothing current uses never runs low.
     const stock = React.useMemo(() => stockLedger(supplies, events, nowH), [supplies, events, nowH]);
+    const specs = React.useMemo(() => stockSpecifications(supplies), [supplies]);
+    const [choosingStock, setChoosingStock] = React.useState<string | null>(null);
     const lowSupplies = React.useMemo(() => {
-        const balances = new Map<string, { supply: Supply; remaining: number }>();
-        for (const s of supplies.filter(s => s.archivedAt === undefined)) {
-            const key = stockGroup(s),
-                row = balances.get(key) ?? { supply: s, remaining: 0 };
-            row.remaining += stock.remaining.get(s.id) ?? 0;
-            balances.set(key, row);
-        }
-        return [...balances.values()]
-            .map(row => supplyStatus(row.supply, row.remaining, regimens, nowH))
-            .filter(
-                st =>
-                    st.dailyUse !== null &&
-                    (st.remaining <= 0 || (st.runOutH !== null && st.runOutH - nowH < supplyLeadDays * 24)),
-            );
+        return stockForecast(supplies, stock.remaining, regimens, nowH).combined.filter(
+            st =>
+                st.dailyUse !== null &&
+                (st.remaining <= 0 || (st.runOutH !== null && st.runOutH - nowH < supplyLeadDays * 24)),
+        );
     }, [supplies, stock, regimens, nowH, supplyLeadDays]);
     const hormoneAdvisory = React.useMemo(() => getHormoneLevelAdvisory(labResults), [labResults]);
     const hasLabForMode = labResults.some(l => (isTransmasc ? isT_LabUnit(l.unit) : !isT_LabUnit(l.unit)));
@@ -545,9 +539,14 @@ const Home: React.FC<HomeProps> = ({
                                     // A rest day's button stays, since an injection day does
                                     // move, but it asks first: one stray tap there wrote a full
                                     // dose days early, and it shifts every estimate after it.
+                                    const choices = specs.matching(item);
+                                    const startLog = () => {
+                                        if (!specs.selected(item) && choices.length) setChoosingStock(item.id);
+                                        else onLogPlanItem(item);
+                                    };
                                     const logDose = () => {
                                         if (st.kind !== 'rest') {
-                                            onLogPlanItem(item);
+                                            startLog();
                                             return;
                                         }
                                         showDialog(
@@ -556,7 +555,7 @@ const Home: React.FC<HomeProps> = ({
                                                 verb: t(`plan.verb.${item.route}`),
                                                 day: dueLabel(st.nextH, lang, false, nowH),
                                             }),
-                                            () => onLogPlanItem(item),
+                                            startLog,
                                             { title: label, confirmLabel: t('home.empty_cta') },
                                         );
                                     };
@@ -606,6 +605,45 @@ const Home: React.FC<HomeProps> = ({
                                             </span>
                                         </>
                                     );
+                                    if (choosingStock === item.id && !taken)
+                                        return (
+                                            <div key={item.id} className="space-y-2 py-3">
+                                                <p className="text-sm">{label}</p>
+                                                <CustomSelect
+                                                    label={t('plan.stockSpec')}
+                                                    value=""
+                                                    options={[
+                                                        { value: '', label: t('cost.choose') },
+                                                        ...choices.map(s => ({
+                                                            value: s.id,
+                                                            label: stockChoiceLabel(s, item.route, t),
+                                                        })),
+                                                    ]}
+                                                    onChange={id => {
+                                                        if (!id) return;
+                                                        onLogPlanItem({ ...item, inventorySupplyId: id });
+                                                        setChoosingStock(null);
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className={headerAction}
+                                                    onClick={() => {
+                                                        onLogPlanItem(item);
+                                                        setChoosingStock(null);
+                                                    }}
+                                                >
+                                                    {t('cost.later')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={headerAction}
+                                                    onClick={() => setChoosingStock(null)}
+                                                >
+                                                    {t('btn.cancel')}
+                                                </button>
+                                            </div>
+                                        );
                                     return (
                                         <div key={item.id} className="flex items-center justify-between gap-3 py-1.5">
                                             {loggedToday ? (
@@ -666,7 +704,7 @@ const Home: React.FC<HomeProps> = ({
                             SVG unless the two are kept from wrapping) so it never ends up
                             alone on a line. */}
                                 {lowSupplies.map(({ supply, remaining, runOutH }) => {
-                                    const name = supplyLabel(supply, t);
+                                    const name = supplyLabel(supply, t) + ' · ' + specLabel(supply.pack, t);
                                     return (
                                         <button
                                             key={supply.id}

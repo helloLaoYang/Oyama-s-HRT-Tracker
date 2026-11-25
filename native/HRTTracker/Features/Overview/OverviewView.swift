@@ -10,6 +10,7 @@ struct OverviewView: View {
     @State private var showDose = false
     @State private var showInfo = false
     @State private var earlyPlan: MedicationPlan?
+    @State private var stockPlan: MedicationPlan?
     @State private var loggedPlans: [String: String] = [:]
     @ScaledMetric(relativeTo: .largeTitle) private var mainValueSize: CGFloat = 42
     @ScaledMetric(relativeTo: .largeTitle) private var pairedValueSize: CGFloat = 36
@@ -84,6 +85,25 @@ struct OverviewView: View {
             }
         }
         .sheet(isPresented: $showDose) { DoseEditorView(store: store) }
+        .sheet(item: $stockPlan) { plan in
+            NavigationStack {
+                List {
+                    ForEach(InventorySpecifications(store.supplies).matching(plan)) { lot in
+                        Button(stockChoiceLabel(lot, for: plan.route)) {
+                            var linked = plan
+                            linked.inventorySupplyId = lot.id
+                            if store.savePlan(linked) { record(linked) }
+                            stockPlan = nil
+                        }
+                    }
+                    Button(inventoryText("Confirm later")) { record(plan); stockPlan = nil }
+                }
+                .navigationTitle(inventoryText("Choose specification"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { stockPlan = nil } } }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .sheet(item: $shareSnapshot) { snapshot in
             ConcentrationSharePreview(snapshot: snapshot)
         }
@@ -348,6 +368,15 @@ struct OverviewView: View {
     }
 
     private func complete(_ plan: MedicationPlan) {
+        let specifications = InventorySpecifications(store.supplies)
+        if specifications.selected(plan) == nil && !specifications.matching(plan).isEmpty {
+            stockPlan = plan
+        } else {
+            record(plan)
+        }
+    }
+
+    private func record(_ plan: MedicationPlan) {
         if let event = store.complete(plan) { loggedPlans[plan.id] = event.id }
     }
 }

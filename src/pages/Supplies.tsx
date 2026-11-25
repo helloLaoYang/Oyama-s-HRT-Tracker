@@ -10,11 +10,27 @@ import { settingsSection } from '../components/SettingsListItem';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { useDialog } from '../contexts/DialogContext';
-import { Regimen, Supply, Pack, PackKind, supplyStatus, packKindsFor, defaultPack, packUnitMG } from '../utils/regimen';
-import { supplyLabel, intervalLabel, dueLabel, fill, fillNodes, remainingLabel, packUnit } from '../utils/regimenText';
-import { usualFor } from '../utils/plan';
+import { Regimen, Supply, Pack, PackKind, packKindsFor, defaultPack, packUnitMG } from '../utils/regimen';
+import {
+    supplyLabel,
+    intervalLabel,
+    dueLabel,
+    fill,
+    fillNodes,
+    remainingLabel,
+    packUnit,
+    patchStrengthLabel,
+} from '../utils/regimenText';
+import { PLAN_DRUGS, usualFor } from '../utils/plan';
 import { inertWhen } from '../utils/inert';
-import { stockLedger, stockSpec, stockUnitPrice } from '../utils/stockLedger';
+import {
+    recordedStrength,
+    stockForecast,
+    stockLedger,
+    stockSpec,
+    stockSpecifications,
+    stockUnitPrice,
+} from '../utils/stockLedger';
 import {
     parsePurchase,
     purchaseUnit,
@@ -37,42 +53,13 @@ const labelCls = `block text-xs font-medium mb-1.5 ${on}`;
 const cancelBtn = 'min-w-[88px] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md';
 const confirmBtn = 'btn-primary min-w-[88px]';
 
-/** Everything that can be stocked, per mode: the forms the dose form can log. */
-const STOCKABLE: Record<'transfem' | 'transmasc', [Route, Ester][]> = {
-    transfem: [
-        [Route.injection, Ester.EV],
-        [Route.injection, Ester.EB],
-        [Route.injection, Ester.EC],
-        [Route.injection, Ester.EN],
-        [Route.injection, Ester.EU],
-        [Route.injection, Ester.LEUP],
-        [Route.injection, Ester.TRIP],
-        [Route.oral, Ester.EV],
-        [Route.oral, Ester.E2],
-        [Route.oral, Ester.CPA],
-        [Route.oral, Ester.SPIRO],
-        [Route.oral, Ester.BICA],
-        [Route.oral, Ester.MPA],
-        [Route.oral, Ester.RLX],
-        [Route.sublingual, Ester.E2],
-        [Route.gel, Ester.E2],
-        [Route.patchApply, Ester.E2],
-    ],
-    transmasc: [
-        [Route.injection, Ester.TC],
-        [Route.injection, Ester.TE],
-        [Route.injection, Ester.TU],
-        [Route.gel, Ester.T],
-        [Route.patchApply, Ester.T],
-    ],
-};
 const LEAD_DAYS = [7, 14, 30] as const;
 
 interface SuppliesProps {
     target?: StockTarget;
     onBack: () => void;
     supplies: Supply[];
-    onSave: (s: Supply) => void;
+    onSave: (s: Supply, forDoseId?: string) => void;
     onDelete: (id: string) => void;
     events: DoseEvent[];
     regimens: Regimen[];
@@ -211,7 +198,7 @@ const PackFields: React.FC<{ pack: Pack; onChange: (p: Pack) => void; t: (k: str
     if (pack.kind === 'patch')
         return (
             <label className="col-span-2 block">
-                <span className={labelCls}>{t('cost.patchRate')}</span>
+                <span className={labelCls}>{patchStrengthLabel(t)}</span>
                 <input
                     type="number"
                     inputMode="decimal"
@@ -254,6 +241,7 @@ const Supplies: React.FC<SuppliesProps> = ({
     const { showDialog } = useDialog();
     const targetDose = target && 'dose' in target ? target.dose : undefined;
     const targetId = target && 'priceId' in target ? target.priceId : undefined;
+    const anchor = targetDose?.inventorySupplyId ? stockSpecifications(supplies).selected(targetDose) : undefined;
 
     // Whatever is in use now first, then everything else that can be logged.
     const options = useMemo(() => {
@@ -267,7 +255,9 @@ const Supplies: React.FC<SuppliesProps> = ({
         };
         regimens.forEach(r => add(r.route, r.ester, intervalLabel(r.intervalH, t)));
         if (targetDose) add(targetDose.route, targetDose.ester);
-        STOCKABLE[mode].forEach(([r, e]) => add(r, e));
+        for (const route of Object.keys(PLAN_DRUGS[mode]) as Route[]) {
+            for (const ester of PLAN_DRUGS[mode][route] ?? []) add(route, ester);
+        }
         return out;
     }, [regimens, mode, t, targetDose]);
 
@@ -285,14 +275,17 @@ const Supplies: React.FC<SuppliesProps> = ({
 
     const [adding, setAdding] = useState(!!targetDose);
     const [pick, setPick] = useState(() =>
-        targetDose ? targetDose.route + '|' + targetDose.ester : (options[0]?.value ?? ''),
+        targetDose ? (anchor?.route ?? targetDose.route) + '|' + targetDose.ester : (options[0]?.value ?? ''),
     );
     const [pickRoute, pickEster] = pick.split('|') as [Route, Ester];
-    const [pack, setPack] = useState<Pack>(
-        () =>
-            supplies.find(s => s.id === targetDose?.inventorySupplyId)?.pack ??
-            packFor(packKindsFor(pickRoute)[0], pickRoute, pickEster),
-    );
+    const [pack, setPack] = useState<Pack>(() => {
+        if (anchor) return anchor.pack;
+        const strength = targetDose && recordedStrength(targetDose);
+        const pack = packFor(packKindsFor(pickRoute)[0], pickRoute, pickEster);
+        if (strength && pack.kind === 'patch') return { ...pack, releaseRateUGPerDay: strength };
+        if (strength && pack.kind === 'vial') return { ...pack, mgPerMl: strength };
+        return pack;
+    });
     const [count, setCount] = useState('');
     const defaultCurrency = [...supplies].reverse().find(s => s.purchase)?.purchase?.currency ?? 'CNY';
     const [newPrice, setNewPrice] = useState(() => priceDraft(undefined, defaultCurrency));
@@ -332,15 +325,18 @@ const Supplies: React.FC<SuppliesProps> = ({
         startMs <= nowH * 3_600_000;
     const add = () => {
         if (!canAdd) return;
-        onSave({
-            id: uuidv4(),
-            route: pickRoute,
-            ester: pickEster,
-            pack,
-            count: countNum,
-            startedAt: startMs,
-            purchase: bought,
-        });
+        onSave(
+            {
+                id: uuidv4(),
+                route: pickRoute,
+                ester: pickEster,
+                pack,
+                count: countNum,
+                startedAt: startMs,
+                purchase: bought,
+            },
+            targetDose?.id,
+        );
         setCount('');
         setNewPrice(priceDraft(undefined, newPrice.currency));
         setStarted(localDateTime(Date.now()));
@@ -348,9 +344,9 @@ const Supplies: React.FC<SuppliesProps> = ({
     };
 
     const ledger = useMemo(() => stockLedger(supplies, events, nowH), [supplies, events, nowH]);
-    const statuses = supplies
-        .filter(s => s.archivedAt === undefined || s.id === targetId)
-        .map(s => supplyStatus(s, ledger.remaining.get(s.id) ?? 0, regimens, nowH));
+    const statuses = stockForecast(supplies, ledger.remaining, regimens, nowH).lots.filter(
+        ({ supply }) => supply.archivedAt === undefined || supply.id === targetId,
+    );
     const knownPacks = [
         ...new Map(
             supplies.filter(s => s.route === pickRoute && s.ester === pickEster).map(s => [stockSpec(s.pack), s.pack]),
@@ -566,7 +562,7 @@ const Supplies: React.FC<SuppliesProps> = ({
                                                             !supply.pack.releaseRateUGPerDay && (
                                                                 <label className="block">
                                                                     <span className={labelCls}>
-                                                                        {t('cost.patchRate')}
+                                                                        {patchStrengthLabel(t)}
                                                                     </span>
                                                                     <input
                                                                         type="number"

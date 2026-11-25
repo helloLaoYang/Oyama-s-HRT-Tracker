@@ -8,7 +8,8 @@ import Doodle from '../components/Doodle';
 import { v4 as uuidv4 } from 'uuid';
 import { DoseEvent, Route, Ester, ExtraKey, getToE2Factor, isEstradiolEster, isTestosteroneEster } from '../../logic';
 import { formatTime, formatWearDays } from '../utils/helpers';
-import { drugLabel } from '../utils/regimenText';
+import { drugLabel, patchRateLabel } from '../utils/regimenText';
+import type { PlanItem } from '../utils/plan';
 import { useDialog } from '../contexts/DialogContext';
 import DoseForm from '../components/DoseForm';
 import type { Supply } from '../utils/regimen';
@@ -91,6 +92,7 @@ const PinnedDayLabel: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const intervalStep = (v: number, dir: 1 | -1) => ((dir > 0 ? v >= 1 : v > 1) ? 1 : 0.25);
 
 interface HistoryProps {
+    plan: PlanItem[];
     supplies: Supply[];
     t: (key: string) => string;
     isQuickAddOpen: boolean;
@@ -116,6 +118,7 @@ interface HistoryProps {
 }
 
 const History: React.FC<HistoryProps> = ({
+    plan,
     supplies,
     t,
     isQuickAddOpen,
@@ -433,7 +436,13 @@ const History: React.FC<HistoryProps> = ({
                                 <span className="truncate">{t(`route.${ev.route}`)}</span>
                                 {ev.extras[ExtraKey.releaseRateUGPerDay] ? (
                                     <>
-                                        <span className="text-[var(--text)]">{`${ev.extras[ExtraKey.releaseRateUGPerDay]} µg/d`}</span>
+                                        <span className="text-[var(--text)]">
+                                            {patchRateLabel(
+                                                ev.extras[ExtraKey.releaseRateUGPerDay],
+                                                ev.extras.patchCount,
+                                                t,
+                                            )}
+                                        </span>
                                     </>
                                 ) : (
                                     <>
@@ -644,6 +653,7 @@ const History: React.FC<HistoryProps> = ({
                         )}
                         <DoseForm
                             supplies={supplies}
+                            plan={plan}
                             // Force remount on open so the default date resets to "now" (this row never unmounts, only collapses via CSS).
                             key={isQuickAddOpen ? 'open' : 'closed'}
                             eventToEdit={null}

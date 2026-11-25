@@ -5,6 +5,10 @@ import PageHeader, { PAGE_COLUMN, headerAction, headerActionAccent } from '../co
 import CustomSelect from '../components/CustomSelect';
 import Doodle from '../components/Doodle';
 import PlanWizard from '../components/PlanWizard';
+import PlanStockField from '../components/PlanStockField';
+import { specLabel } from '../components/StockPurchaseFields';
+import type { Supply } from '../utils/regimen';
+import { stockSpecifications } from '../utils/stockLedger';
 import { SettingsListItem, settingsSection } from '../components/SettingsListItem';
 import { planToCalendar } from '../utils/planCalendar';
 import type { DoseEvent } from '../../logic';
@@ -22,7 +26,7 @@ import {
     isPresetFrequency,
     itemToDraft,
 } from '../utils/plan';
-import { asTitle, regimenLabel, frequencyLabel, gelSiteName } from '../utils/regimenText';
+import { asTitle, regimenLabel, frequencyLabel, gelSiteName, patchStrengthLabel } from '../utils/regimenText';
 import { inertWhen } from '../utils/inert';
 
 const on = 'text-[var(--text)]';
@@ -45,7 +49,7 @@ const AmountFields: React.FC<{
         <>
             <label className="block">
                 <span className={labelCls}>
-                    {draft.route === Route.patchApply ? t('field.patch_rate') : `${t('plan.dose')} (mg)`}
+                    {draft.route === Route.patchApply ? patchStrengthLabel(t) : `${t('plan.dose')} (mg)`}
                 </span>
                 <input
                     type="number"
@@ -109,6 +113,7 @@ const AmountFields: React.FC<{
 };
 
 interface PlanProps {
+    supplies: Supply[];
     onBack: () => void;
     plan: PlanItem[];
     onSave: (item: PlanItem) => void;
@@ -117,7 +122,7 @@ interface PlanProps {
     events: DoseEvent[];
 }
 
-const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) => {
+const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events, supplies }) => {
     const { t } = useTranslation();
     const { mode } = useHRTMode();
     const { showDialog } = useDialog();
@@ -132,6 +137,9 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
     const [cameInEmpty, setCameInEmpty] = useState(plan.length === 0);
     const [openId, setOpenId] = useState<string | null>(null);
     const [edit, setEdit] = useState<PlanDraft | null>(null);
+    const specs = stockSpecifications(supplies);
+    const selection = edit && (draftToItem(edit, edit.original?.id ?? 'draft') ?? edit);
+    const needsStockChoice = !!selection && specs.matching(selection).length > 0 && !specs.selected(selection);
 
     const openRow = (item: PlanItem) => {
         if (openId === item.id) {
@@ -175,6 +183,8 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
                 <PageHeader onBack={cancelAdding} title={t('plan.add')} />
                 <PlanWizard
                     plan={plan}
+                    supplies={supplies}
+                    events={events}
                     onAdd={item => {
                         onSave(item);
                         setAdding(false);
@@ -208,6 +218,7 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
                     <div className={settingsSection}>
                         {plan.map(item => {
                             const open = openId === item.id;
+                            const linked = specs.selected(item);
                             return (
                                 <div key={item.id}>
                                     <button
@@ -221,6 +232,7 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
                                             <p className={`text-sm font-medium ${on}`}>{regimenLabel(item, t)}</p>
                                             <p className={`text-xs mt-0.5 leading-relaxed ${muted}`}>
                                                 {asTitle(frequencyLabel(item, t))}
+                                                {linked && ' · ' + specLabel(linked.pack, t)}
                                                 {item.route === Route.gel &&
                                                     `, ${gelSiteName(item.extras[ExtraKey.gelSite] ?? 0, t)}`}
                                             </p>
@@ -235,6 +247,14 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
                                             <div className="pb-3 space-y-3">
                                                 {open && edit && (
                                                     <div className="grid grid-cols-2 gap-3">
+                                                        <div className="col-span-2 empty:hidden">
+                                                            <PlanStockField
+                                                                draft={edit}
+                                                                supplies={supplies}
+                                                                events={events}
+                                                                onChange={patch => setEdit({ ...edit, ...patch })}
+                                                            />
+                                                        </div>
                                                         <AmountFields
                                                             draft={edit}
                                                             onChange={patch =>
@@ -265,7 +285,9 @@ const Plan: React.FC<PlanProps> = ({ onBack, plan, onSave, onDelete, events }) =
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        disabled={!edit || !draftToItem(edit, item.id)}
+                                                        disabled={
+                                                            !edit || !draftToItem(edit, item.id) || needsStockChoice
+                                                        }
                                                         onClick={() => saveEdit(item)}
                                                         className={`${headerActionAccent} disabled:opacity-40`}
                                                     >

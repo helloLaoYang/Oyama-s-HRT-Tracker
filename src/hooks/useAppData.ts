@@ -18,8 +18,8 @@ import {
     isPlausibleBirthYear,
 } from '../../logic';
 import { createDayLabelFormatter, toDayKey } from '../utils/helpers';
-import { detectRegimens, dosesAhead, normalizeSupply, Supply } from '../utils/regimen';
-import { stockLedger } from '../utils/stockLedger';
+import { canSupply, detectRegimens, dosesAhead, normalizeSupply, Supply } from '../utils/regimen';
+import { matchesStrength, stockLedger, stockSpecifications } from '../utils/stockLedger';
 import { PlanItem, normalizePlanItem, legacyCpaItem, regimensFromPlan } from '../utils/plan';
 import {
     DoseTemplate,
@@ -671,16 +671,30 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     // Quick doses are a per-device shortcut list, not part of the record — they
     // are neither exported nor synced, so no tombstone is needed.
     const addQuickDose = (dose: QuickDose) => setQuickDoses(prev => [...prev, dose]);
-    const saveSupply = (supply: Supply) =>
+    const saveSupply = (supply: Supply, forDoseId?: string) => {
         setSupplies(prev =>
             prev.some(s => s.id === supply.id)
                 ? prev.map(s => (s.id === supply.id ? stamp(supply) : s))
                 : [...prev, stamp(supply)],
         );
+        if (forDoseId) {
+            setEvents(prev =>
+                prev.map(dose =>
+                    dose.id === forDoseId &&
+                    canSupply(supply, dose) &&
+                    matchesStrength(supply, dose) !== false &&
+                    supply.startedAt / 3_600_000 <= dose.timeH
+                        ? stamp({ ...dose, inventorySupplyId: supply.id })
+                        : dose,
+                ),
+            );
+        }
+    };
     const deleteSupply = (id: string) => {
         const at = Date.now();
         setSupplies(prev => {
             const referenced =
+                plan.some(item => item.inventorySupplyId === id) ||
                 events.some(e => e.inventorySupplyId === id) ||
                 stockLedger(prev, events, at / 3_600_000).uses.some(
                     u => u.choices.some(s => s.id === id) || u.parts.some(p => p.supply.id === id),
@@ -692,9 +706,11 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     };
     const touchPlan = () => localStorage.setItem(keyFor(mode, 'plan-at'), String(Date.now()));
     const savePlanItem = (item: PlanItem) => {
+        const lot = stockSpecifications(supplies).selected(item);
+        const linked = !item.inventorySupplyId && lot ? { ...item, inventorySupplyId: lot.id } : item;
         touchPlan();
         setPlan(prev =>
-            prev.some(i => i.id === item.id) ? prev.map(i => (i.id === item.id ? item : i)) : [...prev, item],
+            prev.some(i => i.id === item.id) ? prev.map(i => (i.id === item.id ? linked : i)) : [...prev, linked],
         );
     };
     const deletePlanItem = (id: string) => {

@@ -130,7 +130,7 @@ struct InventoryAlertsView: View {
     }
 
     private func alertText(_ status: InventoryStockStatus) -> String {
-        let medication = InventoryMedication(route: status.supply.route, ester: status.supply.ester).name
+        let medication = InventoryMedication(route: status.supply.route, ester: status.supply.ester).name + " · " + packageDetail(status.supply.pack)
         guard status.remaining > 0 else { return inventoryText("\(medication) is out of stock.") }
         return inventoryText("\(medication) is running low. \(inventoryRunOut(status, nowH: store.nowH, calendar: store.calendar))")
     }
@@ -151,14 +151,22 @@ struct InventorySnapshot {
         self.regimens = regimens
         let ledger = InventoryLedger(supplies: supplies, events: events, nowH: nowH)
         self.ledger = ledger
-        statuses = supplies.filter { $0.archivedAt == nil }.map {
-            InventoryStockStatus(supply: $0, remaining: ledger.remaining[$0.id, default: 0], regimens: regimens, nowH: nowH)
+        let specifications = InventorySpecifications(supplies)
+        var plansBySpec: [InventorySpecification: [MedicationPlan]] = [:]
+        var alertSupplies: [InventorySpecification: MedicationSupply] = [:]
+        for plan in regimens {
+            guard let supply = specifications.selected(plan) else { continue }
+            plansBySpec[supply.specification, default: []].append(plan)
+            alertSupplies[supply.specification] = supply
         }
-        let byMedication = Dictionary(grouping: statuses) { InventoryMedication(route: $0.supply.route, ester: $0.supply.ester) }
-        combinedStatuses = byMedication.values.compactMap { group in
-            guard let first = group.first else { return nil }
-            return InventoryStockStatus(supply: first.supply, remaining: group.reduce(0) { $0 + $1.remaining },
-                                        regimens: regimens, nowH: nowH)
+        statuses = supplies.filter { $0.archivedAt == nil }.map {
+            InventoryStockStatus(supply: $0, remaining: ledger.remaining[$0.id, default: 0],
+                                 regimens: plansBySpec[$0.specification, default: []], nowH: nowH)
+        }
+        let bySpec = Dictionary(grouping: statuses) { $0.supply.specification }
+        combinedStatuses = alertSupplies.map { key, supply in
+            InventoryStockStatus(supply: supply, remaining: bySpec[key, default: []].reduce(0) { $0 + $1.remaining },
+                                 regimens: plansBySpec[key, default: []], nowH: nowH)
         }.sorted { $0.id < $1.id }
     }
 }
@@ -182,10 +190,9 @@ struct InventoryMedication: Hashable, Identifiable {
 
     static func options(mode: HRTMode, regimens: [MedicationPlan]) -> [Self] {
         let current = regimens.map { Self(route: $0.route, ester: $0.ester) }
-        let routes: [Route] = mode == .transmasc ? [.injection, .gel, .patchApply] : [.injection, .oral, .sublingual, .gel, .patchApply]
-        let stockable = routes.flatMap { route -> [Self] in
-            let drugs = route == .sublingual ? ["E2"] : PlanChoice.drugs(route, mode: mode)
-            return drugs.map { Self(route: route, ester: $0) }
+        let preferred: [Route] = mode == .transmasc ? [.injection, .gel, .patchApply] : [.injection, .oral, .sublingual, .gel, .patchApply]
+        let stockable = (preferred + PlanChoice.routes(for: mode).filter { !preferred.contains($0) }).flatMap { route in
+            PlanChoice.drugs(route, mode: mode).map { Self(route: route, ester: $0) }
         }
         var seen: Set<Self> = []
         return (current + stockable).filter { seen.insert($0).inserted }
@@ -217,6 +224,7 @@ struct InventoryEditor: View {
     let existing: InventoryStockStatus?
     let regimens: [MedicationPlan]
     let options: [InventoryMedication]
+    let linkDoseID: String?
 
     @State private var medication: InventoryMedication
     @State private var kind: MedicationPack.Kind
@@ -239,18 +247,26 @@ struct InventoryEditor: View {
 
     @MainActor
     init(store: TrackerStore, existing: InventoryStockStatus?, regimens: [MedicationPlan],
-         priceFirst: Bool = false, forDose dose: DoseEvent? = nil) {
+         priceFirst: Bool = false, forDose dose: DoseEvent? = nil, linkDoseID: String? = nil) {
         self.store = store
+        self.linkDoseID = linkDoseID
         self.existing = existing
         self.regimens = regimens
         var options = InventoryMedication.options(mode: store.mode, regimens: regimens)
-        let requested = dose.map { InventoryMedication(route: $0.route, ester: $0.ester) }
+        let anchor = dose.flatMap { dose in
+            store.supplies.first { $0.id == dose.inventorySupplyId && $0.canSupply(dose.route, dose.ester) && $0.matchesStrength(route: dose.route, extras: dose.extras) != false }
+        }
+        let requested = anchor.map { InventoryMedication(route: $0.route, ester: $0.ester) } ?? dose.map { InventoryMedication(route: $0.route, ester: $0.ester) }
         if let requested, !options.contains(requested) { options.append(requested) }
         self.options = options
         let medication = existing.map { InventoryMedication(route: $0.supply.route, ester: $0.supply.ester) }
             ?? requested ?? options.first ?? InventoryMedication(route: .oral, ester: "E2")
         _medication = State(initialValue: medication)
-        let pack = existing?.supply.pack ?? dose?.inventorySupplyId.flatMap { id in store.supplies.first { $0.id == id }?.pack }
+        let recordedPatch = dose.flatMap { dose -> MedicationPack? in
+            guard dose.route == .patchApply, let rate = dose.extras["releaseRateUGPerDay"], rate > 0 else { return nil }
+            return .patch(rate: rate / stockQuantity(route: dose.route, doseMG: dose.doseMG, extras: dose.extras))
+        }
+        let pack = existing?.supply.pack ?? anchor?.pack ?? recordedPatch
             ?? Self.initialPack(MedicationPack.Kind.choices(for: medication.route)[0], medication: medication, regimens: regimens)
         _kind = State(initialValue: pack.kind)
         let fields = Self.packParameters(pack)
@@ -284,7 +300,7 @@ struct InventoryEditor: View {
                     LabeledContent(inventoryText("Medication"), value: medication.name)
                     LabeledContent(inventoryText("Package"), value: packageDetail(existing.supply.pack))
                     if case .patch(nil) = existing.supply.pack, editingPrice {
-                        field(inventoryText("Release per patch (µg/24 h)"), value: $strength, field: .strength)
+                        field(HistoryText.localized("Release rate per patch (µg/day)"), value: $strength, field: .strength)
                     }
                 }
             } else {
@@ -318,7 +334,7 @@ struct InventoryEditor: View {
                     } else if [.pill, .pump, .sachet].contains(kind) {
                         field(massTitle, value: $strength, field: .strength)
                     } else if kind == .patch {
-                        field(inventoryText("Release per patch (µg/24 h)"), value: $strength, field: .strength)
+                        field(HistoryText.localized("Release rate per patch (µg/day)"), value: $strength, field: .strength)
                     }
                 }
             }
@@ -460,7 +476,7 @@ struct InventoryEditor: View {
 
     private func save() {
         guard let candidate else { return }
-        if store.saveSupply(candidate) { dismiss() }
+        if store.saveSupply(candidate, forDoseID: linkDoseID) { dismiss() }
         else { saveFailed = true }
     }
 
@@ -555,9 +571,13 @@ func packageDetail(_ pack: MedicationPack) -> String {
     switch pack {
     case let .vial(ml, mgPerMl): inventoryText("\(stockNumber(ml)) mL · \(stockNumber(mgPerMl)) mg/mL")
     case let .pill(mg), let .pump(mg), let .sachet(mg): "\(stockNumber(mg)) mg/\(pack.kind.unit)"
-    case let .patch(rate?): "\(stockNumber(rate)) µg/24 h"
+    case let .patch(rate?): label("\(stockNumber(rate)) µg/day")
     case .patch, .bulk: pack.kind.title
     }
+}
+
+func stockChoiceLabel(_ supply: MedicationSupply, for route: Route) -> String {
+    route == supply.route ? packageDetail(supply.pack) : packageDetail(supply.pack) + " · " + InventoryMedication(route: supply.route, ester: supply.ester).name
 }
 
 private func inventoryRemaining(_ status: InventoryStockStatus) -> String {

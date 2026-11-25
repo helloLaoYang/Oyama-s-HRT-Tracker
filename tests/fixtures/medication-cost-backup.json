@@ -8,6 +8,18 @@
   "modes": {
     "transmasc": {},
     "transfem": {
+      "plan": [
+        {
+          "id": "daily",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 1,
+          "extras": {},
+          "everyDays": 1,
+          "timesPerDay": 1,
+          "inventorySupplyId": "older"
+        }
+      ],
       "supplies": [
         {
           "id": "older",

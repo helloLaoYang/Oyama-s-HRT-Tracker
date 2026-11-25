@@ -115,7 +115,15 @@ export function productNames(route: Route, ester: Ester, t: T): string {
     return look(route) || (route === Route.sublingual ? look(Route.oral) : '');
 }
 
-/** "戊酸雌二醇 5 mg 肌注", "雌二醇贴片 100 µg/天": the way a prescription line reads. */
+export const patchStrengthLabel = (t: T) => fill(t('cost.patchRate'), { unit: t('dose.guide.unit.ug_day') });
+
+export function patchRateLabel(total: number, count: number | undefined, t: T) {
+    const patches = count && Number.isSafeInteger(count) && count > 0 ? count : 1;
+    const rate = trimNum(total / patches) + ' ' + t('dose.guide.unit.ug_day');
+    return patches === 1 ? rate : rate + ' × ' + patches + ' ' + t('supplies.unit.patch');
+}
+
+/** The drug, dose and route as shown on a plan entry. */
 export function regimenLabel(
     r: { route: Route; ester: Ester; doseMG: number; extras: Partial<Record<ExtraKey, number>> },
     t: T,
@@ -123,7 +131,7 @@ export function regimenLabel(
     const route = inPhrase(t(`regimen.route.${r.route}`));
     const rate = r.extras[ExtraKey.releaseRateUGPerDay];
     if (r.route === Route.patchApply && rate)
-        return `${glue(esterName(r.ester, t), route)} ${trimNum(rate)} µg${t('regimen.per_day')}`;
+        return `${glue(esterName(r.ester, t), route)} ${patchRateLabel(rate, r.extras.patchCount, t)}`;
     return `${esterName(r.ester, t)} ${trimNum(r.doseMG)} mg ${route}`;
 }
 

@@ -1,6 +1,24 @@
 import HRTEngine
 import SwiftUI
 
+struct StockUseDetails: View {
+    let use: StockUse
+
+    var body: some View {
+        if let selected = use.selected {
+            let units = use.parts.reduce(0) { $0 + $1.units }
+            LabeledContent(inventoryText("Stock used"), value: "\(stockNumber(units)) \(selected.pack.kind.unit)")
+            let prices = stockCostTotals(use.parts)
+            ForEach(prices.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { currency in
+                LabeledContent(use.complete ? inventoryText("Dose cost") : inventoryText("Priced subtotal"),
+                               value: stockMoney(prices[currency, default: 0], currency))
+            }
+            if use.parts.contains(where: { $0.cost == nil }) { Text(inventoryText("Price needed")) }
+            if use.missingStock { Text(inventoryText("Missing stock")) }
+        }
+    }
+}
+
 func stockCostTotals(_ parts: [StockAllocation]) -> [StockCurrency: Decimal] {
     var totals: [StockCurrency: Decimal] = [:]
     for part in parts {
@@ -91,9 +109,31 @@ struct MedicationCostView: View {
                                                   regimens: inventory.regimens, nowH: store.nowH)
                 NavigationStack { InventoryEditor(store: store, existing: status, regimens: inventory.regimens, priceFirst: true) }
             case let .stock(event):
-                NavigationStack { InventoryEditor(store: store, existing: nil, regimens: inventory.regimens, forDose: event) }
+                NavigationStack { InventoryEditor(store: store, existing: nil, regimens: inventory.regimens, forDose: event, linkDoseID: event.id) }
             case let .specification(event):
-                DoseEditorView(store: store, event: event)
+                NavigationStack {
+                    List {
+                        if let use = inventory.ledger.uses.first(where: { $0.id == event.id }) {
+                            ForEach(use.choices) { lot in
+                                Button {
+                                    var dose = use.dose
+                                    dose.inventorySupplyId = lot.id
+                                    if store.saveDose(dose) { editing = nil }
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(stockChoiceLabel(lot, for: event.route))
+                                        let units = stockQuantity(route: event.route, doseMG: event.doseMG, extras: event.extras) / lot.pack.unitMG
+                                        Text("\(stockNumber(units)) \(lot.pack.kind.unit) · \(stockPriceLabel(lot))")
+                                            .font(.footnote).foregroundStyle(TrackerTheme.muted)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .navigationTitle(inventoryText("Choose specification"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil } } }
+                }.presentationDetents([.medium, .large])
             }
         }
     }

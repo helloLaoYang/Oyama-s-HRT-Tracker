@@ -612,6 +612,9 @@ const AppContent = () => {
     // three doses in a day are three taps and three undos.
     const [planLogs, setPlanLogs] = useState<{ itemId: string; eventId: string }[]>([]);
     const handleLogPlanItem = (item: PlanItem) => {
+        if (item.inventorySupplyId && plan.find(p => p.id === item.id)?.inventorySupplyId !== item.inventorySupplyId) {
+            savePlanItem(item);
+        }
         const eventId = uuidv4();
         addEvent(planEvent(item, eventId, Date.now()));
         setPlanLogs(logs => [...logs, { itemId: item.id, eventId }]);
@@ -715,6 +718,8 @@ const AppContent = () => {
     if (showOnboarding) {
         return (
             <Onboarding
+                supplies={supplies}
+                events={events}
                 languageOptions={languageOptions}
                 weight={weight}
                 onWeightChange={setWeight}
@@ -821,6 +826,7 @@ const AppContent = () => {
 
                         {currentView === 'plan' && (
                             <Plan
+                                supplies={supplies}
                                 onBack={() => handleViewChange('home')}
                                 plan={plan}
                                 onSave={savePlanItem}
@@ -848,6 +854,7 @@ const AppContent = () => {
 
                         {currentView === 'history' && (
                             <History
+                                plan={plan}
                                 supplies={supplies}
                                 t={t}
                                 isQuickAddOpen={isQuickAddOpen}

@@ -1799,35 +1799,6 @@
         }
       }
     },
-    "Release per patch (µg/24 h)": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每贴释放速率（µg/24 h）"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Freisetzung pro Pflaster (µg/24 h)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Débit par patch (µg/24 h)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 枚の放出速度（µg/24 h）"
-          }
-        }
-      }
-    },
     "Use existing specification": {
       "extractionState": "manual",
       "localizations": {
@@ -1998,6 +1969,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "価格未登録"
+          }
+        }
+      }
+    },
+    "Stock specification": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "库存规格"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packungsstärke im Bestand"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Présentation en stock"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在庫の規格"
           }
         }
       }

@@ -50,6 +50,102 @@ final class DesignSmokeTests: XCTestCase {
         screenshot("cost-overview", in: app)
         app.buttons["cost.details"].tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "1.5")).firstMatch.exists)
+
+        let inventoryLink = app.buttons["cost.inventory"]
+        scroll(overview, until: inventoryLink)
+        inventoryLink.tap()
+        app.buttons["inventory.add"].tap()
+        app.buttons["inventory.medication"].tap()
+        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "醋酸环丙孕酮")).firstMatch.tap()
+        let secondCount = app.textFields["inventory.count"]
+        secondCount.tap()
+        secondCount.typeText("8")
+        app.buttons["完成"].firstMatch.tap()
+        app.buttons["inventory.save"].tap()
+        let inventory = app.navigationBars["药量库存"]
+        XCTAssertTrue(inventory.waitForExistence(timeout: 6))
+        inventory.buttons.firstMatch.tap()
+
+        let planLink = app.buttons["overview.plan"]
+        for _ in 0..<5 where !planLink.isHittable { overview.swipeDown() }
+        planLink.tap()
+        app.buttons["plan.edit.CPA"].tap()
+        let spec = app.buttons["plan.inventorySpec"]
+        XCTAssertTrue(spec.waitForExistence(timeout: 6))
+        spec.tap()
+        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "12.5 mg/片")).firstMatch.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "0.5 片")).firstMatch.exists)
+        screenshot("plan-stock-preview", in: app)
+        app.buttons["plan.save"].tap()
+        app.navigationBars["用药方案"].buttons.firstMatch.tap()
+        let taken = app.buttons["plan.complete.CPA"]
+        XCTAssertTrue(taken.waitForExistence(timeout: 6))
+        taken.tap()
+        let today = app.buttons["cost.range.today"]
+        scroll(overview, until: today)
+        today.tap()
+        XCTAssertTrue(total.label.contains("1.00"), total.label)
+        scroll(overview, until: inventoryLink)
+        inventoryLink.tap()
+        let lot = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "inventory.supply.", "12.5 mg/片")).firstMatch
+        XCTAssertTrue(lot.waitForExistence(timeout: 6))
+        XCTAssertTrue(lot.label.contains("26 片"), lot.label)
+        inventory.buttons.firstMatch.tap()
+        let undo = app.buttons["撤销"]
+        for _ in 0..<5 where !undo.isHittable { overview.swipeDown() }
+        undo.tap()
+        scroll(overview, until: today)
+        XCTAssertTrue(app.staticTexts["所选时段暂无用药记录"].exists)
+    }
+
+    func testPatchStockUsesTheRecordedDailyRate() {
+        let app = launchDemo()
+        func restoreSystemLanguage() {
+            app.tabBars.buttons["Settings"].tap()
+            app.buttons["settings.general"].tap()
+            app.buttons["settings.language"].tap()
+            app.buttons["language.system"].tap()
+        }
+        if app.tabBars.buttons["Settings"].exists {
+            restoreSystemLanguage()
+            app.tabBars.buttons["概览"].tap()
+        }
+        let overview = app.scrollViews.firstMatch
+        let add = app.buttons["cost.stock.patchApply|E2"]
+        waitUntilEnabled(app.buttons["overview.share"])
+        scroll(overview, until: add)
+        add.tap()
+        let rate = app.textFields["inventory.strength"]
+        XCTAssertTrue(rate.waitForExistence(timeout: 6))
+        XCTAssertEqual(rate.value as? String, "50")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "µg/天")).firstMatch.exists)
+        let count = app.textFields["inventory.count"]
+        count.tap()
+        count.typeText("10")
+        app.buttons["完成"].firstMatch.tap()
+        let price = app.textFields["inventory.totalPrice"]
+        if !price.isHittable { app.collectionViews.firstMatch.swipeUp() }
+        price.tap()
+        price.typeText("100")
+        app.buttons["完成"].firstMatch.tap()
+        app.buttons["inventory.save"].tap()
+        let total = app.staticTexts["cost.total.CNY"]
+        scroll(overview, until: total)
+        XCTAssertTrue(total.label.contains("60.00"), total.label)
+        app.buttons["cost.details"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "50 µg/天", "6")).firstMatch.exists)
+        screenshot("patch-cost-daily-rate", in: app)
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.general"].tap()
+        app.buttons["settings.language"].tap()
+        app.buttons["language.en"].tap()
+        addTeardownBlock { restoreSystemLanguage() }
+        app.tabBars.buttons["Overview"].tap()
+        scroll(overview, until: total)
+        XCTAssertTrue(total.label.contains("60.00"), total.label)
+        let english = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "50 µg/day", "6")).firstMatch
+        if !english.exists { app.buttons["cost.details"].tap() }
+        XCTAssertTrue(english.exists)
     }
 
     func testWebModelSettingsAndInventory() {
@@ -350,10 +446,16 @@ final class DesignSmokeTests: XCTestCase {
     }
 
     private func scroll(_ view: XCUIElement, until target: XCUIElement) {
-        for _ in 0..<4 where !target.isHittable {
-            let from = view.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.79))
-            let to = view.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.4))
-            from.press(forDuration: 0.05, thenDragTo: to)
+        for _ in 0..<6 where !target.isHittable {
+            let chart = view.descendants(matching: .any).matching(identifier: "overview.timeline").firstMatch
+            let frame = chart.exists ? chart.frame : .zero
+            let height = view.frame.height
+            // Begin outside the chart's drag-to-scrub area and above the floating tab bar.
+            let y = frame.minY > height * 0.29 ? min(0.72, (frame.minY - 24) / height) : 0.72
+            let x = frame.contains(CGPoint(x: view.frame.midX, y: height * y)) ? 0.985 : 0.52
+            let from = view.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y))
+            let to = view.coordinate(withNormalizedOffset: CGVector(dx: x, dy: max(0.12, y - 0.37)))
+            from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
         }
         XCTAssertTrue(target.isHittable, view.debugDescription)
     }

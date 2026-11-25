@@ -14,7 +14,7 @@ import {
     type StockAllocation,
 } from '../utils/stockLedger';
 import { packUnitMG, stockQuantity, type Supply } from '../utils/regimen';
-import { specLabel, stockMoney, type StockTarget } from './StockPurchaseFields';
+import { specLabel, stockChoiceLabel, stockMoney, type StockTarget } from './StockPurchaseFields';
 import Segmented from './Segmented';
 import CustomSelect from './CustomSelect';
 import { ChevronDown, ChevronRight } from './icons';
@@ -142,7 +142,7 @@ export default function MedicationCost({
                                 { value: '', label: t('cost.later') },
                                 ...u.choices.map(s => ({
                                     value: s.id,
-                                    label: specLabel(s.pack, t),
+                                    label: stockChoiceLabel(s, u.event.route, t),
                                     description:
                                         Number((stockQuantity(u.event) / packUnitMG(s.pack)).toFixed(6)) +
                                         ' ' +

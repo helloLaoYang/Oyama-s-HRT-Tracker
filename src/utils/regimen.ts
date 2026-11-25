@@ -31,6 +31,7 @@ import {
 export type Hormone = 'E2' | 'T' | 'AA' | 'SERM' | 'other';
 
 export interface Regimen {
+    inventorySupplyId?: string;
     /** route | ester | dose | the extras that change what the dose does */
     key: string;
     route: Route;
@@ -175,6 +176,7 @@ export function detectRegimens(events: DoseEvent[], nowH: number): Regimen[] {
             const amounts = [...cluster, ...scheduled].map(e => e.doseMG);
             out.push({
                 key: signature(sample),
+                ...(sample.inventorySupplyId && { inventorySupplyId: sample.inventorySupplyId }),
                 route: sample.route,
                 ester: sample.ester,
                 doseMG: sample.doseMG,
@@ -755,8 +757,14 @@ export function stockQuantity(e: Pick<DoseEvent, 'route' | 'doseMG' | 'extras'>)
 }
 
 export function supplyStatus(s: Supply, remaining: number, regimens: Regimen[], nowH: number): SupplyStatus {
-    const matches = (e: { route: Route; ester: Ester }) => e.route === s.route && e.ester === s.ester;
-    const rate = regimens.filter(matches).reduce((a, r) => a + (stockQuantity(r) * 24) / r.intervalH, 0);
+    const rate = regimens.filter(r => canSupply(s, r)).reduce((a, r) => a + (stockQuantity(r) * 24) / r.intervalH, 0);
     const dailyUse = rate > 0 ? rate : null;
     return { supply: s, remaining, dailyUse, runOutH: dailyUse ? nowH + (remaining / dailyUse) * 24 : null };
+}
+
+export function canSupply(s: Supply, dose: Pick<DoseEvent, 'route' | 'ester'>) {
+    if (s.ester !== dose.ester) return false;
+    if (s.route === dose.route) return true;
+    const tabletRoutes = [Route.oral, Route.sublingual];
+    return s.pack.kind === 'pill' && tabletRoutes.includes(s.route) && tabletRoutes.includes(dose.route);
 }

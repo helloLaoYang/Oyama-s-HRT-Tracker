@@ -180,6 +180,7 @@ enum TrackerBackup {
                         "reminders": ["enabled": plan.remindersEnabled, "minutes": plan.reminderMinutes],
                     ]
                     if let anchor = plan.anchorTimeH { raw["anchorTimeH"] = anchor }
+                    if let supplyID = plan.inventorySupplyId { raw["inventorySupplyId"] = supplyID }
                     if let updatedAt = entry.stamp { raw["updatedAt"] = updatedAt }
                     return raw
                 },
@@ -301,11 +302,14 @@ enum TrackerBackup {
         guard let fields = medication(raw), let cadence = number(raw["everyDays"]), (1...180).contains(cadence),
               let timesPerDay = integer(raw["timesPerDay"]), (1...8).contains(timesPerDay) else { return nil }
         let reminders = raw["reminders"] as? [String: Any]
+        let supplyID = id(raw["inventorySupplyId"])
+        guard raw["inventorySupplyId"] == nil || raw["inventorySupplyId"] is NSNull || supplyID != nil else { return nil }
         let minutes = (reminders?["minutes"] as? [Any])?.compactMap(integer).filter { (0..<1_440).contains($0) }
         return MedicationPlan(
             id: fields.id, route: fields.route, ester: fields.drug, doseMG: fields.dose, extras: fields.extras,
             everyDays: cadence, timesPerDay: timesPerDay, reminderMinutes: minutes ?? [540],
-            remindersEnabled: reminders?["enabled"] as? Bool ?? true, anchorTimeH: timeHours(raw["anchorTimeH"])
+            remindersEnabled: reminders?["enabled"] as? Bool ?? true, anchorTimeH: timeHours(raw["anchorTimeH"]),
+            inventorySupplyId: supplyID
         )
     }
 

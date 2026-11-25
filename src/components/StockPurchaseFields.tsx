@@ -1,8 +1,8 @@
 import React from 'react';
-import type { DoseEvent } from '../../logic';
+import type { DoseEvent, Route } from '../../logic';
 import { appLocale } from '../i18n/locale';
 import { useTranslation } from '../contexts/LanguageContext';
-import { STOCK_CURRENCIES, type Pack, type StockCurrency, type StockPurchase } from '../utils/regimen';
+import { STOCK_CURRENCIES, type Pack, type StockCurrency, type StockPurchase, type Supply } from '../utils/regimen';
 import { currencyScale, stockUnitPrice } from '../utils/stockLedger';
 import { packUnit } from '../utils/regimenText';
 import CustomSelect from './CustomSelect';
@@ -18,13 +18,18 @@ export function stockMoney(amount: number, currency: StockCurrency, unit = false
 export function specLabel(pack: Pack, t: (key: string) => string) {
     if (pack.kind === 'vial') return pack.mgPerMl + ' mg/mL, ' + pack.ml + ' mL';
     if (pack.kind === 'patch')
-        return pack.releaseRateUGPerDay ? pack.releaseRateUGPerDay + ' µg/24 h' : t('supplies.pack.patch');
+        return pack.releaseRateUGPerDay
+            ? pack.releaseRateUGPerDay + ' ' + t('dose.guide.unit.ug_day')
+            : t('supplies.pack.patch');
     if (pack.kind === 'bulk') return t('supplies.pack.bulk');
     return pack.mg + ' mg/' + packUnit(pack, t);
 }
 
 export const purchaseUnit = (pack: Pack, t: (key: string) => string) =>
     t(pack.kind === 'pump' ? 'cost.bottle' : pack.kind === 'bulk' ? 'cost.pack' : 'cost.box');
+
+export const stockChoiceLabel = (s: Supply, route: Route, t: (key: string) => string) =>
+    specLabel(s.pack, t) + (s.route === route ? '' : ' · ' + t('regimen.route.' + s.route));
 
 export type StockTarget = { priceId: string } | { dose: DoseEvent };
 

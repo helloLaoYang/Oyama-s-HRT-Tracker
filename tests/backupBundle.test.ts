@@ -267,7 +267,8 @@ describe('complete backup bundle data layer', () => {
             const storage = new MemoryStorage();
             const result = mergeCompleteBackupBundleToStorage(input, context(storage));
             expect(result.blocked).toEqual([]);
-            const { supplies, events } = build(storage).modes.transfem;
+            const { supplies, events, plan } = build(storage).modes.transfem;
+            expect(plan?.[0].inventorySupplyId).toBe('older');
             expect(supplies).toEqual(fixture.modes.transfem.supplies);
             expect(events).toEqual(fixture.modes.transfem.events);
             const ledger = stockLedger(supplies!, events!, 480010);

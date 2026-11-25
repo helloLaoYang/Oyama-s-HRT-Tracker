@@ -150,6 +150,67 @@ struct MedicationSupply: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
+struct InventorySpecification: Hashable {
+    let route: Route
+    let ester: String
+    let pack: MedicationPack
+}
+
+extension MedicationSupply {
+    var specification: InventorySpecification { InventorySpecification(route: route, ester: ester, pack: pack) }
+
+    func canSupply(_ doseRoute: Route, _ drug: String) -> Bool {
+        guard ester == drug else { return false }
+        if route == doseRoute { return true }
+        return pack.kind == .pill && [.oral, .sublingual].contains(route) && [.oral, .sublingual].contains(doseRoute)
+    }
+
+    // Only presentation data can identify a strength. Total administered mg can also represent a partial unit.
+    func matchesStrength(route: Route, extras: [String: Double]) -> Bool? {
+        switch pack {
+        case let .patch(rate?) where route == .patchApply:
+            guard let total = extras["releaseRateUGPerDay"], total > 0 else { return nil }
+            let perPatch = total / stockQuantity(route: route, doseMG: 0, extras: extras)
+            return abs(rate - perPatch) <= max(rate, perPatch) * 1e-9
+        case let .vial(_, concentration) where route == .injection:
+            guard let used = extras["concentrationMGmL"], used > 0 else { return nil }
+            return abs(concentration - used) <= max(concentration, used) * 1e-9
+        default: return nil
+        }
+    }
+}
+
+func automaticStock(_ choices: [MedicationSupply], route: Route, extras: [String: Double]) -> MedicationSupply? {
+    let sameRoute = choices.filter { $0.route == route }
+    let exact = sameRoute.filter { $0.matchesStrength(route: route, extras: extras) == true }
+    let candidates = exact.isEmpty ? sameRoute.filter { $0.matchesStrength(route: route, extras: extras) != false } : exact
+    return candidates.count == 1 ? candidates.first : nil
+}
+
+struct InventorySpecifications {
+    let byID: [String: MedicationSupply]
+    let active: [MedicationSupply]
+
+    init(_ supplies: [MedicationSupply]) {
+        byID = Dictionary(supplies.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var seen = Set<InventorySpecification>()
+        active = supplies.filter { $0.archivedAt == nil && seen.insert($0.specification).inserted }
+    }
+
+    func matching(_ plan: MedicationPlan) -> [MedicationSupply] {
+        active.filter { $0.canSupply(plan.route, plan.ester) && $0.matchesStrength(route: plan.route, extras: plan.extras) != false }
+    }
+
+    func selected(_ plan: MedicationPlan) -> MedicationSupply? {
+        if let id = plan.inventorySupplyId {
+            guard let supply = byID[id], supply.canSupply(plan.route, plan.ester),
+                  supply.matchesStrength(route: plan.route, extras: plan.extras) != false else { return nil }
+            return supply
+        }
+        return automaticStock(matching(plan), route: plan.route, extras: plan.extras)
+    }
+}
+
 struct InventoryStockStatus: Identifiable {
     let supply: MedicationSupply
     let remaining: Double
@@ -167,7 +228,7 @@ struct InventoryStockStatus: Identifiable {
     init(supply: MedicationSupply, remaining: Double, regimens: [MedicationPlan], nowH: Double) {
         self.supply = supply
         self.remaining = remaining
-        let rate = regimens.lazy.filter { $0.route == supply.route && $0.ester == supply.ester }.reduce(0.0) {
+        let rate = regimens.lazy.filter { supply.canSupply($0.route, $0.ester) }.reduce(0.0) {
             $0 + stockQuantity(route: $1.route, doseMG: $1.doseMG, extras: $1.extras) * Double($1.dosesPerDay) / $1.everyDays
         }
         let perDay = rate.isFinite && rate > 0 ? rate : nil
@@ -232,7 +293,7 @@ enum InventoryRegimens {
                 let next = ordered.first { $0.timeH > nowH && similarAmount($0.doseMG, last.doseMG) }
                 let plan = MedicationPlan(
                     id: last.id, route: last.route, ester: last.ester, doseMG: last.doseMG,
-                    extras: last.extras, everyDays: intervalH / 24, remindersEnabled: false
+                    extras: last.extras, everyDays: intervalH / 24, remindersEnabled: false, inventorySupplyId: last.inventorySupplyId
                 )
                 return InferredRegimen(plan: plan, last: last.timeH, since: sinceH,
                     next: next?.timeH ?? last.timeH + intervalH, hormone: hormone(for: last.ester))

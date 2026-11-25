@@ -72,9 +72,16 @@ struct InventoryLedger {
     private(set) var remaining: [String: Double]
     private(set) var uses: [StockUse] = []
 
+    static func preview(_ dose: DoseEvent, supplies: [MedicationSupply], events: [DoseEvent]) -> StockUse? {
+        let lots = supplies.filter { $0.ester == dose.ester }
+        guard dose.route != .patchRemove, !lots.isEmpty else { return nil }
+        let history = events.filter { $0.id != dose.id && $0.ester == dose.ester }
+        return InventoryLedger(supplies: lots, events: history + [dose], nowH: dose.timeH).uses.first { $0.id == dose.id }
+    }
+
     init(supplies: [MedicationSupply], events: [DoseEvent], nowH: Double) {
         let ordered = supplies.sorted { ($0.startedAt, $0.id) < ($1.startedAt, $1.id) }
-        let groups = Dictionary(grouping: ordered) { $0.route.rawValue + "|" + $0.ester }
+        let groups = Dictionary(grouping: ordered, by: \.ester)
         let byID = Dictionary(ordered.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         remaining = byID.mapValues { $0.count * $0.pack.unitMG }
         let counts = ordered.flatMap { supply in
@@ -96,26 +103,28 @@ struct InventoryLedger {
             var needed = stockQuantity(route: dose.route, doseMG: dose.doseMG, extras: dose.extras)
             guard needed > 0 else { continue }
             applyCounts(before: dose.timeH, inclusive: false, to: &remaining)
-            let lots = (groups[dose.route.rawValue + "|" + dose.ester] ?? []).filter { lot in
-                lot.startedAt / 3_600_000 <= dose.timeH && (lot.archivedAt.map { dose.timeH <= $0 / 3_600_000 } ?? true)
+            let lots = (groups[dose.ester] ?? []).filter { lot in
+                lot.canSupply(dose.route, dose.ester) && lot.startedAt / 3_600_000 <= dose.timeH &&
+                    (lot.archivedAt.map { dose.timeH <= $0 / 3_600_000 } ?? true)
             }
             var choices: [MedicationSupply] = []
-            for lot in lots where remaining[lot.id, default: 0] > 0 && !choices.contains(where: { $0.pack == lot.pack }) {
+            for lot in lots where remaining[lot.id, default: 0] > 0 && lot.matchesStrength(route: dose.route, extras: dose.extras) != false &&
+                !choices.contains(where: { $0.specification == lot.specification }) {
                 choices.append(lot)
             }
             let selected: MedicationSupply?
             if let id = dose.inventorySupplyId {
-                selected = byID[id].flatMap { $0.route == dose.route && $0.ester == dose.ester ? $0 : nil }
-                if let selected, !choices.contains(where: { $0.pack == selected.pack }) { choices.append(selected) }
+                selected = byID[id].flatMap { $0.canSupply(dose.route, dose.ester) && $0.matchesStrength(route: dose.route, extras: dose.extras) != false ? $0 : nil }
+                if let selected, !choices.contains(where: { $0.specification == selected.specification }) { choices.append(selected) }
             } else {
-                selected = choices.count == 1 ? choices.first : nil
+                selected = automaticStock(choices, route: dose.route, extras: dose.extras)
             }
             // An imported dose can reference a lot missing from this device. Confirm its
             // specification before pricing it against any newly supplied replacement.
             let ambiguous = selected == nil && !choices.isEmpty
             var parts: [StockAllocation] = []
             if let selected {
-                for lot in lots where lot.pack == selected.pack {
+                for lot in lots where lot.specification == selected.specification {
                     let take = min(needed, remaining[lot.id, default: 0])
                     guard take > 0 else { continue }
                     parts.append(StockAllocation(supply: lot, units: take / lot.pack.unitMG))

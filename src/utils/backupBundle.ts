@@ -613,6 +613,9 @@ const validatePlan = (raw: unknown, path: string): Validation<PlanItem> => {
     if (timesPerDay < 1 || timesPerDay > PLAN_TIMES_PER_DAY_MAX) {
         return { error: `${path}: timesPerDay must be between 1 and ${PLAN_TIMES_PER_DAY_MAX}` };
     }
+    if (raw.inventorySupplyId != null && !isRecordId(raw.inventorySupplyId)) {
+        return { error: path + ': invalid stock reference' };
+    }
     return {
         value: {
             id: raw.id,
@@ -622,6 +625,7 @@ const validatePlan = (raw: unknown, path: string): Validation<PlanItem> => {
             extras: extras as PlanItem['extras'],
             everyDays,
             timesPerDay: everyDays > 1 ? 1 : timesPerDay,
+            ...(isRecordId(raw.inventorySupplyId) && { inventorySupplyId: raw.inventorySupplyId }),
         },
     };
 };
