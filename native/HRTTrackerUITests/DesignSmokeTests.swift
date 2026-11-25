@@ -340,9 +340,17 @@ final class DesignSmokeTests: XCTestCase {
         let selectedDay = element("heatmap.selected", in: app)
         scroll(overview, until: selectedDay)
         XCTAssertTrue(selectedDay.label.contains("0 次用药"))
-        scroll(overview, until: app.buttons["overview.forecast"])
         screenshot("03-medication-activity", in: app)
-        app.buttons["overview.forecast"].tap()
+        let forecast = app.buttons["overview.forecast"]
+        scroll(overview, until: forecast)
+        let simulationHeading = app.staticTexts["试算"]
+        let inventory = app.buttons["cost.inventory"]
+        XCTAssertTrue(simulationHeading.exists)
+        XCTAssertTrue(inventory.exists)
+        XCTAssertEqual(forecast.label, "用药方案试算")
+        XCTAssertLessThan(inventory.frame.midY, simulationHeading.frame.midY)
+        XCTAssertLessThan(simulationHeading.frame.midY, forecast.frame.midY)
+        forecast.tap()
 
         let simulation = app.navigationBars["方案试算"]
         XCTAssertTrue(simulation.waitForExistence(timeout: 6))

@@ -3,6 +3,7 @@ import SwiftUI
 struct OverviewPixelCats: View {
     let hasDoses: Bool
     let hasLabs: Bool
+    var width: CGFloat = 32
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -33,7 +34,7 @@ struct OverviewPixelCats: View {
                 context.fill(path, with: .color(color), style: FillStyle(antialiased: false))
             }
         }
-        .frame(width: 32, height: 32 * 15 / 26)
+        .frame(width: width, height: width * 15 / 26)
     }
 
     private func color(_ hex: UInt32) -> Color {

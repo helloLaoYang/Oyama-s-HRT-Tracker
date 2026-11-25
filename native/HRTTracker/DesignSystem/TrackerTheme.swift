@@ -169,15 +169,17 @@ struct TrackerSegment<Option: Hashable>: View {
     let options: [Option]
     @Binding var selection: Option
     var compact = false
+    var tableName: String? = nil
+    var optionIdentifier: ((Option) -> String)? = nil
     let title: (Option) -> LocalizedStringKey
 
     var body: some View {
         HStack(spacing: compact ? 2 : 3) {
             ForEach(options, id: \.self) { option in
-                Button {
+                let button = Button {
                     selection = option
                 } label: {
-                    Text(title(option))
+                    Text(title(option), tableName: tableName)
                         .font(compact ? .footnote : .subheadline)
                         .foregroundStyle(selection == option ? TrackerTheme.ink : TrackerTheme.muted)
                         .padding(.horizontal, compact ? 8 : 11)
@@ -193,6 +195,11 @@ struct TrackerSegment<Option: Hashable>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selection == option ? .isSelected : [])
+                if let optionIdentifier {
+                    button.accessibilityIdentifier(optionIdentifier(option))
+                } else {
+                    button
+                }
             }
         }
         .padding(compact ? 2 : 3)

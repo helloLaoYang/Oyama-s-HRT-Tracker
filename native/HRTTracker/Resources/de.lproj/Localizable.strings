@@ -1,4 +1,5 @@
 "Cannot open tracker data" = "Aufzeichnungen können nicht geöffnet werden";
+"Could not refresh tracker data" = "Aufzeichnungen konnten nicht aktualisiert werden";
 "Close the app and try again." = "Schließe die App und versuche es erneut.";
 "Overview" = "Übersicht";
 "Records" = "Protokoll";
@@ -47,6 +48,8 @@
 "No dose records yet" = "Noch keine Dosen erfasst";
 "No supported concentration model for these records." = "Für diese Einträge ist kein unterstütztes Konzentrationsmodell verfügbar.";
 "Regimen simulation" = "Therapieplan simulieren";
+"Simulation" = "Simulation";
+"Medication regimen simulation" = "Medikationsplan simulieren";
 "About concentration estimates" = "Über Konzentrationsschätzungen";
 "Concentrations are model estimates and may differ substantially from laboratory results." = "Die Konzentrationen sind Modellschätzungen und können erheblich von Laborwerten abweichen.";
 "Done" = "Fertig";

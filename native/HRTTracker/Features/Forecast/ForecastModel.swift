@@ -48,7 +48,9 @@ struct ForecastRegimen: Equatable, Sendable {
                                       extras: last.extras, everyDays: interval / 24, remindersEnabled: false)
             return Self(schedule: ScheduledMedication(plan: plan, first: first), matchingHistory: times)
         }
-        return inferred.sorted { $0.schedule.first < $1.schedule.first }
+        return inferred.sorted {
+            ($0.schedule.first, $0.schedule.plan.id) < ($1.schedule.first, $1.schedule.plan.id)
+        }
     }
 
     private static func fingerprint(_ dose: DoseEvent) -> String {
