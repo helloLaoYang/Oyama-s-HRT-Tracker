@@ -2,50 +2,16 @@ import XCTest
 @testable import HRTTracker
 
 final class AIAssistantRequestTests: XCTestCase {
-    func testRecordReplyPreservesGenerativeAnswerAndLinksToKnownFacts() throws {
-        let request = makeRequest()
-        let selection = try request.selection(from: """
-            ```json
-            {"answer":"There were two doses and one recent lab result.","factIDs":["fact-2","fact-1"]}
-            ```
-            """)
-        XCTAssertEqual(selection.answer, "There were two doses and one recent lab result.")
-        XCTAssertEqual(selection.facts.map(\.id), ["latest-lab", "dose-count"])
-    }
-
-    func testHRTEducationCanReceiveAnAnswerWithoutRecordFacts() throws {
+    func testGeneralQuestionCanReceiveAnAnswerWithoutRecordFacts() throws {
         let snapshot = AIInsightSnapshot(mode: .transfem, range: .month, facts: [], doses: [], labs: [])
-        let question = AIAssistantRequest(purpose: .question, question: "What does HRT stand for?", snapshot: snapshot)
-        let answer = "HRT stands for hormone replacement therapy."
-        let selection = try question.selection(from: #"{"answer":"HRT stands for hormone replacement therapy.","factIDs":[]}"#)
+        let question = AIAssistantRequest(purpose: .question, question: "Why is the sky blue?", snapshot: snapshot)
+        let answer = "Air scatters blue light more strongly than red light."
+        let selection = try question.streamSelection(from: answer)
 
         XCTAssertEqual(selection.answer, answer)
         XCTAssertTrue(selection.facts.isEmpty)
-    }
-
-    func testReplyRejectsUnrecognizedAndDuplicateFactIDs() {
-        let request = makeRequest()
-        for invalid in [
-            #"{"answer":"Model reply.","factIDs":["fact-99"]}"#,
-            #"{"answer":"Model reply.","factIDs":["fact-1","fact-1"]}"#,
-            #"{"answer":" ","factIDs":[]}"#,
-            #"{"answer":"Model reply.","factIDs":["fact-1"],"advice":"Unexpected text"}"#
-        ] {
-            XCTAssertThrowsError(try request.selection(from: invalid))
-            XCTAssertThrowsError(try request.selection(from: invalid, allowPlainText: true))
-        }
-    }
-
-    func testCompatibleReplyCanUsePlainTextWithoutClaimingSources() throws {
-        let request = makeRequest()
-        let text = "Hello! How can I help?"
-        XCTAssertThrowsError(try request.selection(from: text))
-        let reply = try request.selection(from: text, allowPlainText: true)
-        XCTAssertEqual(reply.answer, text)
-        XCTAssertTrue(reply.facts.isEmpty)
-
-        let malformed = #"{"answer":"Truncated reply","factIDs":["fact-1""#
-        XCTAssertThrowsError(try request.selection(from: malformed, allowPlainText: true))
+        XCTAssertThrowsError(try question.streamSelection(from: " "))
+        XCTAssertThrowsError(try question.streamSelection(from: question.prompt))
     }
 
     func testStreamHidesCitationTrailerAndLinksOnlyKnownRecords() throws {
@@ -59,52 +25,30 @@ final class AIAssistantRequestTests: XCTestCase {
         XCTAssertEqual(reply.facts.map(\.id), ["latest-lab"])
     }
 
-    func testImageRequestOmitsPersonalRecordFacts() throws {
-        var request = makeRequest()
-        request.includesRecordFacts = false
-        let input = try payload(request.input(context: nil, includeRecentTurns: false))
-        XCTAssertEqual(input["facts"] as? [[String: String]], [])
-        XCTAssertNil(input["localMemory"])
-    }
-
-    func testRecordChangeContextUsesLocalDateAndOpaqueFactAliases() throws {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        var snapshot = makeRequest().snapshot
-        snapshot.capturedInterval = now...now
-        snapshot.capturedTimeZoneID = "Asia/Shanghai"
-        let request = AIAssistantRequest(purpose: .question, question: "Correct yesterday's result", snapshot: snapshot)
-
-        let input = try payload(request.input(context: nil, includeRecentTurns: false, allowsRecordChanges: true))
-        let recordContext = try XCTUnwrap(input["recordContext"] as? [String: String])
-        XCTAssertEqual(recordContext["timeZone"], "Asia/Shanghai")
-        XCTAssertEqual(recordContext["labAnalyte"], "estradiol")
-        XCTAssertTrue(try XCTUnwrap(recordContext["localTime"]).hasSuffix("+08:00"))
-        XCTAssertEqual(request.recordReference(for: "fact-2"), .lab("private-lab-id"))
-        XCTAssertNil(request.recordReference(for: "fact-1"))
-        XCTAssertNil(request.recordReference(for: "private-lab-id"))
-        let regularInput = try payload(request.input(context: nil, includeRecentTurns: false))
-        XCTAssertNil(regularInput["recordContext"])
-    }
-
-    func testExternalPayloadOmitsRawTranscriptAndRecordIDsEvenWithMemoryOptIn() throws {
+    func testLocalPromptSeparatesUserMessageAndRoleHistoryFromReferenceData() throws {
         let request = makeRequest()
-        let context = AIConversationContext(recentTurns: "private transcript", summary: "Saved summary", longTerm: "Saved preference")
-        let withoutMemory = try payload(request.input(context: nil, includeRecentTurns: false))
-        let withMemory = try payload(request.input(context: context, includeRecentTurns: false))
-        let onDevice = try payload(request.input(context: context, includeRecentTurns: true))
+        let earlier = AIChatTurn(date: .now, mode: .transfem, question: "Earlier question",
+                                 answer: "Earlier answer", sources: [])
+        let context = AIConversationContext(recentTurns: [earlier], summary: "Saved summary",
+                                            longTerm: "Saved preference")
+        let base = try referenceData(in: request.instructions(context: nil))
+        let instructions = try request.instructions(context: context)
+        let onDevice = try referenceData(in: instructions)
 
-        XCTAssertEqual(withoutMemory["question"] as? String, "What is the latest lab result?")
-        XCTAssertEqual(withoutMemory["rangeDays"] as? Int, 30)
-        XCTAssertNil(withoutMemory["previousSummary"])
-        XCTAssertNil(withoutMemory["localMemory"])
-        XCTAssertNil(withMemory["recentTurns"])
-        XCTAssertEqual(withMemory["previousSummary"] as? String, "Saved summary")
-        XCTAssertEqual(withMemory["localMemory"] as? String, "Saved preference")
-        XCTAssertEqual(onDevice["recentTurns"] as? String, "private transcript")
-        let facts = try XCTUnwrap(withMemory["facts"] as? [[String: String]])
+        XCTAssertEqual(request.prompt, "What is the latest lab result?")
+        XCTAssertFalse(instructions.contains(request.prompt))
+        XCTAssertFalse(instructions.contains(earlier.question))
+        XCTAssertFalse(instructions.contains(earlier.answer))
+        XCTAssertNil(onDevice["question"])
+        XCTAssertNil(onDevice["recentTurns"])
+        XCTAssertEqual(onDevice["rangeDays"] as? Int, 30)
+        XCTAssertNil(base["previousSummary"])
+        XCTAssertNil(base["localMemory"])
+        XCTAssertEqual(onDevice["previousSummary"] as? String, "Saved summary")
+        XCTAssertEqual(onDevice["localMemory"] as? String, "Saved preference")
+        let facts = try XCTUnwrap(onDevice["facts"] as? [[String: String]])
         XCTAssertEqual(facts.map { $0["id"] }, ["fact-1", "fact-2"])
         XCTAssertFalse(facts.flatMap(\.values).contains("private-lab-id"))
-        XCTAssertNil(withMemory["report"])
     }
 
     private func makeRequest() -> AIAssistantRequest {
@@ -121,7 +65,9 @@ final class AIAssistantRequestTests: XCTestCase {
         )
     }
 
-    private func payload(_ input: String) throws -> [String: Any] {
-        try XCTUnwrap(JSONSerialization.jsonObject(with: Data(input.utf8)) as? [String: Any])
+    private func referenceData(in instructions: String) throws -> [String: Any] {
+        let marker = try XCTUnwrap(instructions.range(of: "\nReference data (JSON):\n"))
+        let data = Data(instructions[marker.upperBound...].utf8)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 }

@@ -23,7 +23,7 @@ struct AIMemoryEntry: Identifiable, Equatable, Sendable {
 }
 
 struct AIConversationContext {
-    let recentTurns: String
+    let recentTurns: [AIChatTurn]
     let summary: String
     let longTerm: String
 }
@@ -167,15 +167,20 @@ final class AIConversationStore {
         nextSequence = 0
     }
 
-    func context(mode: HRTMode, modelLimit: Int?, reservedTokens: Int, baseInput: String,
-                 includeRecentTurns: Bool) throws -> AIConversationContext {
-        let inputLimit = Self.inputLimit(modelLimit: modelLimit, reservedTokens: reservedTokens)
+    func context(mode: HRTMode, modelLimit: Int, reservedTokens: Int, baseInput: String) throws -> AIConversationContext {
+        let inputLimit = modelLimit - min(max(0, reservedTokens), max(0, modelLimit))
         let baseCost = Self.estimatedCost(baseInput) + 32
         guard baseCost < inputLimit else { throw AIConversationError.contextTooLong }
 
         let available = inputLimit - baseCost
         let remembered = boundedMemory(for: mode, budget: min(2_048, available / 3))
-        let modeTurns = turns.filter { $0.mode == mode && $0.document == nil }
+        let modeTurns = turns.compactMap { turn -> AIChatTurn? in
+            guard turn.mode == mode, turn.document == nil,
+                  !turn.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  let answer = AIAssistantReplyGuard.finalText(turn.answer) else { return nil }
+            return AIChatTurn(id: turn.id, date: turn.date, mode: turn.mode,
+                              question: turn.question, answer: answer, sources: turn.sources)
+        }
         let stored = try checkpoint(for: mode)
         let boundary = stored.flatMap { digest in
             modeTurns.firstIndex { $0.id == digest.through }.map { $0 + 1 }
@@ -183,7 +188,7 @@ final class AIConversationStore {
         var digest = boundary > 0 ? stored?.digest ?? AIConversationDigest() : AIConversationDigest()
         let remainder = modeTurns.dropFirst(boundary)
         let workingBudget = max(0, min(available, inputLimit * 4 / 5 - baseCost) - Self.estimatedCost(remembered))
-        let previousSummaryCost = Self.estimatedCost(digest.text(withDetails: includeRecentTurns))
+        let previousSummaryCost = Self.estimatedCost(digest.text(withDetails: true))
         let rawBudget = max(0, workingBudget - previousSummaryCost)
         var recentCount = Self.newestFittingCount(remainder, budget: rawBudget)
         if recentCount < remainder.count {
@@ -194,29 +199,17 @@ final class AIConversationStore {
             if let last = older.last { try saveCheckpoint(mode: mode, through: last.id, digest: digest) }
         }
 
-        let recent = remainder.suffix(recentCount)
-        // External previews include topic labels and explicit memories. Question snippets,
-        // internal source identifiers and raw transcript turns remain on this device.
-        if !includeRecentTurns { digest.include(recent) }
-        let recentText = includeRecentTurns ? recent.map(Self.transcript).joined(separator: "\n\n") : ""
-        let summaryBudget = available - Self.estimatedCost(recentText) - Self.estimatedCost(remembered)
-        var summary = digest.text(withDetails: includeRecentTurns)
+        let recentTurns = remainder.suffix(recentCount)
+        let recentCost = recentTurns.reduce(0) { $0 + Self.estimatedCost($1) }
+        let summaryBudget = available - recentCost - Self.estimatedCost(remembered)
+        var summary = digest.text(withDetails: true)
         if Self.estimatedCost(summary) > summaryBudget { summary = digest.text(withDetails: false) }
         if Self.estimatedCost(summary) > summaryBudget { summary = "" }
-        return AIConversationContext(recentTurns: recentText, summary: summary, longTerm: remembered)
-    }
-
-    static func fits(modelLimit: Int?, reservedTokens: Int, baseInput: String) -> Bool {
-        estimatedCost(baseInput) + 32 < inputLimit(modelLimit: modelLimit, reservedTokens: reservedTokens)
-    }
-
-    private static func inputLimit(modelLimit: Int?, reservedTokens: Int) -> Int {
-        let limit = min(AIModelClient.defaultContextLimit, modelLimit ?? AIModelClient.unverifiedContextLimit)
-        return limit - min(max(0, reservedTokens), max(0, limit))
+        return AIConversationContext(recentTurns: Array(recentTurns), summary: summary, longTerm: remembered)
     }
 
     private static func estimatedCost(_ text: String) -> Int {
-        // Include JSON escapes without depending on a particular provider's tokenizer.
+        // UTF-8 bytes conservatively budget both plain messages and escaped reference data.
         text.utf8.reduce(0) { count, byte in
             switch byte {
             case 8, 9, 10, 12, 13, 34, 47, 92: count + 2
@@ -226,15 +219,16 @@ final class AIConversationStore {
         }
     }
 
-    private static func transcript(_ turn: AIChatTurn) -> String {
-        "User: \(turn.question)\nAssistant: \(turn.answer)"
+    private static func estimatedCost(_ turn: AIChatTurn) -> Int {
+        // Allow for the two role markers and their delimiters.
+        estimatedCost(turn.question) + estimatedCost(turn.answer) + 20
     }
 
     private static func newestFittingCount(_ turns: ArraySlice<AIChatTurn>, budget: Int) -> Int {
         var remaining = budget
         var count = 0
         for turn in turns.reversed() {
-            let cost = estimatedCost(turn.question) + estimatedCost(turn.answer) + 20
+            let cost = estimatedCost(turn)
             if cost > remaining { break }
             remaining -= cost
             count += 1

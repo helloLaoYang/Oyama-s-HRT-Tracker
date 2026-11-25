@@ -58,43 +58,20 @@ final class AIConversationTests: XCTestCase {
 
         let reopened = AIConversationStore(directory: directory)
         XCTAssertEqual(reopened.turns, [turn])
-        for includeRecentTurns in [false, true] {
-            let context = try reopened.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 100,
-                                               baseInput: "Question", includeRecentTurns: includeRecentTurns)
-            let text = context.recentTurns + context.summary + context.longTerm
-            XCTAssertFalse(text.contains("Private summary"))
-            XCTAssertFalse(text.contains("private-record.pdf"))
-            XCTAssertFalse(text.contains(image.base64EncodedString()))
-        }
+        let context = try reopened.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 100,
+                                           baseInput: "Question")
+        let history = try XCTUnwrap(context.recentTurns.first)
+        XCTAssertEqual(history.question, turn.question)
+        XCTAssertEqual(history.answer, turn.answer)
+        XCTAssertNil(history.reasoningSummary)
+        XCTAssertNil(history.generatedImage)
+        XCTAssertTrue(history.attachmentNames.isEmpty)
+        let text = [history.question, history.answer, context.summary, context.longTerm].joined(separator: "\n")
+        XCTAssertFalse(text.contains("Private summary"))
+        XCTAssertFalse(text.contains("private-record.pdf"))
+        XCTAssertFalse(text.contains(image.base64EncodedString()))
         try reopened.clear()
         XCTAssertTrue(AIConversationStore(directory: directory).turns.isEmpty)
-    }
-
-    @MainActor
-    func testAttachmentImportValidatesContentAndSize() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let pdf = directory.appendingPathComponent("record.pdf")
-        let example = Data("%PDF-1.4\n%%EOF".utf8)
-        try example.write(to: pdf)
-        let document = try AIAssistantAttachment.loadFile(pdf)
-        XCTAssertEqual(document.name, "record.pdf")
-        XCTAssertTrue(document.isPDF)
-        XCTAssertTrue(document.isValidPayload)
-        XCTAssertEqual(document.data, example)
-        XCTAssertThrowsError(try AIAssistantAttachment.loadFile(pdf, maxBytes: example.count - 1))
-        try Data("Not a PDF".utf8).write(to: pdf)
-        XCTAssertThrowsError(try AIAssistantAttachment.loadFile(pdf))
-
-        let picture = directory.appendingPathComponent("picture.png")
-        let image = try makeImageData()
-        try image.write(to: picture)
-        XCTAssertTrue(try AIAssistantAttachment.loadFile(picture).isValidPayload)
-        XCTAssertTrue(AIAssistantGeneratedImage.isValid(image))
-        XCTAssertFalse(AIAssistantGeneratedImage.isValid(example))
     }
 
     @MainActor
@@ -107,7 +84,7 @@ final class AIConversationTests: XCTestCase {
     }
 
     @MainActor
-    func testContextCompactionKeepsRawTurnsAndLimitsRemoteContext() async throws {
+    func testContextCompactionKeepsRawTurnsAndLimitsLocalContext() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -125,38 +102,52 @@ final class AIConversationTests: XCTestCase {
         try store.saveMemory(id: nil, mode: .transfem, text: "own-mode-memory")
 
         let local = try store.context(mode: .transfem, modelLimit: 800, reservedTokens: 100,
-                                      baseInput: "Question", includeRecentTurns: true)
-        XCTAssertTrue(local.recentTurns.contains(recent.question))
-        XCTAssertFalse(local.recentTurns.contains(older.question))
+                                      baseInput: "Question")
+        XCTAssertEqual(local.recentTurns, [recent])
         XCTAssertTrue(local.summary.contains(older.question))
         XCTAssertTrue(local.summary.contains("old-source-id"))
         XCTAssertFalse(local.summary.contains("private old answer"))
         XCTAssertTrue(local.longTerm.contains("own-mode-memory"))
         XCTAssertFalse(local.longTerm.contains("other-mode-memory"))
-        XCTAssertFalse((local.recentTurns + local.summary).contains("other-mode-question"))
+        XCTAssertFalse(local.summary.contains("other-mode-question"))
         XCTAssertEqual(store.turns, [older, recent, otherMode])
         try store.append(recent)
         XCTAssertEqual(store.turns, [older, recent, otherMode])
 
         let reopened = AIConversationStore(directory: directory)
         let restored = try reopened.context(mode: .transfem, modelLimit: 800, reservedTokens: 100,
-                                             baseInput: "Question", includeRecentTurns: true)
+                                             baseInput: "Question")
         XCTAssertEqual(restored.summary, local.summary)
-        let remote = try reopened.context(mode: .transfem, modelLimit: 800, reservedTokens: 100,
-                                       baseInput: "Question", includeRecentTurns: false)
-        XCTAssertTrue(remote.recentTurns.isEmpty)
-        XCTAssertFalse(remote.summary.isEmpty)
-        XCTAssertFalse(remote.summary.contains(older.question))
-        XCTAssertFalse(remote.summary.contains(recent.question))
-        XCTAssertFalse(remote.summary.contains("source-id"))
-        XCTAssertTrue(remote.longTerm.contains("own-mode-memory"))
-        XCTAssertFalse(AIConversationStore.fits(modelLimit: nil, reservedTokens: 100,
-                                                baseInput: String(repeating: "a", count: 4_096)))
+        XCTAssertEqual(restored.recentTurns, local.recentTurns)
+        XCTAssertThrowsError(try reopened.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 100,
+                                                   baseInput: String(repeating: "a", count: 4_096)))
         try reopened.clear()
         let cleared = try reopened.context(mode: .transfem, modelLimit: 800, reservedTokens: 100,
-                                        baseInput: "Question", includeRecentTurns: false)
+                                        baseInput: "Question")
         XCTAssertTrue(cleared.summary.isEmpty)
         XCTAssertTrue(cleared.longTerm.isEmpty)
+    }
+
+    @MainActor
+    func testLegacyRoleScriptDoesNotRepeatInModelHistory() throws {
+        let store = AIConversationStore(inMemory: true)
+        let valid = AIChatTurn(date: .now, mode: .transfem, question: "你好", answer: "你好！", sources: [])
+        let malformed = AIChatTurn(
+            date: .now, mode: .transfem, question: "测试",
+            answer: "User: 如果是预计呢\nAssistant:目", sources: []
+        )
+        let extraRole = AIChatTurn(
+            date: .now, mode: .transfem, question: "你是谁",
+            answer: "我是 HRTrace 的助手。\nUser: 你是谁\nAssistant: User: 你是谁", sources: []
+        )
+        for turn in [valid, malformed, extraRole] { try store.append(turn) }
+
+        let context = try store.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 256,
+                                        baseInput: "Latest question")
+        XCTAssertEqual(context.recentTurns.map(\.question), ["你好", "你是谁"])
+        XCTAssertEqual(context.recentTurns.map(\.answer), ["你好！", "我是 HRTrace 的助手。"])
+        XCTAssertFalse(context.summary.contains(malformed.question))
+        XCTAssertEqual(store.turns, [valid, malformed, extraRole])
     }
 
     @MainActor
@@ -231,14 +222,10 @@ final class AIConversationTests: XCTestCase {
         XCTAssertEqual(saved.labs, document.labs)
         XCTAssertEqual(saved.exportText, "Private doctor notes")
         let local = try reopened.context(mode: tracker.mode, modelLimit: 4_096, reservedTokens: 100,
-                                         baseInput: "Question", includeRecentTurns: true)
-        let remote = try reopened.context(mode: tracker.mode, modelLimit: 4_096, reservedTokens: 100,
-                                          baseInput: "Question", includeRecentTurns: false)
-        XCTAssertTrue(local.recentTurns.contains(prior.question))
-        for context in [local, remote] {
-            let rendered = context.recentTurns + context.summary + context.longTerm
-            XCTAssertFalse(rendered.contains(visit.question))
-            XCTAssertFalse(rendered.contains(saved.exportText))
-        }
+                                         baseInput: "Question")
+        XCTAssertEqual(local.recentTurns, [prior])
+        let rendered = local.summary + local.longTerm
+        XCTAssertFalse(rendered.contains(visit.question))
+        XCTAssertFalse(rendered.contains(saved.exportText))
     }
 }

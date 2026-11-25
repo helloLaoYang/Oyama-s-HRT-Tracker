@@ -1,176 +1,118 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Medication record saved.": {
+    "Reply unavailable.": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用药记录已保存。"
+            "value": "这条回复无法显示。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Medikationseintrag gespeichert."
+            "value": "Antwort nicht verfügbar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prise enregistrée."
+            "value": "Réponse indisponible."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "投薬記録を保存しました。"
+            "value": "この応答は表示できません。"
           }
         }
       }
     },
-    "Lab result saved.": {
+    "Reply interrupted.": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "化验结果已保存。"
+            "value": "回复未完成。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laborwert gespeichert."
+            "value": "Antwort unterbrochen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Résultat enregistré."
+            "value": "Réponse interrompue."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "検査結果を保存しました。"
+            "value": "応答が中断されました。"
           }
         }
       }
     },
-    "The record was saved. Could not save the chat receipt.": {
+    "Retry": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "记录已保存，聊天回执保存失败。"
+            "value": "重试"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Eintrag wurde gespeichert. Die Chat-Bestätigung konnte nicht gespeichert werden."
+            "value": "Erneut versuchen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le relevé a été enregistré. Le reçu de la discussion n’a pas pu être enregistré."
+            "value": "Réessayer"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録は保存されました。チャットの保存結果は記録できませんでした。"
+            "value": "再試行"
           }
         }
       }
     },
-    "Attachments to send": {
+    "Edit question": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "将发送的附件"
+            "value": "编辑问题"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zu sendende Anhänge"
+            "value": "Frage bearbeiten"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pièces jointes à envoyer"
+            "value": "Modifier la question"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送信する添付ファイル"
-          }
-        }
-      }
-    },
-    "Generate image": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生成图片"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bild erstellen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Générer une image"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像を生成"
-          }
-        }
-      }
-    },
-    "It also covers the files you attach to later messages for this model.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此授权也适用于以后附加到此模型消息的文件。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sie gilt auch für Dateien, die du künftigen Nachrichten an dieses Modell anhängst."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle couvre aussi les fichiers que vous joindrez plus tard aux messages destinés à ce modèle."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このモデルへの今後のメッセージに添付するファイルにも適用されます。"
+            "value": "質問を編集"
           }
         }
       }
@@ -204,35 +146,6 @@
         }
       }
     },
-    "Switch to a model that supports these attachments or image generation to send this message.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请切换到支持这些附件或图片生成的模型，再发送这条消息。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle zum Senden ein Modell, das diese Anhänge oder die Bilderstellung unterstützt."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour envoyer ce message, choisissez un modèle qui prend en charge ces pièces jointes ou la génération d’images."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このメッセージを送信するには、添付ファイルや画像生成に対応するモデルに切り替えてください。"
-          }
-        }
-      }
-    },
     "Add memory": {
       "extractionState": "manual",
       "localizations": {
@@ -258,93 +171,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "記憶を追加"
-          }
-        }
-      }
-    },
-    "This approval also applies to future questions, record summaries, and any memory summaries you opt to include. Change it in Model settings.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本次授权也适用于后续问题、记录摘要和你选择加入的记忆摘要。可在模型设置中修改或撤销。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Freigabe gilt auch für künftige Fragen, Aufzeichnungszusammenfassungen und optional einbezogene Erinnerungszusammenfassungen. Du kannst sie in den Modelleinstellungen ändern."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette autorisation couvre aussi vos prochaines questions, les résumés de vos relevés et les résumés de mémoire que vous choisissez d’inclure. Modifiez-la dans les réglages du modèle."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この許可は、今後の質問、記録の要約、追加を選んだ記憶の要約にも適用されます。モデル設定で変更できます。"
-          }
-        }
-      }
-    },
-    "Answer a question": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回答问题"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Frage beantworten"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Répondre à une question"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "質問に回答"
-          }
-        }
-      }
-    },
-    "Apple on-device": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple 本地模型"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple auf dem Gerät"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple sur cet appareil"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple オンデバイス"
           }
         }
       }
@@ -610,35 +436,6 @@
         }
       }
     },
-    "Compatible model": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "兼容模型"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kompatibles Modell"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle compatible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "互換モデル"
-          }
-        }
-      }
-    },
     "Concentration plot": {
       "extractionState": "manual",
       "localizations": {
@@ -664,64 +461,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "濃度グラフ"
-          }
-        }
-      }
-    },
-    "Configure a compatible model to continue.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请配置兼容模型后继续。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Richte ein kompatibles Modell ein, um fortzufahren."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configurez un modèle compatible pour continuer."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "続けるには互換モデルを設定してください。"
-          }
-        }
-      }
-    },
-    "Confirm send": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认发送"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senden bestätigen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmer l’envoi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信を確認"
           }
         }
       }
@@ -1161,35 +900,6 @@
         }
       }
     },
-    "Include the memory summary": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入记忆摘要"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erinnerungszusammenfassung beifügen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inclure le résumé des souvenirs"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記憶の要約を含める"
-          }
-        }
-      }
-    },
     "Keep the question to 500 characters or fewer.": {
       "extractionState": "manual",
       "localizations": {
@@ -1393,35 +1103,6 @@
         }
       }
     },
-    "Memory to send": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将发送的记忆"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zu sendende Erinnerungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Souvenirs à envoyer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信する記憶"
-          }
-        }
-      }
-    },
     "Method": {
       "extractionState": "manual",
       "localizations": {
@@ -1476,35 +1157,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "モデル"
-          }
-        }
-      }
-    },
-    "Model settings": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "模型设置"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modelleinstellungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réglages du modèle"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "モデル設定"
           }
         }
       }
@@ -1592,93 +1244,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "OK"
-          }
-        }
-      }
-    },
-    "Organize the recap": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理回顾"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rückblick ordnen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organiser le récapitulatif"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "振り返りを整理"
-          }
-        }
-      }
-    },
-    "Organize the visit summary": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理就诊摘要"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terminübersicht ordnen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organiser le résumé de consultation"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "診察サマリーを整理"
-          }
-        }
-      }
-    },
-    "Organize with model": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用模型整理"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit dem Modell ordnen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organiser avec le modèle"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "モデルで整理"
           }
         }
       }
@@ -1857,35 +1422,6 @@
         }
       }
     },
-    "Reasoning effort": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "推理强度"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Denkaufwand"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intensité du raisonnement"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "推論の強度"
-          }
-        }
-      }
-    },
     "Recap": {
       "extractionState": "manual",
       "localizations": {
@@ -2031,35 +1567,6 @@
         }
       }
     },
-    "Review the information this provider will receive.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请核对将发送给此服务商的信息。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prüfe, welche Informationen dieser Anbieter erhält."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vérifiez les informations qui seront transmises à ce fournisseur."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このサービスに送信する情報を確認してください。"
-          }
-        }
-      }
-    },
     "Save": {
       "extractionState": "manual",
       "localizations": {
@@ -2176,35 +1683,6 @@
         }
       }
     },
-    "Send to": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发送至"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senden an"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Envoyer à"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信先"
-          }
-        }
-      }
-    },
     "Stop": {
       "extractionState": "manual",
       "localizations": {
@@ -2234,64 +1712,6 @@
         }
       }
     },
-    "Summary to send": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将发送的摘要"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zu sendende Zusammenfassung"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Résumé à envoyer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信する概要"
-          }
-        }
-      }
-    },
-    "Task": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "任务"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgabe"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tâche"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "タスク"
-          }
-        }
-      }
-    },
     "The answer did not match the available records. Try again.": {
       "extractionState": "manual",
       "localizations": {
@@ -2317,35 +1737,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "回答は利用可能な記録と一致しませんでした。再試行してください。"
-          }
-        }
-      }
-    },
-    "The model or records changed. Start the request again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "模型或记录已更改。请重新发起请求。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Modell oder die Aufzeichnungen haben sich geändert. Starte die Anfrage erneut."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le modèle ou les relevés ont changé. Relancez la requête."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "モデルまたは記録が変わりました。リクエストをやり直してください。"
           }
         }
       }

@@ -12,7 +12,6 @@ struct HRTTrackerApp: App {
         let container: ModelContainer
         let store: TrackerStore
         let watchSync: PhoneWatchSync
-        let modelSettings: AIModelSettings
         let conversation: AIConversationStore
     }
 
@@ -31,7 +30,6 @@ struct HRTTrackerApp: App {
             )
             let store = TrackerStore(context: container.mainContext, demo: memoryOnly)
             return Startup(container: container, store: store, watchSync: PhoneWatchSync(store: store),
-                           modelSettings: AIModelSettings(inMemory: memoryOnly),
                            conversation: AIConversationStore(inMemory: memoryOnly))
         }
     }
@@ -40,8 +38,7 @@ struct HRTTrackerApp: App {
         WindowGroup {
             switch startup {
             case .success(let state):
-                TrackerRoot(store: state.store, watchSync: state.watchSync,
-                            modelSettings: state.modelSettings, conversation: state.conversation)
+                TrackerRoot(store: state.store, watchSync: state.watchSync, conversation: state.conversation)
                     .modelContainer(state.container)
             case .failure:
                 ContentUnavailableView("Cannot open tracker data", systemImage: "exclamationmark.triangle",
@@ -78,7 +75,6 @@ private enum TrackerTab: String, CaseIterable {
 private struct TrackerRoot: View {
     let store: TrackerStore
     let watchSync: PhoneWatchSync
-    let modelSettings: AIModelSettings
     let conversation: AIConversationStore
     @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
     @Environment(\.scenePhase) private var scenePhase
@@ -86,9 +82,13 @@ private struct TrackerRoot: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedTab: TrackerTab = .overview
     @State private var keyboardVisible = false
+    @State private var assistantReady = false
     @State private var showsAssistant = false
     @State private var opensCurveAfterAssistant = false
     @State private var concentrationScrollRequest = 0
+    #if DEBUG && targetEnvironment(simulator)
+    @State private var assistantTestReplies = AssistantTestReplies()
+    #endif
 
     var body: some View {
         TabView(selection: tabSelection) {
@@ -103,30 +103,32 @@ private struct TrackerRoot: View {
                 .tag(TrackerTab.history)
                 .accessibilityIdentifier("tab.history")
 
-            Color.clear
-                .accessibilityHidden(usesInlineAssistant)
-                .tabItem {
-                    if usesInlineAssistant {
-                        Text(verbatim: " ").accessibilityHidden(true)
-                    } else {
-                        tab(.assistant)
+            if assistantReady {
+                Color.clear
+                    .accessibilityHidden(usesInlineAssistant)
+                    .tabItem {
+                        if usesInlineAssistant {
+                            Text(verbatim: " ").accessibilityHidden(true)
+                        } else {
+                            tab(.assistant)
+                        }
                     }
-                }
-                .tag(TrackerTab.assistant)
+                    .tag(TrackerTab.assistant)
+            }
 
             NavigationStack { LabsView(store: store) }
                 .tabItem { tab(.labs) }
                 .tag(TrackerTab.labs)
                 .accessibilityIdentifier("tab.labs")
 
-            NavigationStack { TrackerSettingsView(store: store, modelSettings: modelSettings) }
+            NavigationStack { TrackerSettingsView(store: store) }
                 .tabItem { tab(.settings) }
                 .tag(TrackerTab.settings)
                 .accessibilityIdentifier("tab.settings")
         }
         .id(language)
         .overlay(alignment: .bottom) {
-            if usesInlineAssistant, !keyboardVisible {
+            if assistantReady, usesInlineAssistant, !keyboardVisible {
                 assistantButton
                     .offset(y: 3)
             }
@@ -138,17 +140,34 @@ private struct TrackerRoot: View {
             keyboardVisible = false
         }
         .sheet(isPresented: $showsAssistant, onDismiss: assistantDismissed) {
-            AIAssistantView(store: store, modelSettings: modelSettings, conversation: conversation) {
-                opensCurveAfterAssistant = true
-                showsAssistant = false
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            assistantSheet
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .environment(\.locale, language.locale ?? systemLocale)
         .tint(TrackerTheme.accent)
         .preferredColorScheme(preferredScheme)
         .saturation(store.appearance == .mono ? 0 : 1)
+        .task {
+            #if DEBUG && targetEnvironment(simulator)
+            if isAssistantUITest {
+                guard !assistantReady else { return }
+                try? conversation.append(AIChatTurn(
+                    date: .now, mode: store.mode, question: "旧问题",
+                    answer: "User: 旧问题\nAssistant: User: 你是谁", sources: []
+                ))
+                assistantReady = true
+                return
+            }
+            #endif
+            guard !assistantReady, AIOfflineModel.isSupported else { return }
+            do {
+                try await AIOfflineModel.shared.prepare()
+                assistantReady = !Task.isCancelled
+            } catch {
+                assistantReady = false
+            }
+        }
         .task(id: ReminderInputs(
             enabled: store.remindersEnabled, mode: store.mode, plans: store.plans, doses: store.doses,
             day: store.calendar.startOfDay(for: store.now), language: language, active: scenePhase == .active
@@ -169,12 +188,39 @@ private struct TrackerRoot: View {
         }
     }
 
+    private var assistantSheet: AIAssistantView {
+        #if DEBUG && targetEnvironment(simulator)
+        if isAssistantUITest {
+            return AIAssistantView(
+                store: store, conversation: conversation,
+                generateReply: { [assistantTestReplies] _, _, _, update in
+                    try await assistantTestReplies.generate(onUpdate: update)
+                },
+                showCurve: openCurveFromAssistant
+            )
+        }
+        #endif
+        return AIAssistantView(store: store, conversation: conversation, showCurve: openCurveFromAssistant)
+    }
+
+    #if DEBUG && targetEnvironment(simulator)
+    private var isAssistantUITest: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("--demo") && arguments.contains("--assistant-ui-test")
+    }
+    #endif
+
+    private func openCurveFromAssistant() {
+        opensCurveAfterAssistant = true
+        showsAssistant = false
+    }
+
     private var usesInlineAssistant: Bool { horizontalSizeClass == .compact }
 
     private var tabSelection: Binding<TrackerTab> {
         Binding(get: { selectedTab }, set: { tab in
             if tab == .assistant {
-                showsAssistant = true
+                showsAssistant = assistantReady
             } else {
                 selectedTab = tab
             }
@@ -224,6 +270,24 @@ private struct TrackerRoot: View {
         .accessibilityIdentifier("tab.assistant")
     }
 }
+
+#if DEBUG && targetEnvironment(simulator)
+private actor AssistantTestReplies {
+    private var hasSent = false
+
+    func generate(onUpdate: @MainActor @Sendable (String) throws -> Void) async throws -> String {
+        if !hasSent {
+            hasSent = true
+            let text = "User: 测试\nAssistant: User: 你是谁"
+            try await onUpdate(text)
+            return text
+        }
+        let text = "测试通过，我可以帮你。"
+        try await onUpdate(text)
+        return text
+    }
+}
+#endif
 
 private struct WatchRefreshInputs: Equatable {
     let inputs: PhoneWatchInputs

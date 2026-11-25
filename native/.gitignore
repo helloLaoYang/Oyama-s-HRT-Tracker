@@ -1,4 +1,5 @@
 HRTTracker.xcodeproj/
+OfflineModels/
 DerivedData/
 .build/
 *.xcresult/

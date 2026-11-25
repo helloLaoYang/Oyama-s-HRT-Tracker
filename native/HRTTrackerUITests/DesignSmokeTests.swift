@@ -117,13 +117,83 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertTrue(submit.isEnabled)
     }
 
-    func testRecordAssistantSheetAndModelSettings() {
+    #if targetEnvironment(simulator)
+    func testAssistantIsHiddenWithoutPreparedModel() {
+        let app = launchDemo()
+        let tabs = app.tabBars.firstMatch
+        let records = tabs.buttons["记录"]
+        let checks = tabs.buttons["检查"]
+        XCTAssertTrue(records.waitForExistence(timeout: 8))
+        XCTAssertTrue(checks.exists)
+        XCTAssertFalse(app.buttons["tab.assistant"].exists)
+
+        tabs.buttons["设置"].tap()
+        XCTAssertTrue(element("settings.general", in: app).waitForExistence(timeout: 8))
+        XCTAssertFalse(element("settings.aiModels", in: app).exists)
+    }
+
+    #if DEBUG
+    func testAssistantRecoversFromMalformedReplyWithPinnedControls() {
+        let app = launchDemo(arguments: ["--assistant-ui-test"])
+        let assistant = app.buttons["tab.assistant"]
+        XCTAssertTrue(assistant.waitForExistence(timeout: 8))
+        assistant.tap()
+
+        let range = element("ai.range", in: app)
+        let memory = element("ai.memories", in: app)
+        let editOldQuestion = app.buttons["ai.history.editQuestion"]
+        let input = element("ai.question", in: app)
+        let send = app.buttons["ai.send"]
+        let rawRoleText = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "User:", "Assistant:")
+        ).firstMatch
+        XCTAssertTrue(range.waitForExistence(timeout: 8))
+        XCTAssertTrue(memory.isHittable)
+        XCTAssertTrue(element("ai.history.invalidReply", in: app).exists)
+        XCTAssertFalse(rawRoleText.exists)
+        let rangeY = range.frame.minY
+        let memoryY = memory.frame.minY
+
+        XCTAssertTrue(editOldQuestion.isHittable)
+        editOldQuestion.tap()
+        XCTAssertEqual(input.value as? String, "旧问题")
+        let testQuestion = "test"
+        input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "旧问题".count) + testQuestion)
+        XCTAssertEqual(input.value as? String, testQuestion)
+        waitUntilEnabled(send)
+        send.tap()
+
+        let retry = app.buttons["ai.retry"]
+        XCTAssertTrue(retry.waitForExistence(timeout: 8))
+        XCTAssertTrue(element("ai.error", in: app).exists)
+        XCTAssertEqual(input.value as? String, testQuestion)
+        XCTAssertFalse(rawRoleText.exists)
+        XCTAssertTrue(range.isHittable)
+        XCTAssertTrue(memory.isHittable)
+        screenshot("30-assistant-retry", in: app)
+        retry.tap()
+
+        let answer = app.staticTexts["ai.answer"]
+        XCTAssertTrue(answer.waitForExistence(timeout: 8))
+        XCTAssertEqual(answer.label, "测试通过，我可以帮你。")
+        XCTAssertFalse(retry.exists)
+        XCTAssertFalse(rawRoleText.exists)
+        XCTAssertTrue(range.isHittable)
+        XCTAssertTrue(memory.isHittable)
+        XCTAssertEqual(range.frame.minY, rangeY, accuracy: 3)
+        XCTAssertEqual(memory.frame.minY, memoryY, accuracy: 3)
+        screenshot("31-assistant-answered", in: app)
+    }
+    #endif
+    #endif
+
+    func testRecordAssistantSheetAndReports() throws {
         let app = launchDemo()
         let tabs = app.tabBars.firstMatch
         let records = tabs.buttons["记录"]
         let assistant = app.buttons["tab.assistant"]
         let checks = tabs.buttons["检查"]
-        XCTAssertTrue(assistant.waitForExistence(timeout: 8))
+        try XCTSkipUnless(assistant.waitForExistence(timeout: 8), "Requires a prepared on-device Qwen model.")
         XCTAssertLessThan(records.frame.midX, assistant.frame.midX)
         XCTAssertLessThan(assistant.frame.midX, checks.frame.midX)
         XCTAssertEqual(assistant.frame.midY, records.frame.midY, accuracy: 6)
@@ -171,35 +241,12 @@ final class DesignSmokeTests: XCTestCase {
         done.tap()
         XCTAssertTrue(app.buttons["labs.calibration"].waitForExistence(timeout: 6))
         screenshot("25-central-ai-entry", in: app)
-
-        assistant.tap()
-        let modelSettings = app.buttons["ai.modelSettings"]
-        XCTAssertTrue(modelSettings.waitForExistence(timeout: 8))
-        modelSettings.tap()
-        let fetch = element("ai.models.fetch", in: app)
-        XCTAssertTrue(fetch.waitForExistence(timeout: 8))
-        XCTAssertFalse(fetch.isEnabled)
-        XCTAssertTrue(element("ai.models.api", in: app).exists)
-        let summary = app.switches["ai.models.reasoningSummary"]
-        XCTAssertTrue(summary.exists)
-        summary.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-        XCTAssertEqual(summary.value as? String, "1")
-        let confirmationMode = element("ai.models.confirmationMode", in: app)
-        XCTAssertTrue(confirmationMode.exists)
-        confirmationMode.tap()
-        let everySend = app.buttons["每次发送"]
-        XCTAssertTrue(everySend.waitForExistence(timeout: 6))
-        everySend.tap()
-        let address = app.textFields["ai.models.address"]
-        address.tap()
-        address.typeText("https://localhost:19443/v1")
-        XCTAssertTrue(fetch.isEnabled)
-        XCTAssertFalse(element("ai.models.save", in: app).isEnabled)
-        screenshot("26-ai-model-settings", in: app)
     }
 
-    func testAssistantPreservesOverviewState() {
+    func testAssistantPreservesOverviewState() throws {
         let app = launchDemo()
+        let assistant = app.buttons["tab.assistant"]
+        try XCTSkipUnless(assistant.waitForExistence(timeout: 8), "Requires a prepared on-device Qwen model.")
         let overviewTab = app.tabBars.buttons["概览"]
         let overview = app.scrollViews.firstMatch
         let month = app.buttons["30天"]
@@ -219,7 +266,7 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertLessThan(chartY, initialY - 40)
         screenshot("28-overview-before-assistant", in: app)
 
-        app.buttons["tab.assistant"].tap()
+        assistant.tap()
         let done = app.buttons["ai.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 8))
         done.tap()
@@ -398,9 +445,9 @@ final class DesignSmokeTests: XCTestCase {
             .waitForExistence(timeout: 8))
     }
 
-    private func launchDemo() -> XCUIApplication {
+    private func launchDemo(arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--demo", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--demo", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"] + arguments
         app.launch()
         return app
     }
