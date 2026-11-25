@@ -13,6 +13,9 @@ import {
 } from '../../logic';
 import ResultChart from '../components/ResultChart';
 import DoseHeatmap from '../components/DoseHeatmap';
+import MedicationCost from '../components/MedicationCost';
+import { type StockTarget } from '../components/StockPurchaseFields';
+import { stockGroup, stockLedger, type CostRange } from '../utils/stockLedger';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import RollingNumber from '../components/RollingNumber';
 import LevelRail from '../components/LevelRail';
@@ -31,6 +34,9 @@ import { planItemLabel, supplyLabel, dueLabel, fill, fillNodes } from '../utils/
 import { headerAction, headerActionAccent } from '../components/PageHeader';
 
 interface HomeProps {
+    onAssignDoseStock: (event: DoseEvent) => void;
+    costRange: CostRange;
+    setCostRange: (range: CostRange) => void;
     t: (key: string) => string;
     currentLevel: number;
     currentCPA: number;
@@ -61,10 +67,13 @@ interface HomeProps {
     onUndoPlanLog: (itemId: string) => void;
     onNavigateToPlan: () => void;
     /** Where a running-low line leads: the stock it is about, to recount or restock. */
-    onNavigateToSupplies: () => void;
+    onNavigateToSupplies: (target?: StockTarget) => void;
 }
 
 const Home: React.FC<HomeProps> = ({
+    onAssignDoseStock,
+    costRange,
+    setCostRange,
     t,
     currentLevel,
     currentCPA,
@@ -107,17 +116,23 @@ const Home: React.FC<HomeProps> = ({
     const doseAdvisory = React.useMemo(() => getDoseAdvisory(events), [events]);
 
     // A supply nothing current uses never runs low.
-    const lowSupplies = React.useMemo(
-        () =>
-            supplies
-                .map(s => supplyStatus(s, events, regimens, nowH))
-                .filter(
-                    st =>
-                        st.dailyUse !== null &&
-                        (st.remaining <= 0 || (st.runOutH !== null && st.runOutH - nowH < supplyLeadDays * 24)),
-                ),
-        [supplies, events, regimens, nowH, supplyLeadDays],
-    );
+    const stock = React.useMemo(() => stockLedger(supplies, events, nowH), [supplies, events, nowH]);
+    const lowSupplies = React.useMemo(() => {
+        const balances = new Map<string, { supply: Supply; remaining: number }>();
+        for (const s of supplies.filter(s => s.archivedAt === undefined)) {
+            const key = stockGroup(s),
+                row = balances.get(key) ?? { supply: s, remaining: 0 };
+            row.remaining += stock.remaining.get(s.id) ?? 0;
+            balances.set(key, row);
+        }
+        return [...balances.values()]
+            .map(row => supplyStatus(row.supply, row.remaining, regimens, nowH))
+            .filter(
+                st =>
+                    st.dailyUse !== null &&
+                    (st.remaining <= 0 || (st.runOutH !== null && st.runOutH - nowH < supplyLeadDays * 24)),
+            );
+    }, [supplies, stock, regimens, nowH, supplyLeadDays]);
     const hormoneAdvisory = React.useMemo(() => getHormoneLevelAdvisory(labResults), [labResults]);
     const hasLabForMode = labResults.some(l => (isTransmasc ? isT_LabUnit(l.unit) : !isT_LabUnit(l.unit)));
     // With no lab yet to anchor the estimate, the way to add one sits by the
@@ -656,7 +671,7 @@ const Home: React.FC<HomeProps> = ({
                                         <button
                                             key={supply.id}
                                             type="button"
-                                            onClick={onNavigateToSupplies}
+                                            onClick={() => onNavigateToSupplies()}
                                             className="group block min-h-11 w-full py-2.5 text-start text-sm leading-relaxed text-[var(--warning)]"
                                         >
                                             {remaining <= 0 || runOutH === null
@@ -770,6 +785,14 @@ const Home: React.FC<HomeProps> = ({
                         </button>
                     </div>
                 )}
+                <MedicationCost
+                    uses={stock.uses}
+                    nowH={nowH}
+                    openStock={onNavigateToSupplies}
+                    assignDose={onAssignDoseStock}
+                    range={costRange}
+                    setRange={setCostRange}
+                />
             </main>
         </div>
     );

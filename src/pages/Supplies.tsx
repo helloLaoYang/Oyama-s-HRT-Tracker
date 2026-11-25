@@ -14,6 +14,16 @@ import { Regimen, Supply, Pack, PackKind, supplyStatus, packKindsFor, defaultPac
 import { supplyLabel, intervalLabel, dueLabel, fill, fillNodes, remainingLabel, packUnit } from '../utils/regimenText';
 import { usualFor } from '../utils/plan';
 import { inertWhen } from '../utils/inert';
+import { stockLedger, stockSpec, stockUnitPrice } from '../utils/stockLedger';
+import {
+    parsePurchase,
+    purchaseUnit,
+    priceDraft,
+    specLabel,
+    stockMoney,
+    StockPurchaseFields,
+    type StockTarget,
+} from '../components/StockPurchaseFields';
 
 const on = 'text-[var(--text)]';
 const muted = 'text-[var(--text-muted)]';
@@ -59,6 +69,7 @@ const STOCKABLE: Record<'transfem' | 'transmasc', [Route, Ester][]> = {
 const LEAD_DAYS = [7, 14, 30] as const;
 
 interface SuppliesProps {
+    target?: StockTarget;
     onBack: () => void;
     supplies: Supply[];
     onSave: (s: Supply) => void;
@@ -197,10 +208,37 @@ const PackFields: React.FC<{ pack: Pack; onChange: (p: Pack) => void; t: (k: str
             'col-span-2',
         );
     }
+    if (pack.kind === 'patch')
+        return (
+            <label className="col-span-2 block">
+                <span className={labelCls}>{t('cost.patchRate')}</span>
+                <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    className={inputCls}
+                    value={pack.releaseRateUGPerDay ?? ''}
+                    onChange={e =>
+                        onChange(
+                            e.target.value === ''
+                                ? { kind: 'patch' }
+                                : { kind: 'patch', releaseRateUGPerDay: Number(e.target.value) },
+                        )
+                    }
+                />
+            </label>
+        );
     return null;
 };
 
+function localDateTime(ms: number) {
+    const date = new Date(ms);
+    return new Date(ms - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
+}
+
 const Supplies: React.FC<SuppliesProps> = ({
+    target,
     onBack,
     supplies,
     onSave,
@@ -214,6 +252,8 @@ const Supplies: React.FC<SuppliesProps> = ({
     const { t, lang } = useTranslation();
     const { mode } = useHRTMode();
     const { showDialog } = useDialog();
+    const targetDose = target && 'dose' in target ? target.dose : undefined;
+    const targetId = target && 'priceId' in target ? target.priceId : undefined;
 
     // Whatever is in use now first, then everything else that can be logged.
     const options = useMemo(() => {
@@ -226,9 +266,10 @@ const Supplies: React.FC<SuppliesProps> = ({
             out.push({ value, label: supplyLabel({ route, ester }, t), description });
         };
         regimens.forEach(r => add(r.route, r.ester, intervalLabel(r.intervalH, t)));
+        if (targetDose) add(targetDose.route, targetDose.ester);
         STOCKABLE[mode].forEach(([r, e]) => add(r, e));
         return out;
-    }, [regimens, mode, t]);
+    }, [regimens, mode, t, targetDose]);
 
     // A pack as it starts out for this drug. A tablet holds the planned dose
     // of it when there is one, else its usual dose: defaultPack's 2 mg is an
@@ -242,12 +283,26 @@ const Supplies: React.FC<SuppliesProps> = ({
         return mg > 0 ? { kind: 'pill', mg } : p;
     };
 
-    const [adding, setAdding] = useState(false);
-    const [pick, setPick] = useState(() => options[0]?.value ?? '');
+    const [adding, setAdding] = useState(!!targetDose);
+    const [pick, setPick] = useState(() =>
+        targetDose ? targetDose.route + '|' + targetDose.ester : (options[0]?.value ?? ''),
+    );
     const [pickRoute, pickEster] = pick.split('|') as [Route, Ester];
-    const [pack, setPack] = useState<Pack>(() => packFor(packKindsFor(pickRoute)[0], pickRoute, pickEster));
+    const [pack, setPack] = useState<Pack>(
+        () =>
+            supplies.find(s => s.id === targetDose?.inventorySupplyId)?.pack ??
+            packFor(packKindsFor(pickRoute)[0], pickRoute, pickEster),
+    );
     const [count, setCount] = useState('');
-    const [openId, setOpenId] = useState<string | null>(null);
+    const defaultCurrency = [...supplies].reverse().find(s => s.purchase)?.purchase?.currency ?? 'CNY';
+    const [newPrice, setNewPrice] = useState(() => priceDraft(undefined, defaultCurrency));
+    const [started, setStarted] = useState(() => localDateTime((targetDose?.timeH ?? nowH) * 3_600_000));
+    const [openId, setOpenId] = useState<string | null>(targetId ?? null);
+    const [editMode, setEditMode] = useState<'price' | 'count'>(targetId ? 'price' : 'count');
+    const [editPrice, setEditPrice] = useState(() =>
+        priceDraft(supplies.find(s => s.id === targetId)?.purchase, defaultCurrency),
+    );
+    const [patchRate, setPatchRate] = useState('');
     const [recount, setRecount] = useState('');
     const [recountMg, setRecountMg] = useState('');
 
@@ -259,17 +314,48 @@ const Supplies: React.FC<SuppliesProps> = ({
         if (!packKindsFor(route).includes(pack.kind)) setPack(packFor(packKindsFor(route)[0], route, ester));
         else if (pack.kind === 'pill') setPack(packFor('pill', route, ester));
     };
-    const packValid = (p: Pack) => p.kind === 'patch' || p.kind === 'bulk' || packUnitMG(p) > 0;
+    const packValid = (p: Pack) =>
+        (p.kind !== 'patch' || p.releaseRateUGPerDay === undefined || p.releaseRateUGPerDay > 0) &&
+        (p.kind !== 'vial' || (p.ml > 0 && p.mgPerMl > 0)) &&
+        Number.isFinite(packUnitMG(p)) &&
+        packUnitMG(p) > 0;
     const countNum = num(count);
-    const canAdd = !!pick && countNum > 0 && packValid(pack);
+    const bought = parsePurchase(newPrice, countNum);
+    const startMs = new Date(started).getTime();
+    const canAdd =
+        !!pick &&
+        countNum > 0 &&
+        Number.isFinite(countNum * packUnitMG(pack)) &&
+        packValid(pack) &&
+        !!bought &&
+        startMs > 0 &&
+        startMs <= nowH * 3_600_000;
     const add = () => {
         if (!canAdd) return;
-        onSave({ id: uuidv4(), route: pickRoute, ester: pickEster, pack, count: countNum, startedAt: Date.now() });
+        onSave({
+            id: uuidv4(),
+            route: pickRoute,
+            ester: pickEster,
+            pack,
+            count: countNum,
+            startedAt: startMs,
+            purchase: bought,
+        });
         setCount('');
+        setNewPrice(priceDraft(undefined, newPrice.currency));
+        setStarted(localDateTime(Date.now()));
         setAdding(false);
     };
 
-    const statuses = supplies.map(s => supplyStatus(s, events, regimens, nowH));
+    const ledger = useMemo(() => stockLedger(supplies, events, nowH), [supplies, events, nowH]);
+    const statuses = supplies
+        .filter(s => s.archivedAt === undefined || s.id === targetId)
+        .map(s => supplyStatus(s, ledger.remaining.get(s.id) ?? 0, regimens, nowH));
+    const knownPacks = [
+        ...new Map(
+            supplies.filter(s => s.route === pickRoute && s.ester === pickEster).map(s => [stockSpec(s.pack), s.pack]),
+        ).values(),
+    ];
     const packOptions = packKindsFor(pickRoute).map(k => ({ value: k, label: t(`supplies.pack.${k}`) }));
 
     const openRow = (s: Supply, remaining: number) => {
@@ -278,6 +364,9 @@ const Supplies: React.FC<SuppliesProps> = ({
             return;
         }
         setOpenId(s.id);
+        setEditMode(s.archivedAt === undefined ? 'count' : 'price');
+        setEditPrice(priceDraft(s.purchase, defaultCurrency));
+        setPatchRate('');
         const unit = packUnitMG(s.pack);
         if (s.pack.kind === 'vial') {
             const whole = Math.floor(remaining / unit + 1e-9);
@@ -292,7 +381,9 @@ const Supplies: React.FC<SuppliesProps> = ({
         const whole = num(recount);
         if (!(whole >= 0)) return;
         const extra = s.pack.kind === 'vial' ? (num(recountMg) || 0) / packUnitMG(s.pack) : 0;
-        onSave({ ...s, count: whole + extra, startedAt: Date.now() });
+        if (extra < 0 || !Number.isFinite(whole + extra)) return;
+        const at = Date.now();
+        onSave({ ...s, recounts: [...(s.recounts ?? []).filter(c => c.at !== at), { at, count: whole + extra }] });
         setOpenId(null);
     };
 
@@ -322,6 +413,27 @@ const Supplies: React.FC<SuppliesProps> = ({
                                 options={packOptions}
                             />
                             <PackFields pack={pack} onChange={setPack} t={t} />
+                            {knownPacks.length > 0 && (
+                                <div className="col-span-2">
+                                    <CustomSelect
+                                        label={t('cost.reuse')}
+                                        value={
+                                            knownPacks.some(p => stockSpec(p) === stockSpec(pack))
+                                                ? stockSpec(pack)
+                                                : ''
+                                        }
+                                        options={[
+                                            { value: '', label: t('cost.custom') },
+                                            ...knownPacks.map(p => ({ value: stockSpec(p), label: specLabel(p, t) })),
+                                        ]}
+                                        onChange={v => {
+                                            const p = knownPacks.find(p => stockSpec(p) === v);
+                                            if (p) setPack(p);
+                                            else setPack(packFor(pack.kind, pickRoute, pickEster));
+                                        }}
+                                    />
+                                </div>
+                            )}
                             <label className="block col-span-2">
                                 <span className={labelCls}>
                                     {t('supplies.amount')} ({packUnit(pack, t)})
@@ -341,6 +453,18 @@ const Supplies: React.FC<SuppliesProps> = ({
                                 />
                             </label>
                         </div>
+                        <label className="my-3 block">
+                            <span className={labelCls}>{t('cost.starts')}</span>
+                            <input
+                                className={inputCls}
+                                type="datetime-local"
+                                step="1"
+                                value={started}
+                                max={localDateTime(nowH * 3_600_000)}
+                                onChange={e => setStarted(e.target.value)}
+                            />
+                        </label>
+                        <StockPurchaseFields pack={pack} basis={countNum} draft={newPrice} onChange={setNewPrice} />
                         <div className="mt-4 flex justify-end gap-2">
                             <button type="button" onClick={() => setAdding(false)} className={cancelBtn}>
                                 {t('btn.cancel')}
@@ -366,6 +490,8 @@ const Supplies: React.FC<SuppliesProps> = ({
                     <div className={settingsSection}>
                         {statuses.map(({ supply, remaining, runOutH, dailyUse }) => {
                             const open = openId === supply.id;
+                            const price = stockUnitPrice(supply.purchase);
+                            const edited = parsePurchase(editPrice, supply.count);
                             const low =
                                 dailyUse !== null &&
                                 (remaining <= 0 || (runOutH !== null && runOutH - nowH < leadDays * 24));
@@ -379,6 +505,17 @@ const Supplies: React.FC<SuppliesProps> = ({
                                     >
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-sm font-medium ${on}`}>{supplyLabel(supply, t)}</p>
+                                            <p className="text-xs text-[var(--text-muted)]">
+                                                {specLabel(supply.pack, t)}
+                                                {supply.purchase
+                                                    ? ' · ' +
+                                                      supply.purchase.unitsPerPack +
+                                                      ' ' +
+                                                      packUnit(supply.pack, t) +
+                                                      '/' +
+                                                      purchaseUnit(supply.pack, t)
+                                                    : ''}
+                                            </p>
                                             <p
                                                 className={`text-xs mt-0.5 leading-relaxed ${low ? 'text-[var(--warning)]' : muted}`}
                                             >
@@ -396,6 +533,13 @@ const Supplies: React.FC<SuppliesProps> = ({
                                         </div>
                                         <span className={`text-sm tabular-nums shrink-0 ${on}`}>
                                             {fill(t('supplies.left'), { n: leftLabel(supply, remaining, t) })}
+                                            <span className="block text-end text-xs text-[var(--text-muted)]">
+                                                {price === undefined
+                                                    ? t('cost.needsPrice')
+                                                    : stockMoney(price, supply.purchase!.currency, true) +
+                                                      '/' +
+                                                      packUnit(supply.pack, t)}
+                                            </span>
                                         </span>
                                         <ChevronDown
                                             size={16}
@@ -406,68 +550,140 @@ const Supplies: React.FC<SuppliesProps> = ({
                                     <div className="disclosure" data-open={open} {...inertWhen(!open)}>
                                         <div className="disclosure-inner">
                                             <div className="pb-3 space-y-3">
-                                                <p className={`text-xs ${muted}`}>{t('supplies.left_now')}</p>
-                                                {/* .input-base fills its box, and as a rule outside
+                                                {supply.archivedAt === undefined && (
+                                                    <Segmented
+                                                        value={editMode}
+                                                        onChange={setEditMode}
+                                                        options={[
+                                                            { id: 'count', label: t('cost.recount') },
+                                                            { id: 'price', label: t('cost.purchase') },
+                                                        ]}
+                                                    />
+                                                )}
+                                                {editMode === 'price' ? (
+                                                    <>
+                                                        {supply.pack.kind === 'patch' &&
+                                                            !supply.pack.releaseRateUGPerDay && (
+                                                                <label className="block">
+                                                                    <span className={labelCls}>
+                                                                        {t('cost.patchRate')}
+                                                                    </span>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="any"
+                                                                        min="0"
+                                                                        className={inputCls}
+                                                                        value={patchRate}
+                                                                        onChange={e => setPatchRate(e.target.value)}
+                                                                    />
+                                                                </label>
+                                                            )}
+                                                        <StockPurchaseFields
+                                                            pack={supply.pack}
+                                                            basis={supply.count}
+                                                            draft={editPrice}
+                                                            onChange={setEditPrice}
+                                                        />
+                                                        <div className="flex justify-end">
+                                                            <button
+                                                                type="button"
+                                                                className={confirmBtn}
+                                                                disabled={
+                                                                    !edited ||
+                                                                    (patchRate !== '' && !(Number(patchRate) > 0))
+                                                                }
+                                                                onClick={() => {
+                                                                    if (!edited) return;
+                                                                    const nextPack =
+                                                                        supply.pack.kind === 'patch' && patchRate
+                                                                            ? {
+                                                                                  ...supply.pack,
+                                                                                  releaseRateUGPerDay:
+                                                                                      Number(patchRate),
+                                                                              }
+                                                                            : supply.pack;
+                                                                    onSave({
+                                                                        ...supply,
+                                                                        pack: nextPack,
+                                                                        purchase: edited,
+                                                                    });
+                                                                    setOpenId(null);
+                                                                }}
+                                                            >
+                                                                {t('btn.save')}
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p className={`text-xs ${muted}`}>{t('supplies.left_now')}</p>
+                                                        {/* .input-base fills its box, and as a rule outside
                                                     Tailwind's layers it outranks a w- utility, so these
                                                     two narrow fields set their width inline. */}
-                                                <div className="flex flex-wrap items-end gap-3">
-                                                    <label className="block">
-                                                        <span className={labelCls}>{packUnit(supply.pack, t)}</span>
-                                                        <input
-                                                            type="number"
-                                                            inputMode="decimal"
-                                                            min="0"
-                                                            step="any"
-                                                            value={recount}
-                                                            onChange={e => setRecount(e.target.value)}
-                                                            className={inputCls}
-                                                            style={{ fontSize: '16px', width: '6rem' }}
-                                                        />
-                                                    </label>
-                                                    {supply.pack.kind === 'vial' && (
-                                                        <label className="block">
-                                                            <span className={labelCls}>{t('supplies.opened_mg')}</span>
-                                                            <input
-                                                                type="number"
-                                                                inputMode="decimal"
-                                                                min="0"
-                                                                step="any"
-                                                                value={recountMg}
-                                                                onChange={e => setRecountMg(e.target.value)}
-                                                                className={inputCls}
-                                                                style={{ fontSize: '16px', width: '6rem' }}
-                                                            />
-                                                        </label>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            showDialog(
-                                                                'confirm',
-                                                                t('supplies.delete_confirm'),
-                                                                () => onDelete(supply.id),
-                                                                {
-                                                                    danger: true,
-                                                                    title: supplyLabel(supply, t),
-                                                                    confirmLabel: t('btn.delete'),
-                                                                },
-                                                            )
-                                                        }
-                                                        className={`${headerAction} text-[var(--danger)]`}
-                                                    >
-                                                        {t('btn.delete')}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={!(num(recount) >= 0)}
-                                                        onClick={() => applyRecount(supply)}
-                                                        className={`${headerActionAccent} disabled:opacity-40`}
-                                                    >
-                                                        {t('btn.save')}
-                                                    </button>
-                                                </div>
+                                                        <div className="flex flex-wrap items-end gap-3">
+                                                            <label className="block">
+                                                                <span className={labelCls}>
+                                                                    {packUnit(supply.pack, t)}
+                                                                </span>
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    min="0"
+                                                                    step="any"
+                                                                    value={recount}
+                                                                    onChange={e => setRecount(e.target.value)}
+                                                                    className={inputCls}
+                                                                    style={{ fontSize: '16px', width: '6rem' }}
+                                                                />
+                                                            </label>
+                                                            {supply.pack.kind === 'vial' && (
+                                                                <label className="block">
+                                                                    <span className={labelCls}>
+                                                                        {t('supplies.opened_mg')}
+                                                                    </span>
+                                                                    <input
+                                                                        type="number"
+                                                                        inputMode="decimal"
+                                                                        min="0"
+                                                                        step="any"
+                                                                        value={recountMg}
+                                                                        onChange={e => setRecountMg(e.target.value)}
+                                                                        className={inputCls}
+                                                                        style={{ fontSize: '16px', width: '6rem' }}
+                                                                    />
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    showDialog(
+                                                                        'confirm',
+                                                                        t('cost.removeConfirm'),
+                                                                        () => onDelete(supply.id),
+                                                                        {
+                                                                            danger: true,
+                                                                            title: supplyLabel(supply, t),
+                                                                            confirmLabel: t('cost.remove'),
+                                                                        },
+                                                                    )
+                                                                }
+                                                                className={`${headerAction} text-[var(--danger)]`}
+                                                            >
+                                                                {t('cost.remove')}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={!(num(recount) >= 0)}
+                                                                onClick={() => applyRecount(supply)}
+                                                                className={`${headerActionAccent} disabled:opacity-40`}
+                                                            >
+                                                                {t('btn.save')}
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

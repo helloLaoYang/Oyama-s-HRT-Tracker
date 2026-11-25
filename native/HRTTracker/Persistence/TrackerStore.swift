@@ -191,6 +191,7 @@ final class TrackerStore {
     @discardableResult
     func saveSupply(_ supply: MedicationSupply) -> Bool {
         guard supply.isValid else { return false }
+        refreshClock()
         return trySave {
             if let record = supplyRecords.first(where: { $0.modeRaw == mode.rawValue && $0.uuid == supply.id }) {
                 record.update(supply, updatedAt: stamp)
@@ -202,9 +203,17 @@ final class TrackerStore {
 
     @discardableResult
     func deleteSupply(_ id: String) -> Bool {
-        trySave {
-            supplyRecords.filter { $0.modeRaw == mode.rawValue && $0.uuid == id }.forEach { context.delete($0) }
+        guard var supply = supplies.first(where: { $0.id == id }) else { return false }
+        let records = doses
+        let ledger = InventoryLedger(supplies: supplies, events: records, nowH: nowH)
+        let referenced = records.contains { $0.inventorySupplyId == id } || ledger.uses.contains { use in
+            use.choices.contains { $0.id == id } || use.parts.contains { $0.supply.id == id }
         }
+        if !referenced {
+            return trySave { supplyRecords.filter { $0.modeRaw == mode.rawValue && $0.uuid == id }.forEach { context.delete($0) } }
+        }
+        supply.archivedAt = max(supply.startedAt, (isDemo ? now : Date()).timeIntervalSince1970 * 1_000)
+        return saveSupply(supply)
     }
 
     @discardableResult
@@ -214,10 +223,21 @@ final class TrackerStore {
     func saveDoses(_ doses: [DoseEvent]) -> Bool {
         let mode = self.mode
         let at = stamp
+        refreshClock()
+        let incoming = Set(doses.map(\.id))
+        let lots = supplies
+        var assignments: [String: String] = [:]
+        if !lots.isEmpty {
+            let ledger = InventoryLedger(supplies: lots, events: self.doses.filter { !incoming.contains($0.id) } + doses, nowH: nowH)
+            for use in ledger.uses where incoming.contains(use.id) {
+                assignments[use.id] = use.selected?.id
+            }
+        }
         return trySave {
             var byID = Dictionary(doseRecords.filter { $0.modeRaw == mode.rawValue }.map { ($0.uuid, $0) },
                                   uniquingKeysWith: { first, _ in first })
-            for dose in doses {
+            for var dose in doses {
+                if dose.inventorySupplyId == nil { dose.inventorySupplyId = assignments[dose.id] }
                 if let existing = byID[dose.id] {
                     existing.update(dose, updatedAt: at)
                 } else {

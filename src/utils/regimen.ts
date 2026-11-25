@@ -644,10 +644,19 @@ export type Pack =
     | { kind: 'pill'; mg: number }
     | { kind: 'pump'; mg: number }
     | { kind: 'sachet'; mg: number }
-    | { kind: 'patch' }
+    | { kind: 'patch'; releaseRateUGPerDay?: number }
     | { kind: 'bulk' };
 
 export type PackKind = Pack['kind'];
+
+export const STOCK_CURRENCIES = ['CNY', 'HKD', 'TWD', 'USD', 'EUR', 'JPY'] as const;
+export type StockCurrency = (typeof STOCK_CURRENCIES)[number];
+export interface StockPurchase {
+    unitsPerPack: number;
+    packCount: number;
+    totalMinor?: number;
+    currency: StockCurrency;
+}
 
 export interface Supply {
     id: string;
@@ -658,6 +667,10 @@ export interface Supply {
     count: number;
     /** Epoch ms from which logged doses are subtracted. */
     startedAt: number;
+    purchase?: StockPurchase;
+    recounts?: { at: number; count: number }[];
+    archivedAt?: number;
+    updatedAt?: number;
 }
 
 /** mg in one unit of the pack; 1 for a patch, and for bulk mg. */
@@ -726,23 +739,24 @@ export const normalizeSupply = (raw: any): Supply | null => {
 
 export interface SupplyStatus {
     supply: Supply;
-    /** In mg, or patches for a patch. */
-    used: number;
     remaining: number;
     /** Per day, from the matching regimens; null when nothing current uses it. */
     dailyUse: number | null;
     runOutH: number | null;
 }
 
-export function supplyStatus(s: Supply, events: DoseEvent[], regimens: Regimen[], nowH: number): SupplyStatus {
-    const fromH = s.startedAt / 3600000;
+export function stockQuantity(e: Pick<DoseEvent, 'route' | 'doseMG' | 'extras'>): number {
+    const patches = e.extras?.patchCount;
+    return e.route === Route.patchApply
+        ? patches && Number.isSafeInteger(patches) && patches > 0
+            ? patches
+            : 1
+        : e.doseMG;
+}
+
+export function supplyStatus(s: Supply, remaining: number, regimens: Regimen[], nowH: number): SupplyStatus {
     const matches = (e: { route: Route; ester: Ester }) => e.route === s.route && e.ester === s.ester;
-    const perDose = (e: { doseMG: number }) => (s.route === Route.patchApply ? 1 : e.doseMG);
-    const used = events
-        .filter(e => matches(e) && e.timeH >= fromH && e.timeH <= nowH)
-        .reduce((a, e) => a + perDose(e), 0);
-    const remaining = Math.max(0, s.count * packUnitMG(s.pack) - used);
-    const rate = regimens.filter(matches).reduce((a, r) => a + (perDose(r) * 24) / r.intervalH, 0);
+    const rate = regimens.filter(matches).reduce((a, r) => a + (stockQuantity(r) * 24) / r.intervalH, 0);
     const dailyUse = rate > 0 ? rate : null;
-    return { supply: s, used, remaining, dailyUse, runOutH: dailyUse ? nowH + (remaining / dailyUse) * 24 : null };
+    return { supply: s, remaining, dailyUse, runOutH: dailyUse ? nowH + (remaining / dailyUse) * 24 : null };
 }

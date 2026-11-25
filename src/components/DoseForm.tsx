@@ -22,7 +22,10 @@ import {
 import { Save, Trash, Info, Bookmark, BookmarkPlus, Close, Check, Warning, External, Busy } from './icons';
 import { DoseAdvisoryLine } from './DoseAdvisory';
 import { LOCALE_MAP } from '../utils/helpers';
-import { doseOf, drugLabel, productNames } from '../utils/regimenText';
+import { doseOf, drugLabel, productNames, packUnit } from '../utils/regimenText';
+import type { Supply } from '../utils/regimen';
+import { stockLedger, stockTotals, stockSpec, stockUseComplete } from '../utils/stockLedger';
+import { specLabel, stockMoney } from './StockPurchaseFields';
 import InjectionFields from './dose_form/InjectionFields';
 import OralFields from './dose_form/OralFields';
 import SublingualFields from './dose_form/SublingualFields';
@@ -77,6 +80,7 @@ const formatGuideNumber = (val: number) => {
 };
 
 interface DoseFormProps {
+    supplies?: Supply[];
     eventToEdit: DoseEvent | null;
     onSave: (event: DoseEvent) => void;
     onCancel: () => void;
@@ -99,6 +103,14 @@ interface DoseFormProps {
 // back as 12.5 rather than all its digits, and parses to the same number the
 // untrimmed string did.
 const trimDose = (mg: number) => mg.toFixed(3).replace(/\.?0+$/, '');
+
+// The editor shows minutes. Keeping an unchanged instant prevents a specification
+// edit from moving an imported dose to before the stock it was taken from.
+function doseTimeFromInput(value: string, original?: number) {
+    const ms = new Date(value).getTime();
+    if (original !== undefined && Math.floor(original * 60) === Math.floor(ms / 60_000)) return original;
+    return ms / 3_600_000;
+}
 
 // The route menu in a fixed order, the most used first. The Route enum's own
 // order is what's stored and stays as it is. A route this list doesn't know
@@ -135,6 +147,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
     onAddQuickDose,
     onDeleteQuickDose,
     events = [],
+    supplies = [],
 }) => {
     const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
@@ -200,6 +213,44 @@ const DoseForm: React.FC<DoseFormProps> = ({
     const [customHoldInput, setCustomHoldInput] = useState<string>('10');
     const [customHoldValue, setCustomHoldValue] = useState<number>(10);
     const [lastEditedField, setLastEditedField] = useState<'raw' | 'bio'>('bio');
+    const [draftId] = useState(() => eventToEdit?.id ?? uuidv4());
+    const [stockId, setStockId] = useState(eventToEdit?.inventorySupplyId);
+    const stockDrug = [Route.patchApply, Route.patchRemove, Route.gel].includes(route)
+        ? isTransmasc
+            ? Ester.T
+            : Ester.E2
+        : ester;
+    const lots = useMemo(
+        () => supplies.filter(s => s.route === route && s.ester === stockDrug),
+        [supplies, route, stockDrug],
+    );
+    const selectedId =
+        lots.some(s => s.id === stockId) ||
+        (stockId === eventToEdit?.inventorySupplyId && eventToEdit?.route === route && eventToEdit.ester === stockDrug)
+            ? stockId
+            : undefined;
+    const groupPatchCount =
+        route === Route.patchApply && eventToEdit?.route === route ? eventToEdit.extras.patchCount : undefined;
+    const quantity =
+        lastEditedField === 'raw' && stockDrug !== Ester.E2
+            ? Number(rawDose)
+            : Number(e2Dose) / (getToE2Factor(stockDrug) || 1);
+    const stockPreview = useMemo(() => {
+        if (!lots.length || route === Route.patchRemove) return;
+        const timeH = doseTimeFromInput(dateStr, eventToEdit?.timeH);
+        if (!Number.isFinite(timeH)) return;
+        const probe: DoseEvent = {
+            id: draftId,
+            route,
+            ester: stockDrug,
+            timeH,
+            doseMG: quantity > 0 ? quantity : 1,
+            extras: { patchCount: groupPatchCount },
+            inventorySupplyId: selectedId,
+        };
+        const earlier = events.filter(e => e.id !== draftId && e.route === route && e.ester === stockDrug);
+        return stockLedger(lots, [...earlier, probe], timeH).uses.find(u => u.event.id === draftId);
+    }, [lots, route, dateStr, draftId, stockDrug, quantity, groupPatchCount, selectedId, events, eventToEdit?.timeH]);
 
     const slExtras = useMemo(() => {
         if (route !== Route.sublingual) return null;
@@ -520,7 +571,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
             isSavingRef.current = false;
             setIsSaving(false);
         };
-        let timeH = new Date(dateStr).getTime() / 3600000;
+        let timeH = doseTimeFromInput(dateStr, eventToEdit?.timeH);
         if (isNaN(timeH)) {
             timeH = new Date().getTime() / 3600000;
         }
@@ -593,18 +644,15 @@ const DoseForm: React.FC<DoseFormProps> = ({
             }
         }
 
+        if (groupPatchCount) extras[ExtraKey.patchCount] = groupPatchCount;
         const newEvent: DoseEvent = {
-            id: eventToEdit?.id || uuidv4(),
+            id: draftId,
             route,
-            ester:
-                route === Route.patchRemove || route === Route.patchApply || route === Route.gel
-                    ? isTransmasc
-                        ? Ester.T
-                        : Ester.E2
-                    : ester,
+            ester: stockDrug,
             timeH,
             doseMG: cleanDoseMG(finalDose),
             extras,
+            ...(selectedId ? { inventorySupplyId: selectedId } : {}),
         };
 
         onSave(newEvent);
@@ -1232,6 +1280,47 @@ const DoseForm: React.FC<DoseFormProps> = ({
                             )}
 
                         {/* Recent-use heads-up — logged doses already running high */}
+                        {stockPreview && stockPreview.choices.length > 0 && (
+                            <div className="space-y-2">
+                                {stockPreview.choices.length > 1 || stockPreview.needsSpecification ? (
+                                    <CustomSelect
+                                        label={t('cost.spec')}
+                                        value={
+                                            stockPreview.choices.find(
+                                                s =>
+                                                    stockPreview.selected &&
+                                                    stockSpec(s.pack) === stockSpec(stockPreview.selected.pack),
+                                            )?.id ?? ''
+                                        }
+                                        onChange={v => setStockId(v || undefined)}
+                                        options={[
+                                            { value: '', label: t('cost.later') },
+                                            ...stockPreview.choices.map(s => ({
+                                                value: s.id,
+                                                label: specLabel(s.pack, t),
+                                            })),
+                                        ]}
+                                    />
+                                ) : (
+                                    <p>
+                                        {t('cost.spec')} {specLabel(stockPreview.choices[0].pack, t)}
+                                    </p>
+                                )}
+                                {stockPreview.selected && (quantity > 0 || route === Route.patchApply) && (
+                                    <p className="text-sm text-[var(--text-muted)]">
+                                        {Number(stockPreview.parts.reduce((n, p) => n + p.units, 0).toFixed(6))}{' '}
+                                        {packUnit(stockPreview.selected.pack, t)}
+                                        {' · '}
+                                        {[...stockTotals(stockPreview.parts)]
+                                            .map(([c, n]) => stockMoney(n, c) + ' ' + c)
+                                            .join(' / ')}
+                                        {!stockUseComplete(stockPreview) &&
+                                            ' ' +
+                                                t(stockPreview.missingStock ? 'cost.missingStock' : 'cost.needsPrice')}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         {doseAdvisory && (
                             <div className="mt-2 pt-2 border-t-(length:--hairline) border-[var(--border)]">
                                 <DoseAdvisoryLine advisory={doseAdvisory} t={t} />

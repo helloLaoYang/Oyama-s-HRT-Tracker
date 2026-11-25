@@ -29,6 +29,8 @@ struct DoseEditorView: View {
     @State private var showingTemplateName = false
     @State private var templateSaved = false
     @State private var formError: String?
+    @State private var inventorySupplyId: String?
+    @State private var previewID = UUID().uuidString.lowercased()
     @State private var demoPresetRevision = 0
 
     private static var demoPresets: [String: [Double]] = [:]
@@ -65,6 +67,7 @@ struct DoseEditorView: View {
     init(store: TrackerStore, event: DoseEvent? = nil) {
         self.store = store
         self.event = event
+        _inventorySupplyId = State(initialValue: event?.inventorySupplyId)
         let latest = event ?? store.doses
             .filter { $0.route != .patchRemove && $0.timeH <= store.now.trackerHours }
             .max { $0.timeH < $1.timeH }
@@ -161,6 +164,34 @@ struct DoseEditorView: View {
                     }
                 }
 
+                if let use = inventoryPreview, !use.choices.isEmpty {
+                    Section(inventoryText("Specification used")) {
+                        if use.choices.count > 1 || use.needsSpecification {
+                            Picker(inventoryText("Specification"), selection: Binding(
+                                get: { use.choices.first { $0.pack == use.selected?.pack }?.id ?? "" },
+                                set: { inventorySupplyId = $0.isEmpty ? nil : $0 }
+                            )) {
+                                Text(inventoryText("Confirm later")).tag("")
+                                ForEach(use.choices) { lot in Text(packageDetail(lot.pack)).tag(lot.id) }
+                            }
+                            .accessibilityIdentifier("dose.inventorySpec")
+                        } else if let selected = use.selected {
+                            LabeledContent(inventoryText("Specification"), value: packageDetail(selected.pack))
+                        }
+                        if let selected = use.selected, route == .patchApply || (Self.number(amount) ?? 0) > 0 {
+                            let units = use.parts.reduce(0) { $0 + $1.units }
+                            LabeledContent(inventoryText("Stock used"), value: "\(stockNumber(units)) \(selected.pack.kind.unit)")
+                            let prices = stockCostTotals(use.parts)
+                            ForEach(prices.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { currency in
+                                LabeledContent(use.complete ? inventoryText("Dose cost") : inventoryText("Priced subtotal"),
+                                               value: stockMoney(prices[currency, default: 0], currency))
+                            }
+                            if use.parts.contains(where: { $0.cost == nil }) { Text(inventoryText("Price needed")) }
+                            if use.missingStock { Text(inventoryText("Missing stock")) }
+                        }
+                    }
+                }
+
                 if route != .patchRemove {
                     Section {
                         Button {
@@ -188,6 +219,8 @@ struct DoseEditorView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .onChange(of: route) { _, _ in inventorySupplyId = nil }
+            .onChange(of: ester) { _, _ in inventorySupplyId = nil }
             .background(TrackerTheme.background)
             .tint(TrackerTheme.accent)
             .navigationTitle(HistoryText.localized(event == nil ? "Add dose record" : "Edit dose record"))
@@ -489,12 +522,23 @@ struct DoseEditorView: View {
         }
     }
 
+    private var inventoryPreview: StockUse? {
+        let lots = store.supplies.filter { $0.route == route && $0.ester == ester }
+        guard route != .patchRemove, !lots.isEmpty else { return nil }
+        let id = event?.id ?? previewID
+        let probe = DoseEvent(id: id, route: route, timeH: time.trackerHours,
+                              doseMG: Self.number(amount) ?? 1, ester: ester,
+                              extras: ["patchCount": Double(patchCount)], inventorySupplyId: inventorySupplyId)
+        let earlier = store.doses.filter { $0.id != id && $0.route == route && $0.ester == ester }
+        return InventoryLedger(supplies: lots, events: earlier + [probe], nowH: probe.timeH).uses.first { $0.id == id }
+    }
+
     private func save() {
         guard let draft = doseDraft() else { return }
         let updatedAt = store.now.timeIntervalSince1970 * 1_000
         let original = DoseEvent(
-            id: event?.id ?? UUID().uuidString.lowercased(), route: route, timeH: time.trackerHours,
-            doseMG: draft.amount, ester: ester, extras: draft.extras, updatedAt: updatedAt
+            id: event?.id ?? previewID, route: route, timeH: time.trackerHours,
+            doseMG: draft.amount, ester: ester, extras: draft.extras, updatedAt: updatedAt, inventorySupplyId: inventorySupplyId
         )
         let didSave: Bool
         if batch, event == nil, route != .patchRemove {
@@ -506,7 +550,8 @@ struct DoseEditorView: View {
             let later = (1..<numberOfDoses).map { index in
                 DoseEvent(
                     route: route, timeH: original.timeH + Double(index) * interval * 24,
-                    doseMG: original.doseMG, ester: original.ester, extras: original.extras, updatedAt: updatedAt
+                    doseMG: original.doseMG, ester: original.ester, extras: original.extras, updatedAt: updatedAt,
+                    inventorySupplyId: inventorySupplyId
                 )
             }
             didSave = store.saveDoses([original] + later)

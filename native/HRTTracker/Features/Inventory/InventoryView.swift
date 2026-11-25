@@ -79,14 +79,16 @@ struct InventoryView: View {
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(details.name).font(.body)
+                Text(stockSpecificationLabel(status.supply)).font(.footnote).foregroundStyle(TrackerTheme.muted)
                 Text(inventoryRunOut(status, nowH: store.nowH, calendar: store.calendar))
                     .font(.footnote)
                     .foregroundStyle(low ? TrackerTheme.accent : TrackerTheme.muted)
             }
             Spacer(minLength: 6)
-            Text(inventoryText("\(inventoryRemaining(status)) remaining"))
-                .font(.subheadline.monospacedDigit())
-                .multilineTextAlignment(.trailing)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(inventoryText("\(inventoryRemaining(status)) remaining")).font(.subheadline.monospacedDigit())
+                Text(stockPriceLabel(status.supply)).font(.footnote).foregroundStyle(TrackerTheme.muted)
+            }.multilineTextAlignment(.trailing)
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(TrackerTheme.muted)
@@ -100,9 +102,10 @@ struct InventoryView: View {
 
 struct InventoryAlertsView: View {
     let store: TrackerStore
+    let inventory: InventorySnapshot
 
     var body: some View {
-        let low = InventorySnapshot(store: store).statuses.filter {
+        let low = inventory.combinedStatuses.filter {
             $0.isLow(leadDays: store.supplyLeadDays, nowH: store.nowH)
         }
         if !low.isEmpty {
@@ -133,9 +136,11 @@ struct InventoryAlertsView: View {
     }
 }
 
-private struct InventorySnapshot {
+struct InventorySnapshot {
     let regimens: [MedicationPlan]
     let statuses: [InventoryStockStatus]
+    let combinedStatuses: [InventoryStockStatus]
+    let ledger: InventoryLedger
 
     @MainActor
     init(store: TrackerStore) {
@@ -144,7 +149,17 @@ private struct InventorySnapshot {
         let events = store.doses
         let regimens = InventoryRegimens.current(events: events, plans: store.plans, nowH: nowH)
         self.regimens = regimens
-        statuses = supplies.map { InventoryStockStatus(supply: $0, events: events, regimens: regimens, nowH: nowH) }
+        let ledger = InventoryLedger(supplies: supplies, events: events, nowH: nowH)
+        self.ledger = ledger
+        statuses = supplies.filter { $0.archivedAt == nil }.map {
+            InventoryStockStatus(supply: $0, remaining: ledger.remaining[$0.id, default: 0], regimens: regimens, nowH: nowH)
+        }
+        let byMedication = Dictionary(grouping: statuses) { InventoryMedication(route: $0.supply.route, ester: $0.supply.ester) }
+        combinedStatuses = byMedication.values.compactMap { group in
+            guard let first = group.first else { return nil }
+            return InventoryStockStatus(supply: first.supply, remaining: group.reduce(0) { $0 + $1.remaining },
+                                        regimens: regimens, nowH: nowH)
+        }.sorted { $0.id < $1.id }
     }
 }
 
@@ -154,7 +169,7 @@ private struct InventoryEditorTarget: Identifiable {
     var id: String { status?.id ?? "" }
 }
 
-private struct InventoryMedication: Hashable, Identifiable {
+struct InventoryMedication: Hashable, Identifiable {
     let route: Route
     let ester: String
 
@@ -192,10 +207,10 @@ private struct InventoryMedication: Hashable, Identifiable {
     }
 }
 
-private struct InventoryEditor: View {
+struct InventoryEditor: View {
     private enum Field: String {
         case amount = "count"
-        case opened, volume, strength
+        case opened, volume, strength, unitsPerPack, packCount, totalPrice
     }
 
     let store: TrackerStore
@@ -209,6 +224,13 @@ private struct InventoryEditor: View {
     @State private var volume: String
     @State private var count: String
     @State private var openedMG: String
+    @State private var editingPrice: Bool
+    @State private var unitsPerPack: String
+    @State private var packCount: String
+    @State private var totalPrice: String
+    @State private var currency: StockCurrency
+    @State private var start: Date
+    @State private var newLotID = UUID().uuidString.lowercased()
     @State private var confirmingDelete = false
     @State private var saveFailed = false
     @FocusState private var focus: Field?
@@ -216,16 +238,19 @@ private struct InventoryEditor: View {
     @Environment(\.locale) private var locale
 
     @MainActor
-    init(store: TrackerStore, existing: InventoryStockStatus?, regimens: [MedicationPlan]) {
+    init(store: TrackerStore, existing: InventoryStockStatus?, regimens: [MedicationPlan],
+         priceFirst: Bool = false, forDose dose: DoseEvent? = nil) {
         self.store = store
         self.existing = existing
         self.regimens = regimens
-        let options = InventoryMedication.options(mode: store.mode, regimens: regimens)
+        var options = InventoryMedication.options(mode: store.mode, regimens: regimens)
+        let requested = dose.map { InventoryMedication(route: $0.route, ester: $0.ester) }
+        if let requested, !options.contains(requested) { options.append(requested) }
         self.options = options
         let medication = existing.map { InventoryMedication(route: $0.supply.route, ester: $0.supply.ester) }
-            ?? options.first ?? InventoryMedication(route: .oral, ester: "E2")
+            ?? requested ?? options.first ?? InventoryMedication(route: .oral, ester: "E2")
         _medication = State(initialValue: medication)
-        let pack = existing?.supply.pack
+        let pack = existing?.supply.pack ?? dose?.inventorySupplyId.flatMap { id in store.supplies.first { $0.id == id }?.pack }
             ?? Self.initialPack(MedicationPack.Kind.choices(for: medication.route)[0], medication: medication, regimens: regimens)
         _kind = State(initialValue: pack.kind)
         let fields = Self.packParameters(pack)
@@ -237,14 +262,30 @@ private struct InventoryEditor: View {
         _openedMG = State(initialValue: existing.flatMap {
             pack.kind == .vial ? Self.input($0.remainingVials.openedMG) : nil
         } ?? "")
+        let purchase = existing?.supply.purchase
+        let currency = purchase?.currency ?? store.supplies.compactMap(\.purchase?.currency).first
+            ?? Locale.current.currency.flatMap { StockCurrency(rawValue: $0.identifier) } ?? .CNY
+        _editingPrice = State(initialValue: priceFirst)
+        _currency = State(initialValue: currency)
+        _unitsPerPack = State(initialValue: purchase.map { Self.input($0.unitsPerPack) } ?? "")
+        _packCount = State(initialValue: Self.input(purchase?.packCount ?? 1))
+        _totalPrice = State(initialValue: purchase?.totalMinor.map { Self.input(Double($0) / Double(currency.scale)) } ?? "")
+        _start = State(initialValue: dose.map { Date(trackerHours: $0.timeH) } ?? store.now)
     }
 
     var body: some View {
         Form {
             if let existing {
+                Picker(inventoryText("Adjust stock"), selection: $editingPrice) {
+                    Text(inventoryText("Recount")).tag(false)
+                    Text(inventoryText("Purchase price")).tag(true)
+                }.pickerStyle(.segmented)
                 Section {
                     LabeledContent(inventoryText("Medication"), value: medication.name)
                     LabeledContent(inventoryText("Package"), value: packageDetail(existing.supply.pack))
+                    if case .patch(nil) = existing.supply.pack, editingPrice {
+                        field(inventoryText("Release per patch (µg/24 h)"), value: $strength, field: .strength)
+                    }
                 }
             } else {
                 Section {
@@ -252,7 +293,20 @@ private struct InventoryEditor: View {
                         ForEach(options) { item in Text(item.name).tag(item) }
                     }
                     .accessibilityIdentifier("inventory.medication")
-                    Picker(inventoryText("Package"), selection: $kind) {
+                    let known = Set(store.supplies.filter { $0.ester == medication.ester && $0.route == medication.route }.map(\.pack))
+                    if !known.isEmpty {
+                        Menu(inventoryText("Use existing specification")) {
+                            ForEach(known.sorted { packageDetail($0) < packageDetail($1) }, id: \.self) { pack in
+                                Button(packageDetail(pack)) {
+                                    kind = pack.kind
+                                    let fields = Self.packParameters(pack)
+                                    volume = fields.volume
+                                    strength = fields.strength
+                                }
+                            }
+                        }
+                    }
+                    Picker(inventoryText("Package"), selection: Binding(get: { kind }, set: { kind = $0; setDefaults($0) })) {
                         ForEach(MedicationPack.Kind.choices(for: medication.route), id: \.self) { option in
                             Text(option.title).tag(option)
                         }
@@ -263,21 +317,41 @@ private struct InventoryEditor: View {
                         field(inventoryText("Concentration (mg/mL)"), value: $strength, field: .strength)
                     } else if [.pill, .pump, .sachet].contains(kind) {
                         field(massTitle, value: $strength, field: .strength)
+                    } else if kind == .patch {
+                        field(inventoryText("Release per patch (µg/24 h)"), value: $strength, field: .strength)
                     }
                 }
             }
-            Section {
-                field(kind.countTitle, value: $count, field: .amount)
-                if kind == .vial {
-                    field(inventoryText("Opened quantity (mg)"), value: $openedMG, field: .opened)
+            if existing == nil || !editingPrice {
+                Section {
+                    field(kind.countTitle, value: $count, field: .amount)
+                    if kind == .vial {
+                        field(inventoryText("Opened quantity (mg)"), value: $openedMG, field: .opened)
+                    }
+                    if existing == nil {
+                        DatePicker(inventoryText("Stock starts"), selection: $start, in: ...store.now)
+                    }
+                } header: {
+                    Text(existing == nil ? inventoryText("Quantity on hand") : inventoryText("Count what is left now"))
                 }
-            } header: {
-                Text(existing == nil ? inventoryText("Quantity on hand") : inventoryText("Count what is left now"))
+            }
+            if existing == nil || editingPrice {
+                Section(inventoryText("Purchase price")) {
+                    field(inventoryText("Package size (\(kind.unit)/\(kind.purchaseUnit))"), value: $unitsPerPack, field: .unitsPerPack)
+                    field(inventoryText("Purchased quantity (\(kind.purchaseUnit))"), value: $packCount, field: .packCount)
+                    Picker(inventoryText("Currency"), selection: $currency) {
+                        ForEach(StockCurrency.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    field(inventoryText("Total paid (optional)"), value: $totalPrice, field: .totalPrice)
+                    if let price = purchase?.unitPrice {
+                        LabeledContent(inventoryText("Unit price"), value: "\(stockMoney(price, currency, unit: true))/\(kind.unit)")
+                    }
+                }
             }
             if existing != nil {
                 Section {
                     Button(role: .destructive) { confirmingDelete = true } label: {
-                        Text(inventoryText("Delete stock"))
+                        Text(inventoryText("Remove from inventory"))
                     }
                     .accessibilityIdentifier("inventory.delete")
                 }
@@ -290,9 +364,8 @@ private struct InventoryEditor: View {
         .onChange(of: medication) { _, item in
             let choices = MedicationPack.Kind.choices(for: item.route)
             if !choices.contains(kind) { kind = choices[0] }
-            else if kind == .pill { setDefaults(.pill) }
+            setDefaults(kind)
         }
-        .onChange(of: kind) { _, choice in setDefaults(choice) }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(inventoryText("Cancel")) { dismiss() }
@@ -307,8 +380,8 @@ private struct InventoryEditor: View {
                 Button(inventoryText("Done")) { focus = nil }
             }
         }
-        .confirmationDialog(inventoryText("Delete this stock record?"), isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button(inventoryText("Delete stock"), role: .destructive) {
+        .confirmationDialog(inventoryText("Remove this stock? Previous medication costs are kept."), isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button(inventoryText("Remove from inventory"), role: .destructive) {
                 if let existing, store.deleteSupply(existing.id) { dismiss() }
                 else { saveFailed = true }
             }
@@ -320,7 +393,7 @@ private struct InventoryEditor: View {
 
     private var candidate: MedicationSupply? {
         let pack: MedicationPack
-        if let existing {
+        if let existing, !(existing.supply.pack == .patch(rate: nil) && editingPrice) {
             pack = existing.supply.pack
         } else {
             switch kind {
@@ -328,24 +401,52 @@ private struct InventoryEditor: View {
             case .pill: pack = .pill(mg: decimal(strength) ?? 0)
             case .pump: pack = .pump(mg: decimal(strength) ?? 0)
             case .sachet: pack = .sachet(mg: decimal(strength) ?? 0)
-            case .patch: pack = .patch
+            case .patch:
+                if !strength.isEmpty && decimal(strength) == nil { return nil }
+                pack = .patch(rate: decimal(strength))
             case .bulk: pack = .bulk
             }
         }
-        guard pack.isValid, let units = decimal(count), units >= 0 else { return nil }
+        guard pack.isValid else { return nil }
+        if var supply = existing?.supply, editingPrice {
+            guard let purchase else { return nil }
+            supply.pack = pack
+            supply.purchase = purchase
+            return supply
+        }
+        guard let units = decimal(count), units >= 0 else { return nil }
         var total = units
         if kind == .vial, !openedMG.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard let opened = decimal(openedMG), opened >= 0 else { return nil }
             total += opened / pack.unitMG
         }
         guard existing != nil || total > 0 else { return nil }
-        let date = store.isDemo ? store.now : Date()
-        let supply = MedicationSupply(
-            id: existing?.id ?? UUID().uuidString.lowercased(),
-            route: medication.route, ester: medication.ester, pack: pack,
-            count: total, startedAt: date.timeIntervalSince1970 * 1_000
-        )
+        if var supply = existing?.supply {
+            let at = (store.isDemo ? store.now : Date()).timeIntervalSince1970 * 1_000
+            var counts = supply.recounts ?? []
+            counts.removeAll { $0.at == at }
+            counts.append(StockRecount(at: at, count: total))
+            supply.recounts = counts
+            return supply.isValid ? supply : nil
+        }
+        guard let purchase else { return nil }
+        var supply = MedicationSupply(id: newLotID, route: medication.route, ester: medication.ester, pack: pack,
+                                      count: total, startedAt: start.timeIntervalSince1970 * 1_000)
+        supply.purchase = purchase
         return supply.isValid ? supply : nil
+    }
+
+    private var purchase: StockPurchase? {
+        let basis = existing?.supply.count ?? decimal(count) ?? 1
+        guard let perPack = unitsPerPack.isEmpty ? max(basis, 1) : decimal(unitsPerPack),
+              let packs = decimal(packCount) else { return nil }
+        var minor: Int?
+        if !totalPrice.isEmpty {
+            guard let cents = StockPurchase.minorAmount(totalPrice, currency: currency, locale: locale) else { return nil }
+            minor = cents
+        }
+        let value = StockPurchase(unitsPerPack: perPack, packCount: packs, totalMinor: minor, currency: currency)
+        return value.isValid ? value : nil
     }
 
     private var massTitle: String {
@@ -365,7 +466,7 @@ private struct InventoryEditor: View {
 
     private func field(_ title: String, value: Binding<String>, field: Field) -> some View {
         LabeledContent(title) {
-            TextField(title, text: value, prompt: Text("0"))
+            TextField(title, text: value, prompt: Text(field == .unitsPerPack ? Self.input(max(existing?.supply.count ?? decimal(count) ?? 1, 1)) : field == .totalPrice ? "—" : "0"))
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .focused($focus, equals: field)
@@ -384,7 +485,8 @@ private struct InventoryEditor: View {
         switch pack {
         case let .vial(ml, mgPerMl): (input(ml), input(mgPerMl))
         case let .pill(mg), let .pump(mg), let .sachet(mg): ("", input(mg))
-        case .patch, .bulk: ("", "")
+        case let .patch(rate): ("", rate.map(input) ?? "")
+        case .bulk: ("", "")
         }
     }
 
@@ -398,10 +500,7 @@ private struct InventoryEditor: View {
     }
 
     private func decimal(_ input: String) -> Double? {
-        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        let format = FloatingPointFormatStyle<Double>.number.locale(locale)
-        let amount = (try? format.parseStrategy.parse(text)) ?? Double(text)
-        return amount.flatMap { $0.isFinite ? $0 : nil }
+        stockInputNumber(input, locale: locale)
     }
 
     private static func input(_ number: Double) -> String {
@@ -409,7 +508,26 @@ private struct InventoryEditor: View {
     }
 }
 
-private extension MedicationPack.Kind {
+extension MedicationPack.Kind {
+    var unit: String {
+        switch self {
+        case .pill: inventoryText("tablet")
+        case .patch: inventoryText("patch")
+        case .vial: inventoryText("vial")
+        case .sachet: inventoryText("sachet")
+        case .pump: inventoryText("pump")
+        case .bulk: "mg"
+        }
+    }
+
+    var purchaseUnit: String {
+        switch self {
+        case .pump: inventoryText("bottle")
+        case .bulk: inventoryText("pack")
+        default: inventoryText("box")
+        }
+    }
+
     var title: String {
         switch self {
         case .vial: inventoryText("Vial")
@@ -433,10 +551,11 @@ private extension MedicationPack.Kind {
     }
 }
 
-private func packageDetail(_ pack: MedicationPack) -> String {
+func packageDetail(_ pack: MedicationPack) -> String {
     switch pack {
     case let .vial(ml, mgPerMl): inventoryText("\(stockNumber(ml)) mL · \(stockNumber(mgPerMl)) mg/mL")
-    case let .pill(mg), let .pump(mg), let .sachet(mg): inventoryText("\(pack.kind.title) · \(stockNumber(mg)) mg per unit")
+    case let .pill(mg), let .pump(mg), let .sachet(mg): "\(stockNumber(mg)) mg/\(pack.kind.unit)"
+    case let .patch(rate?): "\(stockNumber(rate)) µg/24 h"
     case .patch, .bulk: pack.kind.title
     }
 }
@@ -470,10 +589,26 @@ private func inventoryRunOut(_ status: InventoryStockStatus, nowH: Double, calen
     return inventoryText(days == 1 ? "About \(count) day left · \(date)" : "About \(count) days left · \(date)")
 }
 
-private func stockNumber(_ value: Double) -> String {
-    value.formatted(.number.precision(.fractionLength(0...2)))
+func stockNumber(_ value: Double) -> String {
+    value.formatted(.number.precision(.fractionLength(0...6)))
 }
 
-private func inventoryText(_ key: String.LocalizationValue) -> String {
+func stockMoney(_ value: Decimal, _ currency: StockCurrency, unit: Bool = false) -> String {
+    value.formatted(.currency(code: currency.rawValue).precision(.fractionLength(currency.fractionDigits...(unit ? 6 : currency.fractionDigits))))
+}
+
+func stockPriceLabel(_ supply: MedicationSupply) -> String {
+    guard let purchase = supply.purchase, let price = purchase.unitPrice else { return inventoryText("Price needed") }
+    return "\(stockMoney(price, purchase.currency, unit: true))/\(supply.pack.kind.unit)"
+}
+
+private func stockSpecificationLabel(_ supply: MedicationSupply) -> String {
+    let specification = packageDetail(supply.pack)
+    guard let purchase = supply.purchase else { return specification }
+    let kind = supply.pack.kind
+    return "\(specification) · \(stockNumber(purchase.unitsPerPack)) \(kind.unit)/\(kind.purchaseUnit)"
+}
+
+func inventoryText(_ key: String.LocalizationValue) -> String {
     label(key, table: "Inventory")
 }

@@ -89,6 +89,7 @@ final class DoseRecord {
     var timeH: Double = 0
     var doseMG: Double = 0
     var extrasData: Data?
+    var inventorySupplyId: String?
     var updatedAt: Double?
 
     init(mode: HRTMode, value: DoseEvent, updatedAt: Double?) {
@@ -101,7 +102,8 @@ final class DoseRecord {
         guard let route = Route(rawValue: routeRaw) else { return nil }
         return DoseEvent(
             id: uuid, route: route, timeH: timeH, doseMG: doseMG, ester: ester,
-            extras: decodeRecord([String: Double].self, from: extrasData) ?? [:], updatedAt: updatedAt
+            extras: decodeRecord([String: Double].self, from: extrasData) ?? [:], updatedAt: updatedAt,
+            inventorySupplyId: inventorySupplyId
         )
     }
 
@@ -111,6 +113,7 @@ final class DoseRecord {
         timeH = value.timeH
         doseMG = value.doseMG
         extrasData = encodeRecord(value.extras)
+        inventorySupplyId = value.inventorySupplyId
         self.updatedAt = updatedAt
     }
 }

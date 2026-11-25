@@ -16,6 +16,7 @@ public struct DoseEvent: Identifiable, Equatable, Codable, Sendable {
     public var ester: String
     public var extras: [String: Double]
     public var updatedAt: Double?
+    public var inventorySupplyId: String?
 
     public init(
         id: String = UUID().uuidString.lowercased(),
@@ -24,7 +25,8 @@ public struct DoseEvent: Identifiable, Equatable, Codable, Sendable {
         doseMG: Double,
         ester: String,
         extras: [String: Double] = [:],
-        updatedAt: Double? = nil
+        updatedAt: Double? = nil,
+        inventorySupplyId: String? = nil
     ) {
         self.id = id
         self.route = route
@@ -33,6 +35,7 @@ public struct DoseEvent: Identifiable, Equatable, Codable, Sendable {
         self.ester = ester
         self.extras = extras
         self.updatedAt = updatedAt
+        self.inventorySupplyId = inventorySupplyId
     }
 }
 

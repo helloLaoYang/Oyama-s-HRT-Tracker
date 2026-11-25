@@ -5,6 +5,49 @@ final class DesignSmokeTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testMedicationCostFromStockPurchase() throws {
+        let app = launchDemo()
+        let overview = app.scrollViews.firstMatch
+        let add = app.buttons["cost.stock.oral|CPA"]
+        waitUntilEnabled(app.buttons["overview.share"])
+        overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.54))
+            .press(forDuration: 0.05, thenDragTo: overview.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.24)))
+        scroll(overview, until: add)
+        add.tap()
+        XCTAssertTrue(app.navigationBars["添加药品"].waitForExistence(timeout: 6))
+        let strength = app.textFields["inventory.strength"]
+        strength.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+        strength.typeText("12.5")
+        XCTAssertEqual(strength.value as? String, "12.5")
+        app.buttons["完成"].firstMatch.tap()
+        let count = app.textFields["inventory.count"]
+        count.tap()
+        count.typeText("28")
+        app.buttons["完成"].firstMatch.tap()
+        let cost = app.textFields["inventory.totalPrice"]
+        let form = app.collectionViews.firstMatch
+        if !cost.isHittable { form.swipeUp() }
+        cost.tap()
+        cost.typeText("56")
+        app.buttons["完成"].firstMatch.tap()
+        screenshot("cost-purchase", in: app)
+        app.buttons["inventory.save"].tap()
+        let total = app.staticTexts["cost.total.CNY"]
+        scroll(overview, until: total)
+        XCTAssertTrue(total.label.contains("3.00"), total.label)
+        app.buttons["cost.range.today"].tap()
+        XCTAssertTrue(app.staticTexts["所选时段暂无用药记录"].exists)
+        app.buttons["cost.range.last7"].tap()
+        XCTAssertTrue(total.label.contains("3.00"))
+        app.buttons["cost.range.all"].tap()
+        XCTAssertTrue(total.label.contains("3.00"))
+        app.buttons["cost.range.last30"].tap()
+        scroll(overview, until: app.buttons["cost.inventory"])
+        screenshot("cost-overview", in: app)
+        app.buttons["cost.details"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "1.5")).firstMatch.exists)
+    }
+
     func testWebModelSettingsAndInventory() {
         let app = launchDemo()
         app.tabBars.buttons["设置"].tap()
@@ -136,7 +179,8 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["更换雌二醇贴片"].exists)
         XCTAssertTrue(app.staticTexts["醋酸环丙孕酮"].exists)
         let chartTitle = app.staticTexts["激素浓度变化曲线"]
-        let rangeButtons = ["7天", "30天", "全部"].map { app.buttons[$0] }
+        let chartRange = element("timeline.range", in: app)
+        let rangeButtons = ["7天", "30天", "全部"].map { chartRange.buttons[$0] }
         XCTAssertTrue(chartTitle.waitForExistence(timeout: 8))
         var previousRightEdge = chartTitle.frame.maxX
         for button in rangeButtons {
@@ -307,7 +351,7 @@ final class DesignSmokeTests: XCTestCase {
             let to = view.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.4))
             from.press(forDuration: 0.05, thenDragTo: to)
         }
-        XCTAssertTrue(target.isHittable)
+        XCTAssertTrue(target.isHittable, view.debugDescription)
     }
 
     private func screenshot(_ name: String, in app: XCUIApplication) {

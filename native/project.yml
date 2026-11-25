@@ -81,6 +81,21 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: HRTrace
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
+  HRTTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - HRTTrackerTests
+      - path: ../tests/fixtures/medication-cost-backup.json
+        buildPhase: resources
+    dependencies:
+      - target: HRTTracker
+      - package: HRTEngine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 5.0
   HRTTrackerUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -98,7 +113,7 @@ schemes:
       targets:
         HRTTracker: all
     test:
-      targets: [HRTTrackerUITests]
+      targets: [HRTTrackerTests, HRTTrackerUITests]
   HRTTrackerWatch:
     build:
       targets:

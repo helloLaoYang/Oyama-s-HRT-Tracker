@@ -260,9 +260,11 @@ enum TrackerBackup {
 
     private static func parseDose(_ raw: [String: Any]) -> DoseEvent? {
         guard let fields = medication(raw), let time = timeHours(raw["timeH"]) else { return nil }
+        let supplyID = id(raw["inventorySupplyId"])
+        guard raw["inventorySupplyId"] == nil || raw["inventorySupplyId"] is NSNull || supplyID != nil else { return nil }
         return DoseEvent(
             id: fields.id, route: fields.route, timeH: time, doseMG: fields.dose, ester: fields.drug,
-            extras: fields.extras, updatedAt: stamp(raw["updatedAt"])
+            extras: fields.extras, updatedAt: stamp(raw["updatedAt"]), inventorySupplyId: supplyID
         )
     }
 

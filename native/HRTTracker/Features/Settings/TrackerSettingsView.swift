@@ -99,7 +99,8 @@ private struct GeneralTrackerSettings: View {
             Section("Inventory") {
                 NavigationLink { InventoryView(store: store) } label: {
                     LabeledContent("Medication inventory") {
-                        if !store.supplies.isEmpty { Text(store.supplies.count.formatted()).monospacedDigit() }
+                        let count = store.supplies.filter { $0.archivedAt == nil }.count
+                        if count > 0 { Text(count.formatted()).monospacedDigit() }
                     }
                 }
                 .accessibilityIdentifier("settings.inventory")

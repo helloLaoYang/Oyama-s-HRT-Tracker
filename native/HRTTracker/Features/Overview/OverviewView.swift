@@ -16,6 +16,7 @@ struct OverviewView: View {
 
     var body: some View {
         let request = timelineRequest
+        let inventory = InventorySnapshot(store: store)
         let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -23,7 +24,7 @@ struct OverviewView: View {
                     currentLevel(request: request, shareableTimeline: shareableTimeline)
                 }
                 todayPlan
-                InventoryAlertsView(store: store)
+                InventoryAlertsView(store: store, inventory: inventory)
                 Divider().overlay(TrackerTheme.separator)
                 if let timeline, !timeline.traces.isEmpty {
                     ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
@@ -53,6 +54,8 @@ struct OverviewView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityIdentifier("overview.forecast")
+                Divider().overlay(TrackerTheme.separator)
+                MedicationCostView(store: store, inventory: inventory)
             }
             .padding(.horizontal, 17)
             .padding(.vertical, 12)
