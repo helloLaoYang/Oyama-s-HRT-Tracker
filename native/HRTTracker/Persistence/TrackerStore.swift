@@ -188,23 +188,41 @@ final class TrackerStore {
         }
     }
 
+    func plannedStock(route: Route, ester: String) -> String? {
+        let matching = plans.filter { $0.route == route && $0.ester == ester }
+        guard !matching.isEmpty else { return nil }
+        let specs = InventorySpecifications(supplies)
+        let lots = matching.compactMap { plan in plan.inventorySupplyId.flatMap { specs.byID[$0] } }
+        guard lots.count == matching.count, let first = lots.first,
+              lots.allSatisfy({ $0.specification == first.specification }),
+              first.canSupply(route, ester) else { return nil }
+        return first.id
+    }
+
     @discardableResult
-    func saveSupply(_ supply: MedicationSupply) -> Bool {
+    func saveSupply(_ supply: MedicationSupply, forDoseID: String? = nil) -> Bool {
         guard supply.isValid else { return false }
+        refreshClock()
         return trySave {
             if let record = supplyRecords.first(where: { $0.modeRaw == mode.rawValue && $0.uuid == supply.id }) {
                 record.update(supply, updatedAt: stamp)
             } else {
                 context.insert(MedicationSupplyRecord(mode: mode, value: supply, updatedAt: stamp))
             }
+            if let forDoseID, let row = doseRecords.first(where: { $0.modeRaw == mode.rawValue && $0.uuid == forDoseID }),
+               let dose = row.value, supply.canSupply(dose.route, dose.ester),
+               supply.matchesStrength(route: dose.route, extras: dose.extras) != false, supply.startedAt / 3_600_000 <= dose.timeH {
+                row.inventorySupplyId = supply.id
+                row.updatedAt = stamp
+            }
         }
     }
 
     @discardableResult
     func deleteSupply(_ id: String) -> Bool {
-        trySave {
-            supplyRecords.filter { $0.modeRaw == mode.rawValue && $0.uuid == id }.forEach { context.delete($0) }
-        }
+        guard var supply = supplies.first(where: { $0.id == id }), supply.archivedAt == nil else { return false }
+        supply.archivedAt = max(supply.startedAt, (isDemo ? now : Date()).timeIntervalSince1970 * 1_000)
+        return saveSupply(supply)
     }
 
     @discardableResult
@@ -214,10 +232,21 @@ final class TrackerStore {
     func saveDoses(_ doses: [DoseEvent]) -> Bool {
         let mode = self.mode
         let at = stamp
+        refreshClock()
+        let incoming = Set(doses.map(\.id))
+        let lots = supplies
+        var assignments: [String: String] = [:]
+        if !lots.isEmpty {
+            let ledger = InventoryLedger(supplies: lots, events: self.doses.filter { !incoming.contains($0.id) } + doses, nowH: nowH)
+            for use in ledger.uses where incoming.contains(use.id) {
+                assignments[use.id] = use.selected?.id
+            }
+        }
         return trySave {
             var byID = Dictionary(doseRecords.filter { $0.modeRaw == mode.rawValue }.map { ($0.uuid, $0) },
                                   uniquingKeysWith: { first, _ in first })
-            for dose in doses {
+            for var dose in doses {
+                if dose.inventorySupplyId == nil { dose.inventorySupplyId = assignments[dose.id] }
                 if let existing = byID[dose.id] {
                     existing.update(dose, updatedAt: at)
                 } else {
@@ -280,6 +309,8 @@ final class TrackerStore {
     func savePlan(_ plan: MedicationPlan) -> Bool {
         guard plan.everyDays.isFinite, (1...180).contains(plan.everyDays), (1...8).contains(plan.timesPerDay),
               plan.reminderMinutes.allSatisfy({ (0..<1_440).contains($0) }) else { return false }
+        var plan = plan
+        if plan.inventorySupplyId == nil { plan.inventorySupplyId = InventorySpecifications(supplies).selected(plan)?.id }
         return trySave {
             let records = planRecords.filter { $0.modeRaw == mode.rawValue }
             if let existing = records.first(where: { $0.uuid == plan.id }) {
@@ -471,7 +502,7 @@ final class TrackerStore {
 
     private func plannedDose(_ plan: MedicationPlan, occurrenceID: String, recordedAt: Date) -> DoseEvent {
         DoseEvent(id: occurrenceID, route: plan.route, timeH: recordedAt.trackerHours, doseMG: plan.doseMG,
-                  ester: plan.ester, extras: plan.extras)
+                  ester: plan.ester, extras: plan.extras, inventorySupplyId: plan.inventorySupplyId)
     }
 
     private func scheduledTime(on date: Date, minute: Int) -> Date? {

@@ -37,7 +37,7 @@ describe('medication plan sync', () => {
 
     it('a new device with no plan takes the plan from the cloud', () => {
         const phone = stateOf(device(null));
-        const cloud = stateOf(device([item('a', 2)], 500));
+        const cloud = stateOf(device([{ ...item('a', 2), inventorySupplyId: 'two-mg' }], 500));
         expect(hasContent(cloud)).toBe(true);
         const result = mergeSyncStates(phone, cloud);
         expect(result.localChanged).toBe(true);
@@ -46,6 +46,7 @@ describe('medication plan sync', () => {
         const storage = device(null);
         const applied = applySyncedStateToStorage(storage, 'u1', 'transfem', result.merged);
         expect(applied.active.plan?.map(i => i.id)).toEqual(['a']);
+        expect(applied.active.plan?.[0].inventorySupplyId).toBe('two-mg');
         expect(storage.getItem(modeKeyFor('u1', 'transfem', 'plan-at'))).toBe('500');
     });
 

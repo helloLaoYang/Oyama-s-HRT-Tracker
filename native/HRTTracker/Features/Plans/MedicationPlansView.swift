@@ -35,9 +35,13 @@ struct MedicationPlansView: View {
                                 Text(planDoseCaption(plan) + " · " + planRepeatCaption(plan))
                                     .font(.footnote)
                                     .foregroundStyle(TrackerTheme.muted)
+                                if let id = plan.inventorySupplyId, let lot = store.supplies.first(where: { $0.id == id }) {
+                                    Text(packageDetail(lot.pack)).font(.footnote).foregroundStyle(TrackerTheme.muted)
+                                }
                             }
                         }
                     }
+                    .accessibilityIdentifier("plan.edit.\(plan.ester)")
                     .swipeActions {
                         Button("Delete", role: .destructive) { _ = store.deletePlan(plan.id) }
                     }
@@ -133,21 +137,32 @@ struct PlanMedicationFields: View {
     let mode: HRTMode
     @Binding var plan: MedicationPlan
     let forecast: Bool
+    var stock: MedicationSupply? = nil
 
     var body: some View {
-        Picker("Route", selection: $plan.route) {
+        Picker("Route", selection: Binding(get: { plan.route }, set: { route in
+            guard route != plan.route else { return }
+            let keepStock = stock?.canSupply(route, plan.ester) == true
+            plan.route = route
+            let drugs = PlanChoice.drugs(route, mode: mode, forecast: forecast)
+            if !drugs.contains(plan.ester), let first = drugs.first { plan.ester = first }
+            if !keepStock {
+                plan.doseMG = 0
+                plan.inventorySupplyId = nil
+            }
+            plan.extras = [:]
+        })) {
             ForEach(PlanChoice.routes(for: mode, forecast: forecast), id: \.self) { route in
                 Text(route.trackerTitle).tag(route)
             }
         }
-        .onChange(of: plan.route) { _, route in
-            let drugs = PlanChoice.drugs(route, mode: mode, forecast: forecast)
-            if !drugs.contains(plan.ester), let first = drugs.first { plan.ester = first }
-            plan.doseMG = 0
-            plan.extras = [:]
-        }
 
-        Picker("Medication", selection: $plan.ester) {
+        Picker("Medication", selection: Binding(get: { plan.ester }, set: { drug in
+            if plan.ester != drug {
+                plan.ester = drug
+                plan.inventorySupplyId = nil
+            }
+        })) {
             ForEach(PlanChoice.drugs(plan.route, mode: mode, forecast: forecast), id: \.self) { ester in
                 Text(trackerDrugName(ester)).tag(ester)
             }
@@ -157,6 +172,15 @@ struct PlanMedicationFields: View {
             let existingMass = plan.doseMG > 0 && plan.extras["releaseRateUGPerDay"] == nil
             if existingMass {
                 amountField("Total dose (mg)", value: $plan.doseMG)
+            } else if !forecast {
+                let title = HistoryText.localized("Release rate per patch (µg/day)")
+                LabeledContent(title) {
+                    TextField(title, value: perPatchRate, format: .number.precision(.fractionLength(0...4)))
+                        .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                }
+                Stepper(value: patchCount, in: 1...max(10, patchCount.wrappedValue)) {
+                    LabeledContent(HistoryText.localized("Patches"), value: String(patchCount.wrappedValue))
+                }
             } else {
                 amountField("Total release rate (µg/day)", value: extra("releaseRateUGPerDay"))
             }
@@ -198,6 +222,22 @@ struct PlanMedicationFields: View {
         }
     }
 
+    private var perPatchRate: Binding<Double> {
+        Binding {
+            (plan.extras["releaseRateUGPerDay"] ?? 0) / Double(HistoryText.patchCount(plan.extras))
+        } set: { rate in
+            plan.extras["releaseRateUGPerDay"] = rate > 0 ? rate * Double(HistoryText.patchCount(plan.extras)) : nil
+        }
+    }
+
+    private var patchCount: Binding<Int> {
+        Binding { HistoryText.patchCount(plan.extras) } set: { count in
+            let rate = perPatchRate.wrappedValue
+            plan.extras["patchCount"] = count > 1 ? Double(count) : nil
+            perPatchRate.wrappedValue = rate
+        }
+    }
+
     private func amountField(_ title: LocalizedStringKey, value: Binding<Double>) -> some View {
         LabeledContent(title) {
             TextField(title, value: value, format: .number.precision(.fractionLength(0...4)))
@@ -220,6 +260,7 @@ private struct MedicationPlanEditor: View {
     let store: TrackerStore
     let isNew: Bool
     @State private var plan: MedicationPlan
+    @State private var addingStock = false
     @Environment(\.dismiss) private var dismiss
     @State private var showError = false
 
@@ -230,9 +271,55 @@ private struct MedicationPlanEditor: View {
     }
 
     var body: some View {
+        let specifications = InventorySpecifications(store.supplies)
+        let selected = specifications.selected(plan)
+        let choices = specifications.active.filter { $0.specification != selected?.specification } + [selected].compactMap { $0 }
+        let needsChoice = selected == nil && !specifications.matching(plan).isEmpty
         Form {
             Section {
-                PlanMedicationFields(mode: store.mode, plan: $plan, forecast: false)
+                if !choices.isEmpty {
+                    Picker(inventoryText("Stock specification"), selection: Binding(
+                        get: { selected?.id ?? "" },
+                        set: { id in
+                            guard let lot = specifications.byID[id] else { return }
+                            if !lot.canSupply(plan.route, plan.ester) {
+                                plan.route = lot.route
+                                plan.ester = lot.ester
+                                plan.doseMG = 0
+                                plan.extras = [:]
+                            }
+                            if case let .patch(rate?) = lot.pack, plan.doseMG == 0 {
+                                if let total = plan.extras["releaseRateUGPerDay"], total > 0 {
+                                    let count = (total / rate).rounded()
+                                    if (1...10).contains(count), abs(total - count * rate) <= total * 1e-9 {
+                                        plan.extras["patchCount"] = count > 1 ? count : nil
+                                    }
+                                } else {
+                                    plan.extras["releaseRateUGPerDay"] = rate
+                                }
+                            }
+                            plan.inventorySupplyId = id
+                        }
+                    )) {
+                        Text(inventoryText("Choose specification")).tag("")
+                        ForEach(choices) { lot in
+                            Text(InventoryMedication(route: lot.route, ester: lot.ester).name + " · " + packageDetail(lot.pack))
+                                .tag(lot.id)
+                        }
+                    }
+                    .accessibilityIdentifier("plan.inventorySpec")
+                }
+                PlanMedicationFields(mode: store.mode, plan: $plan, forecast: false, stock: selected)
+                if specifications.matching(plan).isEmpty {
+                    Button(inventoryText("Add stock")) { addingStock = true }
+                }
+            }
+            if let selected, plan.doseMG > 0 || (plan.extras["releaseRateUGPerDay"] ?? 0) > 0 {
+                let probe = DoseEvent(id: plan.id, route: plan.route, timeH: store.nowH, doseMG: plan.doseMG,
+                                      ester: plan.ester, extras: plan.extras, inventorySupplyId: selected.id)
+                if let use = InventoryLedger.preview(probe, supplies: store.supplies, events: store.doses) {
+                    Section { StockUseDetails(use: use) }
+                }
             }
             Section("Frequency and time") {
                 DatePicker("Scheduled time", selection: scheduleTime, displayedComponents: .hourAndMinute)
@@ -248,6 +335,13 @@ private struct MedicationPlanEditor: View {
             }
         }
         .navigationTitle(isNew ? "Add plan entry" : "Edit medication plan")
+        .sheet(isPresented: $addingStock) {
+            NavigationStack {
+                InventoryEditor(store: store, existing: nil, regimens: [plan] + store.plans.filter { $0.id != plan.id },
+                                forDose: DoseEvent(route: plan.route, timeH: store.nowH, doseMG: plan.doseMG,
+                                                   ester: plan.ester, extras: plan.extras, inventorySupplyId: plan.inventorySupplyId))
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -257,7 +351,8 @@ private struct MedicationPlanEditor: View {
                     }
                     if store.savePlan(plan) { dismiss() } else { showError = true }
                 }
-                .disabled(plan.doseMG <= 0 && (plan.extras["releaseRateUGPerDay"] ?? 0) <= 0)
+                .disabled(needsChoice || (plan.doseMG <= 0 && (plan.extras["releaseRateUGPerDay"] ?? 0) <= 0))
+                .accessibilityIdentifier("plan.save")
             }
         }
         .alert("Could not save changes", isPresented: $showError) {

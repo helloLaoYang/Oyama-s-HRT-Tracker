@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { stockLedger, stockTotals, stockUseComplete } from '../src/utils/stockLedger';
 import { DEFAULT_PK_PARAMS, Ester, Route, type PKCustomParams } from '../logic';
 import {
     ALLOWED_CLOCK_SKEW_MS,
@@ -224,6 +226,77 @@ const buildReport = (storage: MemoryStorage, mode: ModeKey = 'transfem') =>
     buildCompleteBackupBundleReportFromStorage(storage, OWNER, mode, activeFrom(storage, mode), CREATED_AT, NOW);
 
 describe('complete backup bundle data layer', () => {
+    it('imports newer priced stock once and preserves it against an older backup', () => {
+        const local = seed();
+        const stored = JSON.parse(local.getItem(key('transfem', 'supplies'))!);
+        const original = { ...stored[0], updatedAt: NOW - 2_000 };
+        local.setItem(key('transfem', 'supplies'), JSON.stringify([original]));
+        const newer = {
+            ...original,
+            updatedAt: NOW - 1_000,
+            purchase: { currency: 'CNY', unitsPerPack: 1, packCount: 1, totalMinor: 5600 },
+        };
+        const incoming = build(local);
+        incoming.modes = { transfem: { supplies: [newer] }, transmasc: {} };
+        expect(mergeCompleteBackupBundleToStorage(incoming, context(local)).updated).toBe(1);
+        expect(mergeCompleteBackupBundleToStorage(incoming, context(local)).updated).toBe(0);
+        incoming.modes.transfem.supplies = [original];
+        expect(mergeCompleteBackupBundleToStorage(incoming, context(local)).updated).toBe(0);
+        expect(JSON.parse(local.getItem(key('transfem', 'supplies'))!)).toEqual([newer]);
+        incoming.modes.transfem.supplies = [{ ...newer, purchase: { ...newer.purchase, totalMinor: -1 } }];
+        expect(inspectCompleteBackupBundle(incoming, context(local)).blocked).toContain('transfem.supplies');
+    });
+    it('keeps stock specifications, price, recounts and dose references across Web and native envelopes', () => {
+        const fixture = JSON.parse(
+            readFileSync(new URL('./fixtures/medication-cost-backup.json', import.meta.url), 'utf8'),
+        );
+        const native = {
+            format: 'hrt-tracker-native-backup',
+            formatVersion: 1,
+            createdAt: fixture.createdAt,
+            modes: fixture.modes,
+            profile: {
+                hrtMode: 'transfem',
+                weightKG: 70,
+                calibrationMethod: 'mipd',
+                calibrationHistoryMode: 'retrospective',
+            },
+            preferences: { theme: 'system', supplyLeadDays: 14 },
+        };
+        for (const input of [fixture, native]) {
+            const storage = new MemoryStorage();
+            const result = mergeCompleteBackupBundleToStorage(input, context(storage));
+            expect(result.blocked).toEqual([]);
+            const { supplies, events, plan } = build(storage).modes.transfem;
+            expect(plan?.[0].inventorySupplyId).toBe('older');
+            expect(supplies).toEqual(fixture.modes.transfem.supplies);
+            expect(events).toEqual(fixture.modes.transfem.events);
+            const ledger = stockLedger(supplies!, events!, 480010);
+            const byDose = new Map(ledger.uses.map(u => [u.event.id, u]));
+            expect(byDose.get('cross-batch')?.parts.map(p => p.cost)).toEqual([2, 3]);
+            expect(byDose.get('half-tablet')?.parts[0].units).toBe(0.5);
+            expect(byDose.get('whole-tablet')?.parts[0].units).toBe(1);
+            expect(byDose.get('ambiguous')?.needsSpecification).toBe(true);
+            expect(stockUseComplete(byDose.get('two-patches')!)).toBe(false);
+            expect([...byDose.keys()]).not.toContain('future');
+            expect([...byDose.keys()]).not.toContain('remove');
+            expect(Object.fromEntries(ledger.remaining)).toEqual({
+                older: 0,
+                newer: 4,
+                'other-strength': 3,
+                patches: 6,
+            });
+            expect(Object.fromEntries(stockTotals(ledger.uses.flatMap(u => u.parts)))).toEqual({ CNY: 8 });
+            const priced = supplies!.map(s =>
+                s.id === 'patches'
+                    ? { ...s, purchase: { currency: 'JPY' as const, totalMinor: 0, packCount: 1, unitsPerPack: 8 } }
+                    : s,
+            );
+            const revised = stockLedger(priced, events!, 480010);
+            expect(revised.remaining).toEqual(ledger.remaining);
+            expect(Object.fromEntries(stockTotals(revised.uses.flatMap(u => u.parts)))).toEqual({ CNY: 8, JPY: 0 });
+        }
+    });
     it('round-trips both modes, all Supply.pack branches, calibration, scalars, and preferences', () => {
         const source = seed();
         const bundle = build(source);

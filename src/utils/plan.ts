@@ -8,6 +8,7 @@ import { Regimen, hormoneOf, lapseH } from './regimen';
  */
 export interface PlanItem {
     id: string;
+    inventorySupplyId?: string;
     route: Route;
     ester: Ester;
     /** mg per dose. 0 for a patch, which is described by its release rate in `extras`. */
@@ -130,6 +131,7 @@ export const usualFor = (route: Route, ester: Ester): { dose: string; freq: stri
 
 /** A plan item as it is being typed: the amount still a string, the rhythm a key into FREQUENCIES. */
 export interface PlanDraft {
+    inventorySupplyId?: string;
     route: Route;
     ester: Ester;
     /** mg, or µg/day for a patch. */
@@ -138,6 +140,8 @@ export interface PlanDraft {
     slTier: number;
     /** Index into GEL_SITE_ORDER. */
     gelSite: number;
+    patchCount?: number;
+    original?: PlanItem;
 }
 
 export const freshDraft = (route: Route, ester: Ester): PlanDraft => ({
@@ -152,12 +156,31 @@ export const freshDraft = (route: Route, ester: Ester): PlanDraft => ({
 export const draftDoseOk = (d: Pick<PlanDraft, 'dose'>) => parseFloat(d.dose) > 0;
 
 export const draftToItem = (d: PlanDraft, id: string): PlanItem | null => {
+    const original = d.original;
+    if (
+        original &&
+        original.route === d.route &&
+        original.ester === d.ester &&
+        d.freq === frequencyKey(original) &&
+        d.dose === itemToDraft(original).dose &&
+        (d.patchCount ?? 1) === (original.extras[ExtraKey.patchCount] ?? 1) &&
+        d.slTier === (original.extras[ExtraKey.sublingualTier] ?? 2) &&
+        d.gelSite === (original.extras[ExtraKey.gelSite] ?? 0)
+    ) {
+        return { ...original, id, ...(d.inventorySupplyId && { inventorySupplyId: d.inventorySupplyId }) };
+    }
     const dose = parseFloat(d.dose);
     const f = parseFrequency(d.freq);
     if (!(dose > 0) || !f) return null;
     const isPatch = d.route === Route.patchApply;
+    const count = d.patchCount ?? 1;
+    if (isPatch && (!Number.isSafeInteger(count) || count < 1)) return null;
     const extras: PlanItem['extras'] = isPatch
-        ? { [ExtraKey.releaseRateUGPerDay]: dose, [ExtraKey.patchWearH]: f.everyDays * 24 }
+        ? {
+              [ExtraKey.releaseRateUGPerDay]: dose * count,
+              [ExtraKey.patchWearH]: f.everyDays * 24,
+              ...(count > 1 && { [ExtraKey.patchCount]: count }),
+          }
         : d.route === Route.sublingual
           ? { [ExtraKey.sublingualTier]: d.slTier }
           : d.route === Route.gel
@@ -166,6 +189,7 @@ export const draftToItem = (d: PlanDraft, id: string): PlanItem | null => {
     return {
         id,
         route: d.route,
+        ...(d.inventorySupplyId && { inventorySupplyId: d.inventorySupplyId }),
         ester: d.ester,
         doseMG: isPatch ? 0 : dose,
         extras,
@@ -175,11 +199,16 @@ export const draftToItem = (d: PlanDraft, id: string): PlanItem | null => {
 };
 
 export const itemToDraft = (i: PlanItem): PlanDraft => ({
+    original: i,
+    ...(i.inventorySupplyId && { inventorySupplyId: i.inventorySupplyId }),
     route: i.route,
     ester: i.ester,
     dose: String(
-        i.route === Route.patchApply ? (i.extras[ExtraKey.releaseRateUGPerDay] ?? 0) : Number(i.doseMG.toFixed(3)),
+        i.route === Route.patchApply
+            ? (i.extras[ExtraKey.releaseRateUGPerDay] ?? 0) / (i.extras[ExtraKey.patchCount] ?? 1)
+            : i.doseMG,
     ),
+    ...(i.route === Route.patchApply && { patchCount: i.extras[ExtraKey.patchCount] ?? 1 }),
     freq: frequencyKey(i),
     slTier: i.extras[ExtraKey.sublingualTier] ?? 2,
     gelSite: i.extras[ExtraKey.gelSite] ?? 0,
@@ -205,6 +234,8 @@ export const normalizePlanItem = (raw: any): PlanItem | null => {
         return null;
     return {
         id: raw.id,
+        ...(typeof raw.inventorySupplyId === 'string' &&
+            raw.inventorySupplyId && { inventorySupplyId: raw.inventorySupplyId }),
         route: raw.route,
         ester: raw.ester,
         doseMG,
@@ -279,6 +310,7 @@ export function planStatus(item: PlanItem, events: DoseEvent[], nowH: number): P
 /** The dose one tap on the Overview logs: the item as planned, at this moment. */
 export const planEvent = (item: PlanItem, id: string, nowMs: number): DoseEvent => ({
     id,
+    ...(item.inventorySupplyId && { inventorySupplyId: item.inventorySupplyId }),
     route: item.route,
     ester: item.ester,
     doseMG: item.doseMG,
@@ -309,6 +341,7 @@ export function regimensFromPlan(plan: PlanItem[], events: DoseEvent[], nowH: nu
             }
             return {
                 key: `plan|${item.id}`,
+                ...(item.inventorySupplyId && { inventorySupplyId: item.inventorySupplyId }),
                 loose: true,
                 route: item.route,
                 ester: item.ester,

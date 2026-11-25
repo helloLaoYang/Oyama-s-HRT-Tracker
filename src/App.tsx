@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PlanItem, planEvent } from './utils/plan';
 import {
     COMPLETE_BACKUP_FORMAT,
+    isCompleteBackupFile,
     classifyCompleteBackupOutcome,
     completeBackupPreviewFingerprint,
     type CompleteBackupMergeResult,
@@ -37,6 +38,8 @@ import PasswordPrompt from './components/PasswordPrompt';
 import { supportsViewTransitions } from './motion/viewMove';
 // Pages
 import Home from './pages/Home';
+import type { StockTarget } from './components/StockPurchaseFields';
+import type { CostRange } from './utils/stockLedger';
 import Onboarding, { markOnboardingSeen, shouldShowOnboarding } from './pages/Onboarding';
 import {
     Plan,
@@ -174,6 +177,10 @@ const AppContent = () => {
     // A dose on the Overview's chart sent here to be changed: History opens
     // it in place, where every other dose is edited.
     const [editFromOverview, setEditFromOverview] = useState<string | null>(null);
+    const [costRange, setCostRange] = useState<CostRange>('last30');
+    const [stockEntry, setStockEntry] = useState<{ from: 'home' | 'settings'; target?: StockTarget }>({
+        from: 'settings',
+    });
     const [isPasswordInputOpen, setIsPasswordInputOpen] = useState(false);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [isQuickAddLabOpen, setIsQuickAddLabOpen] = useState(false);
@@ -555,7 +562,7 @@ const AppContent = () => {
                 parsed = JSON.parse(decompressed);
             }
 
-            if (parsed && typeof parsed === 'object' && parsed.format === COMPLETE_BACKUP_FORMAT) {
+            if (isCompleteBackupFile(parsed)) {
                 return await confirmCompleteBackupImport(parsed);
             }
 
@@ -582,7 +589,7 @@ const AppContent = () => {
                 }
                 setIsPasswordInputOpen(false);
                 setPendingImportText(null);
-                if (parsed && typeof parsed === 'object' && parsed.format === COMPLETE_BACKUP_FORMAT) {
+                if (isCompleteBackupFile(parsed)) {
                     await confirmCompleteBackupImport(parsed);
                     return;
                 }
@@ -605,6 +612,9 @@ const AppContent = () => {
     // three doses in a day are three taps and three undos.
     const [planLogs, setPlanLogs] = useState<{ itemId: string; eventId: string }[]>([]);
     const handleLogPlanItem = (item: PlanItem) => {
+        if (item.inventorySupplyId && plan.find(p => p.id === item.id)?.inventorySupplyId !== item.inventorySupplyId) {
+            savePlanItem(item);
+        }
         const eventId = uuidv4();
         addEvent(planEvent(item, eventId, Date.now()));
         setPlanLogs(logs => [...logs, { itemId: item.id, eventId }]);
@@ -708,6 +718,8 @@ const AppContent = () => {
     if (showOnboarding) {
         return (
             <Onboarding
+                supplies={supplies}
+                events={events}
                 languageOptions={languageOptions}
                 weight={weight}
                 onWeightChange={setWeight}
@@ -771,6 +783,9 @@ const AppContent = () => {
                     <Suspense fallback={<PageLoading />}>
                         {currentView === 'home' && (
                             <Home
+                                onAssignDoseStock={updateEvent}
+                                costRange={costRange}
+                                setCostRange={setCostRange}
                                 t={t}
                                 currentLevel={currentLevel}
                                 currentCPA={currentCPA}
@@ -798,7 +813,10 @@ const AppContent = () => {
                                 undoableIds={undoableIds}
                                 onUndoPlanLog={handleUndoPlanLog}
                                 onNavigateToPlan={() => handleViewChange('plan')}
-                                onNavigateToSupplies={() => handleViewChange('supplies')}
+                                onNavigateToSupplies={target => {
+                                    setStockEntry({ from: 'home', target });
+                                    handleViewChange('supplies');
+                                }}
                                 supplies={supplies}
                                 nowH={nowH}
                                 onNavigateToForecast={() => handleViewChange('forecast')}
@@ -808,6 +826,7 @@ const AppContent = () => {
 
                         {currentView === 'plan' && (
                             <Plan
+                                supplies={supplies}
                                 onBack={() => handleViewChange('home')}
                                 plan={plan}
                                 onSave={savePlanItem}
@@ -835,6 +854,8 @@ const AppContent = () => {
 
                         {currentView === 'history' && (
                             <History
+                                plan={plan}
+                                supplies={supplies}
                                 t={t}
                                 isQuickAddOpen={isQuickAddOpen}
                                 setIsQuickAddOpen={setIsQuickAddOpen}
@@ -934,8 +955,11 @@ const AppContent = () => {
                                 onNavigateToMilkTea={() => handleViewChange('settings-milk-tea')}
                                 onNavigateToCatStates={() => handleViewChange('settings-cat-states')}
                                 onNavigateToSimulator={() => handleViewChange('settings-simulator')}
-                                onNavigateToSupplies={() => handleViewChange('supplies')}
-                                supplyCount={supplies.length}
+                                onNavigateToSupplies={() => {
+                                    setStockEntry({ from: 'settings' });
+                                    handleViewChange('supplies');
+                                }}
+                                supplyCount={supplies.filter(s => s.archivedAt === undefined).length}
                             />
                         )}
 
@@ -1033,9 +1057,13 @@ const AppContent = () => {
 
                         {currentView === 'supplies' && (
                             <Supplies
-                                onBack={() => handleViewChange('settings')}
+                                target={stockEntry.target}
+                                onBack={() => handleViewChange(stockEntry.from)}
                                 supplies={supplies}
-                                onSave={saveSupply}
+                                onSave={s => {
+                                    saveSupply(s);
+                                    if (stockEntry.target) handleViewChange(stockEntry.from);
+                                }}
                                 onDelete={deleteSupply}
                                 leadDays={supplyLeadDays}
                                 onLeadDaysChange={setSupplyLeadDays}

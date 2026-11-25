@@ -417,7 +417,7 @@ const Forecast: React.FC<ForecastProps> = ({
                         <label className="block">
                             <span className={labelCls}>
                                 {t('forecast.dose')} (
-                                {active.route === Route.patchApply ? `µg${t('regimen.per_day')}` : 'mg'})
+                                {active.route === Route.patchApply ? t('dose.guide.unit.ug_day') : 'mg'})
                             </span>
                             <input
                                 type="number"

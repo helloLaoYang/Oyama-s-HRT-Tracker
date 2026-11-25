@@ -18,7 +18,8 @@ import {
     isPlausibleBirthYear,
 } from '../../logic';
 import { createDayLabelFormatter, toDayKey } from '../utils/helpers';
-import { detectRegimens, dosesAhead, normalizeSupply, Supply } from '../utils/regimen';
+import { canSupply, detectRegimens, dosesAhead, normalizeSupply, Supply } from '../utils/regimen';
+import { matchesStrength, stockLedger, stockSpecifications } from '../utils/stockLedger';
 import { PlanItem, normalizePlanItem, legacyCpaItem, regimensFromPlan } from '../utils/plan';
 import {
     DoseTemplate,
@@ -373,7 +374,7 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     // clock up whenever the log changes.
     useEffect(() => {
         setCurrentTime(new Date());
-    }, [events]);
+    }, [events, supplies]);
 
     // Derived in the same render as the events it comes from. As an effect it
     // landed one render late, so every open of the Overview with data (and
@@ -573,9 +574,21 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     // twin; an unstamped record silently loses that argument.
     const stamp = <T extends object>(record: T): T & { updatedAt: number } => ({ ...record, updatedAt: Date.now() });
 
+    const bindStock = (previous: DoseEvent[], incoming: DoseEvent[]) => {
+        if (!supplies.length) return incoming;
+        const ids = new Set(incoming.map(e => e.id));
+        const combined = [...previous.filter(e => !ids.has(e.id)), ...incoming];
+        const { uses } = stockLedger(supplies, combined, Date.now() / 3_600_000);
+        const bindings = new Map(uses.map(u => [u.event.id, u.selected?.id]));
+        return incoming.map(e => {
+            const inventorySupplyId = e.inventorySupplyId ?? bindings.get(e.id);
+            return inventorySupplyId ? { ...e, inventorySupplyId } : e;
+        });
+    };
+
     const addEvent = (e: DoseEvent) => {
         forgetDeletions('events', [e.id]);
-        setEvents(prev => [...prev, stamp(e)]);
+        setEvents(prev => [...prev, ...bindStock(prev, [stamp(e)])]);
     };
     const addEvents = (list: DoseEvent[]) => {
         if (!list.length) return;
@@ -583,11 +596,14 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
             'events',
             list.map(e => e.id),
         );
-        setEvents(prev => [...prev, ...list.map(stamp)]);
+        setEvents(prev => [...prev, ...bindStock(prev, list.map(stamp))]);
     };
     const updateEvent = (e: DoseEvent) => {
         const next = stamp(e);
-        setEvents(prev => prev.map(p => (p.id === e.id ? next : p)));
+        setEvents(prev => {
+            const [bound] = bindStock(prev, [next]);
+            return prev.map(p => (p.id === e.id ? bound : p));
+        });
     };
     const deleteEvent = (id: string) => {
         recordDeletions('events', [id]);
@@ -655,16 +671,42 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     // Quick doses are a per-device shortcut list, not part of the record — they
     // are neither exported nor synced, so no tombstone is needed.
     const addQuickDose = (dose: QuickDose) => setQuickDoses(prev => [...prev, dose]);
-    const saveSupply = (supply: Supply) =>
+    const saveSupply = (supply: Supply, forDoseId?: string) => {
         setSupplies(prev =>
-            prev.some(s => s.id === supply.id) ? prev.map(s => (s.id === supply.id ? supply : s)) : [...prev, supply],
+            prev.some(s => s.id === supply.id)
+                ? prev.map(s => (s.id === supply.id ? stamp(supply) : s))
+                : [...prev, stamp(supply)],
         );
-    const deleteSupply = (id: string) => setSupplies(prev => prev.filter(s => s.id !== id));
+        if (forDoseId) {
+            setEvents(prev =>
+                prev.map(dose =>
+                    dose.id === forDoseId &&
+                    canSupply(supply, dose) &&
+                    matchesStrength(supply, dose) !== false &&
+                    supply.startedAt / 3_600_000 <= dose.timeH
+                        ? stamp({ ...dose, inventorySupplyId: supply.id })
+                        : dose,
+                ),
+            );
+        }
+    };
+    const deleteSupply = (id: string) => {
+        const at = Date.now();
+        setSupplies(prev =>
+            prev.map(s =>
+                s.id === id && s.archivedAt === undefined
+                    ? { ...s, archivedAt: Math.max(s.startedAt, at), updatedAt: at }
+                    : s,
+            ),
+        );
+    };
     const touchPlan = () => localStorage.setItem(keyFor(mode, 'plan-at'), String(Date.now()));
     const savePlanItem = (item: PlanItem) => {
+        const lot = stockSpecifications(supplies).selected(item);
+        const linked = !item.inventorySupplyId && lot ? { ...item, inventorySupplyId: lot.id } : item;
         touchPlan();
         setPlan(prev =>
-            prev.some(i => i.id === item.id) ? prev.map(i => (i.id === item.id ? item : i)) : [...prev, item],
+            prev.some(i => i.id === item.id) ? prev.map(i => (i.id === item.id ? linked : i)) : [...prev, linked],
         );
     };
     const deletePlanItem = (id: string) => {

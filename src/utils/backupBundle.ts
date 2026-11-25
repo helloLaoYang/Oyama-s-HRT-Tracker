@@ -42,10 +42,12 @@ import {
 import type { AppTheme } from '../constants';
 import type { Lang } from '../i18n/translations';
 import { legacyCpaItem, normalizePlanItem, type PlanItem } from './plan';
-import { normalizeSupply, type Pack, type Supply } from './regimen';
+import { normalizeSupply, packUnitMG, STOCK_CURRENCIES, type Pack, type Supply } from './regimen';
 import { cleanDoseMG } from './cleanDose';
 import {
     MAX_IMPORT_ENTRIES,
+    FORBIDDEN_RECORD_IDS as FORBIDDEN_IDS,
+    isRecordId,
     loadJSONFromStorage,
     modeKeyFor,
     nsFor,
@@ -312,16 +314,6 @@ const isFiniteNumber = (value: unknown): value is number => typeof value === 'nu
 const isRoute = (value: unknown): value is Route =>
     typeof value === 'string' && (Object.values(Route) as string[]).includes(value);
 
-/**
- * Names that would collide with `Object.prototype` on a plain-object map.
- * Record ids are rejected outright; tombstone maps use null-prototype objects
- * and `Object.hasOwn`, so even a stray local value cannot inherit a timestamp.
- */
-const FORBIDDEN_IDS: ReadonlySet<string> = new Set([...Object.getOwnPropertyNames(Object.prototype), 'prototype']);
-
-const isRecordId = (value: unknown): value is string =>
-    typeof value === 'string' && value !== '' && !FORBIDDEN_IDS.has(value);
-
 const ACCOUNT_TAG = /^[0-9a-f]{64}$/;
 
 /**
@@ -427,6 +419,10 @@ const validateEvent = (raw: unknown, path: string, now?: number): Validation<Dos
         ester: raw.ester,
         extras: extras as DoseEvent['extras'],
     };
+    if (raw.inventorySupplyId != null) {
+        if (!isRecordId(raw.inventorySupplyId)) return { error: path + ': invalid stock reference' };
+        value.inventorySupplyId = raw.inventorySupplyId;
+    }
     if (stamp.value !== undefined) value.updatedAt = stamp.value;
     return { value };
 };
@@ -514,6 +510,11 @@ const validatePack = (raw: unknown, path: string): Validation<Pack> => {
             if (!isFiniteNumber(raw.mg) || raw.mg <= 0) return { error: `${path}: sachet needs a positive mg` };
             return { value: { kind: 'sachet', mg: raw.mg } };
         case 'patch':
+            if (raw.releaseRateUGPerDay != null) {
+                if (!isFiniteNumber(raw.releaseRateUGPerDay) || raw.releaseRateUGPerDay <= 0)
+                    return { error: path + ': invalid patch rate' };
+                return { value: { kind: 'patch', releaseRateUGPerDay: raw.releaseRateUGPerDay } };
+            }
             return { value: { kind: 'patch' } };
         case 'bulk':
             return { value: { kind: 'bulk' } };
@@ -522,7 +523,7 @@ const validatePack = (raw: unknown, path: string): Validation<Pack> => {
     }
 };
 
-const validateSupply = (raw: unknown, path: string): Validation<Supply> => {
+const validateSupply = (raw: unknown, path: string, now?: number): Validation<Supply> => {
     if (!isObject(raw)) return { error: `${path}: record must be an object` };
     if (!isRecordId(raw.id)) return { error: `${path}: id must be a non-empty string and not a prototype name` };
     if (!isRoute(raw.route)) return { error: `${path}: unknown route` };
@@ -532,16 +533,65 @@ const validateSupply = (raw: unknown, path: string): Validation<Supply> => {
     if (!isFiniteNumber(raw.count) || raw.count < 0) return { error: `${path}: count must be finite and >= 0` };
     if (!isFiniteNumber(raw.startedAt) || raw.startedAt <= 0)
         return { error: `${path}: startedAt must be a positive finite epoch-ms` };
-    return {
-        value: {
-            id: raw.id,
-            route: raw.route,
-            ester: raw.ester,
-            pack: pack.value,
-            count: raw.count,
-            startedAt: raw.startedAt,
-        },
+    const value: Supply = {
+        id: raw.id,
+        route: raw.route,
+        ester: raw.ester,
+        pack: pack.value,
+        count: raw.count,
+        startedAt: raw.startedAt,
     };
+    const stamp = readStamp(raw.updatedAt, now);
+    if (stamp.error) return { error: path + ': ' + stamp.error };
+    if (stamp.value !== undefined) value.updatedAt = stamp.value;
+    if (!Number.isFinite(value.count * packUnitMG(value.pack))) return { error: path + ': invalid stock quantity' };
+    if (raw.archivedAt != null) {
+        if (!isFiniteNumber(raw.archivedAt) || raw.archivedAt < value.startedAt)
+            return { error: path + ': invalid archive date' };
+        value.archivedAt = raw.archivedAt;
+    }
+    if (raw.recounts != null) {
+        if (!Array.isArray(raw.recounts)) return { error: path + ': invalid stock recounts' };
+        value.recounts = [];
+        for (const row of raw.recounts) {
+            if (
+                !isObject(row) ||
+                !isFiniteNumber(row.at) ||
+                row.at < value.startedAt ||
+                !isFiniteNumber(row.count) ||
+                row.count < 0 ||
+                !Number.isFinite(row.count * packUnitMG(value.pack))
+            )
+                return { error: path + ': invalid stock recount' };
+            value.recounts.push({ at: row.at, count: row.count });
+        }
+    }
+    if (raw.purchase != null) {
+        const p = raw.purchase;
+        const currency = isObject(p) ? STOCK_CURRENCIES.find(c => c === p.currency) : undefined;
+        if (
+            !isObject(p) ||
+            !isFiniteNumber(p.unitsPerPack) ||
+            p.unitsPerPack <= 0 ||
+            !isFiniteNumber(p.packCount) ||
+            p.packCount <= 0 ||
+            p.unitsPerPack * p.packCount <= 0 ||
+            !Number.isFinite(p.unitsPerPack * p.packCount) ||
+            !currency
+        )
+            return { error: path + ': invalid purchase' };
+        value.purchase = {
+            unitsPerPack: p.unitsPerPack,
+            packCount: p.packCount,
+            currency,
+        };
+        if (p.totalMinor != null) {
+            if (!isFiniteNumber(p.totalMinor) || !Number.isSafeInteger(p.totalMinor) || p.totalMinor < 0)
+                return { error: path + ': invalid purchase amount' };
+            value.purchase.totalMinor = p.totalMinor;
+        }
+    }
+    return { value };
 };
 
 const validatePlan = (raw: unknown, path: string): Validation<PlanItem> => {
@@ -563,6 +613,9 @@ const validatePlan = (raw: unknown, path: string): Validation<PlanItem> => {
     if (timesPerDay < 1 || timesPerDay > PLAN_TIMES_PER_DAY_MAX) {
         return { error: `${path}: timesPerDay must be between 1 and ${PLAN_TIMES_PER_DAY_MAX}` };
     }
+    if (raw.inventorySupplyId != null && !isRecordId(raw.inventorySupplyId)) {
+        return { error: path + ': invalid stock reference' };
+    }
     return {
         value: {
             id: raw.id,
@@ -572,6 +625,7 @@ const validatePlan = (raw: unknown, path: string): Validation<PlanItem> => {
             extras: extras as PlanItem['extras'],
             everyDays,
             timesPerDay: everyDays > 1 ? 1 : timesPerDay,
+            ...(isRecordId(raw.inventorySupplyId) && { inventorySupplyId: raw.inventorySupplyId }),
         },
     };
 };
@@ -1116,7 +1170,43 @@ interface ParsedBundle {
     pkParamsUpdatedAt?: number;
 }
 
-const parseBundle = (raw: unknown, now: number): ParsedBundle => {
+export function isCompleteBackupFile(raw: unknown) {
+    return isObject(raw) && (raw.format === COMPLETE_BACKUP_FORMAT || raw.format === 'hrt-tracker-native-backup');
+}
+
+// Native uses the same per-mode records and a different envelope for profile and preferences.
+// Its missing Web-only categories stay absent, so the existing preview and merge rules apply.
+function portableEnvelope(input: unknown): unknown {
+    if (
+        !isObject(input) ||
+        input.format !== 'hrt-tracker-native-backup' ||
+        input.formatVersion !== 1 ||
+        !isObject(input.profile)
+    )
+        return input;
+    const profile = input.profile;
+    const prefs = isObject(input.preferences) ? input.preferences : {};
+    return {
+        format: COMPLETE_BACKUP_FORMAT,
+        formatVersion: input.formatVersion,
+        createdAt: input.createdAt,
+        modes: input.modes,
+        mode: profile.hrtMode,
+        weight: profile.weightKG,
+        weightUpdatedAt: profile.weightUpdatedAt,
+        pkParams: profile.pkParams,
+        pkParamsUpdatedAt: profile.pkParamsUpdatedAt,
+        calibration: { method: profile.calibrationMethod, historyMode: profile.calibrationHistoryMode },
+        preferences: {
+            'app-theme': prefs.theme,
+            'app-show-prediction': prefs.showPrediction,
+            'hrt-supply-lead-days': prefs.supplyLeadDays,
+        },
+    };
+}
+
+const parseBundle = (input: unknown, now: number): ParsedBundle => {
+    const raw = portableEnvelope(input);
     const errors: string[] = [];
     const categoryErrors: Record<string, string[]> = {};
     const categoryCounts: Record<string, number> = {};
@@ -1587,7 +1677,10 @@ const planCategoryMerge = (
             added++;
             continue;
         }
-        if (!kind) {
+        if (
+            !kind &&
+            (category !== 'supplies' || (recordStamp(record) === undefined && recordStamp(existing) === undefined))
+        ) {
             return {
                 blocked: `${path}: id ${record.id} already exists and this category has no updatedAt`,
                 conflicts: [],

@@ -8,6 +8,12 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import CustomRhythm from './CustomRhythm';
 import GelDoseConverter from './dose_form/GelDoseConverter';
+import CustomSelect from './CustomSelect';
+import PlanStockField from './PlanStockField';
+import { specLabel } from './StockPurchaseFields';
+import { stockSpecifications } from '../utils/stockLedger';
+import type { Supply } from '../utils/regimen';
+import type { DoseEvent } from '../../logic';
 import {
     PlanItem,
     PlanDraft,
@@ -70,6 +76,8 @@ const Row: React.FC<RowProps> = ({ on, onClick, title, desc, note, mark }) => (
 
 interface PlanWizardProps {
     plan: PlanItem[];
+    supplies: Supply[];
+    events: DoseEvent[];
     onAdd: (item: PlanItem) => void;
     onCancel: () => void;
     /** Its bar of buttons sits above the phone's bottom bar, as on the Plan
@@ -87,13 +95,15 @@ interface PlanWizardProps {
  * route, so the later screens open already answered and Next is enough when
  * the usual fits.
  */
-const PlanWizard: React.FC<PlanWizardProps> = ({ plan, onAdd, onCancel, aboveNav = true }) => {
+const PlanWizard: React.FC<PlanWizardProps> = ({ plan, supplies, events, onAdd, onCancel, aboveNav = true }) => {
     const { t } = useTranslation();
     const { mode } = useHRTMode();
 
     const routes = Object.keys(PLAN_DRUGS[mode]) as Route[];
     // A drug by a route is in the plan once; what is already there can't be picked again.
     const free = (r: Route) => (PLAN_DRUGS[mode][r] ?? []).filter(e => !plan.some(i => i.route === r && i.ester === e));
+    const specs = stockSpecifications(supplies);
+    const available = specs.active.filter(s => free(s.route).includes(s.ester));
 
     const [draft, setDraft] = useState<PlanDraft | null>(null);
     const [at, setAt] = useState(0);
@@ -133,7 +143,9 @@ const PlanWizard: React.FC<PlanWizardProps> = ({ plan, onAdd, onCancel, aboveNav
         step === 'route'
             ? !!draft
             : step === 'dose'
-              ? !!draft && draftDoseOk(draft)
+              ? !!draft &&
+                draftDoseOk(draft) &&
+                (!specs.matching(item ?? draft).length || !!specs.selected(item ?? draft))
               : step === 'freq'
                 ? !!draft && !!parseFrequency(draft.freq)
                 : true;
@@ -215,6 +227,29 @@ const PlanWizard: React.FC<PlanWizardProps> = ({ plan, onAdd, onCancel, aboveNav
 
                     {step === 'route' && (
                         <div className="mt-6">
+                            {available.length > 0 && (
+                                <CustomSelect
+                                    label={t('plan.stockSpec')}
+                                    value={draft?.inventorySupplyId ?? ''}
+                                    options={[
+                                        { value: '', label: t('cost.choose') },
+                                        ...available.map(s => ({
+                                            value: s.id,
+                                            label: supplyLabel(s, t) + ' · ' + specLabel(s.pack, t),
+                                        })),
+                                    ]}
+                                    onChange={id => {
+                                        const lot = available.find(s => s.id === id);
+                                        if (!lot) return;
+                                        const next = freshDraft(lot.route, lot.ester);
+                                        if (lot.pack.kind === 'patch' && lot.pack.releaseRateUGPerDay)
+                                            next.dose = String(lot.pack.releaseRateUGPerDay);
+                                        setDraft({ ...next, inventorySupplyId: lot.id });
+                                        setCustom(false);
+                                        go((PLAN_DRUGS[mode][lot.route]?.length ?? 0) > 1 ? 2 : 1);
+                                    }}
+                                />
+                            )}
                             {routes.map(r => {
                                 const on = draft?.route === r;
                                 const full = free(r).length === 0;
@@ -268,7 +303,7 @@ const PlanWizard: React.FC<PlanWizardProps> = ({ plan, onAdd, onCancel, aboveNav
                                     className="figure-input min-w-0 flex-1 bg-transparent text-[1.625rem] font-semibold tabular-nums text-body outline-none select-text"
                                 />
                                 <span className="shrink-0 text-sm text-muted">
-                                    {isPatch ? `µg${t('regimen.per_day')}` : 'mg'}
+                                    {isPatch ? t('dose.guide.unit.ug_day') : 'mg'}
                                 </span>
                             </label>
                             {draft.route === Route.gel && draft.ester === Ester.E2 && (
@@ -276,6 +311,9 @@ const PlanWizard: React.FC<PlanWizardProps> = ({ plan, onAdd, onCancel, aboveNav
                                     <GelDoseConverter onApply={mg => patch({ dose: mg })} />
                                 </div>
                             )}
+                            <div className="mt-4">
+                                <PlanStockField draft={draft} supplies={supplies} events={events} onChange={patch} />
+                            </div>
                         </div>
                     )}
 

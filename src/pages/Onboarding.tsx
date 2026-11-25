@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Close } from '../components/icons';
-import { BODY_WEIGHT_KG_MAX, BODY_WEIGHT_KG_MIN, ExtraKey, Route, isPlausibleBodyWeightKG } from '../../logic';
+import {
+    BODY_WEIGHT_KG_MAX,
+    BODY_WEIGHT_KG_MIN,
+    ExtraKey,
+    Route,
+    isPlausibleBodyWeightKG,
+    type DoseEvent,
+} from '../../logic';
+import type { Supply } from '../utils/regimen';
 import Tick from '../components/Tick';
 import PixelCat from '../components/PixelCat';
 import Doodle, { DoodleName } from '../components/Doodle';
@@ -191,6 +199,8 @@ const HowStep: React.FC<{ curve: CurveData | null }> = ({ curve }) => {
 };
 
 interface OnboardingProps {
+    supplies: Supply[];
+    events: DoseEvent[];
     /** Same list Settings uses, rather than a second copy that can drift. */
     languageOptions: { value: string; label: string }[];
     /**
@@ -223,6 +233,8 @@ interface OnboardingProps {
  */
 const Onboarding: React.FC<OnboardingProps> = ({
     languageOptions,
+    supplies,
+    events,
     weight,
     onWeightChange,
     plan,
@@ -549,6 +561,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     <PageHeader onBack={() => setAddingPlan(false)} title={t('plan.add')} />
                     <PlanWizard
                         plan={plan}
+                        supplies={supplies}
+                        events={events}
                         onAdd={item => {
                             onAddPlanItem(item);
                             setAddingPlan(false);

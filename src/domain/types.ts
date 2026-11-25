@@ -40,6 +40,7 @@ export enum Ester {
 export type HRTMode = 'transfem' | 'transmasc';
 
 export enum ExtraKey {
+    patchCount = 'patchCount',
     concentrationMGmL = 'concentrationMGmL',
     areaCM2 = 'areaCM2',
     releaseRateUGPerDay = 'releaseRateUGPerDay',
@@ -69,6 +70,8 @@ export interface DoseEvent {
     doseMG: number; // Dose in mg (of the ester/compound), NOT E2-equivalent
     ester: Ester;
     extras: Partial<Record<ExtraKey, number>>;
+    /** A stock record identifying the specification used, across batches of the same strength. */
+    inventorySupplyId?: string;
     // Epoch ms of the last edit, stamped by the app on write. Only cloud sync
     // reads it: when two devices hold the same id with different contents, this
     // is what says which edit came second. Optional because records written

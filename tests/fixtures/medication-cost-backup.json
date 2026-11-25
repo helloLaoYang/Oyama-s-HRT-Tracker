@@ -1,0 +1,112 @@
+{
+  "format": "oyama-hrt-complete-backup",
+  "formatVersion": 1,
+  "createdAt": "2026-11-24T01:41:00.000Z",
+  "mode": "transfem",
+  "calibration": { "method": "mipd", "historyMode": "retrospective" },
+  "preferences": {},
+  "modes": {
+    "transmasc": {},
+    "transfem": {
+      "plan": [
+        {
+          "id": "daily",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 1,
+          "extras": {},
+          "everyDays": 1,
+          "timesPerDay": 1,
+          "inventorySupplyId": "older"
+        }
+      ],
+      "supplies": [
+        {
+          "id": "older",
+          "route": "oral",
+          "ester": "E2",
+          "pack": { "kind": "pill", "mg": 2 },
+          "count": 1,
+          "startedAt": 1728000000000,
+          "archivedAt": 1728010800000,
+          "purchase": { "unitsPerPack": 10, "packCount": 1, "currency": "CNY", "totalMinor": 2000 }
+        },
+        {
+          "id": "newer",
+          "route": "oral",
+          "ester": "E2",
+          "pack": { "kind": "pill", "mg": 2 },
+          "count": 4,
+          "startedAt": 1728000360000,
+          "recounts": [{ "at": 1728010800000, "count": 2 }],
+          "purchase": { "unitsPerPack": 10, "packCount": 1, "currency": "CNY", "totalMinor": 3000 }
+        },
+        {
+          "id": "other-strength",
+          "route": "oral",
+          "ester": "E2",
+          "pack": { "kind": "pill", "mg": 1 },
+          "count": 4,
+          "startedAt": 1728000000000,
+          "purchase": { "unitsPerPack": 10, "packCount": 1, "currency": "CNY", "totalMinor": 1500 }
+        },
+        {
+          "id": "patches",
+          "route": "patchApply",
+          "ester": "E2",
+          "pack": { "kind": "patch", "releaseRateUGPerDay": 50 },
+          "count": 8,
+          "startedAt": 1728000000000
+        }
+      ],
+      "events": [
+        {
+          "id": "cross-batch",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 4,
+          "timeH": 480001,
+          "extras": {},
+          "inventorySupplyId": "older"
+        },
+        {
+          "id": "half-tablet",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 1,
+          "timeH": 480002,
+          "extras": {},
+          "inventorySupplyId": "newer"
+        },
+        { "id": "ambiguous", "route": "oral", "ester": "E2", "doseMG": 1, "timeH": 480003, "extras": {} },
+        {
+          "id": "whole-tablet",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 1,
+          "timeH": 480004,
+          "extras": {},
+          "inventorySupplyId": "other-strength"
+        },
+        {
+          "id": "two-patches",
+          "route": "patchApply",
+          "ester": "E2",
+          "doseMG": 0,
+          "timeH": 480005,
+          "extras": { "patchCount": 2, "releaseRateUGPerDay": 100 }
+        },
+        { "id": "remove", "route": "patchRemove", "ester": "E2", "doseMG": 0, "timeH": 480006, "extras": {} },
+        {
+          "id": "future",
+          "route": "oral",
+          "ester": "E2",
+          "doseMG": 1,
+          "timeH": 480012,
+          "extras": {},
+          "inventorySupplyId": "newer"
+        }
+      ]
+    }
+  }
+}

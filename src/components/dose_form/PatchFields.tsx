@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import Tabs, { useSwitchAnimation } from '../Tabs';
+import { patchStrengthLabel } from '../../utils/regimenText';
 import { refusedFieldProps } from './refusedField';
 
 const MODE_ORDER = ['rate', 'dose'] as const;
@@ -76,7 +77,7 @@ const PatchFields: React.FC<PatchFieldsProps> = ({
                 {patchMode === 'rate' ? (
                     <div className="space-y-1.5">
                         <label htmlFor={rateId} className="field-label">
-                            {t('field.patch_rate')}
+                            {patchStrengthLabel(t)}
                         </label>
                         <input
                             id={rateId}
@@ -104,7 +105,7 @@ const PatchFields: React.FC<PatchFieldsProps> = ({
                                         Number.isFinite(currentRate) && Math.abs(currentRate - r) < 1e-6,
                                     )}
                                 >
-                                    {formatNum(r)} µg/d
+                                    {formatNum(r)} {t('dose.guide.unit.ug_day')}
                                 </button>
                             ))}
                         </div>

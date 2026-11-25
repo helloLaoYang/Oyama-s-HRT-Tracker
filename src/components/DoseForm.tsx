@@ -22,7 +22,12 @@ import {
 import { Save, Trash, Info, Bookmark, BookmarkPlus, Close, Check, Warning, External, Busy } from './icons';
 import { DoseAdvisoryLine } from './DoseAdvisory';
 import { LOCALE_MAP } from '../utils/helpers';
-import { doseOf, drugLabel, productNames } from '../utils/regimenText';
+import { doseOf, drugLabel, productNames, packUnit, patchRateLabel } from '../utils/regimenText';
+import PatchCountField from './dose_form/PatchCountField';
+import { canSupply, type Supply } from '../utils/regimen';
+import { previewStockUse, stockTotals, specificationKey, stockGroup, stockUseComplete } from '../utils/stockLedger';
+import type { PlanItem } from '../utils/plan';
+import { stockChoiceLabel, stockMoney } from './StockPurchaseFields';
 import InjectionFields from './dose_form/InjectionFields';
 import OralFields from './dose_form/OralFields';
 import SublingualFields from './dose_form/SublingualFields';
@@ -77,6 +82,8 @@ const formatGuideNumber = (val: number) => {
 };
 
 interface DoseFormProps {
+    plan?: PlanItem[];
+    supplies?: Supply[];
     eventToEdit: DoseEvent | null;
     onSave: (event: DoseEvent) => void;
     onCancel: () => void;
@@ -99,6 +106,14 @@ interface DoseFormProps {
 // back as 12.5 rather than all its digits, and parses to the same number the
 // untrimmed string did.
 const trimDose = (mg: number) => mg.toFixed(3).replace(/\.?0+$/, '');
+
+// The editor shows minutes. Keeping an unchanged instant prevents a specification
+// edit from moving an imported dose to before the stock it was taken from.
+function doseTimeFromInput(value: string, original?: number) {
+    const ms = new Date(value).getTime();
+    if (original !== undefined && Math.floor(original * 60) === Math.floor(ms / 60_000)) return original;
+    return ms / 3_600_000;
+}
 
 // The route menu in a fixed order, the most used first. The Route enum's own
 // order is what's stored and stays as it is. A route this list doesn't know
@@ -135,6 +150,8 @@ const DoseForm: React.FC<DoseFormProps> = ({
     onAddQuickDose,
     onDeleteQuickDose,
     events = [],
+    supplies = [],
+    plan = [],
 }) => {
     const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
@@ -191,6 +208,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
 
     const [patchMode, setPatchMode] = useState<'dose' | 'rate'>('rate');
     const [patchRate, setPatchRate] = useState('');
+    const [patchCount, setPatchCount] = useState(1);
     const [patchWearDays, setPatchWearDays] = useState('');
 
     const [gelSite, setGelSite] = useState(0); // Index in GEL_SITE_ORDER
@@ -200,6 +218,71 @@ const DoseForm: React.FC<DoseFormProps> = ({
     const [customHoldInput, setCustomHoldInput] = useState<string>('10');
     const [customHoldValue, setCustomHoldValue] = useState<number>(10);
     const [lastEditedField, setLastEditedField] = useState<'raw' | 'bio'>('bio');
+    const [draftId] = useState(() => eventToEdit?.id ?? uuidv4());
+    const [stockChoice, setStockChoice] = useState<{ group: string; id?: string }>();
+    const stockDrug = [Route.patchApply, Route.patchRemove, Route.gel].includes(route)
+        ? isTransmasc
+            ? Ester.T
+            : Ester.E2
+        : ester;
+    const lots = useMemo(
+        () => supplies.filter(s => canSupply(s, { route, ester: stockDrug })),
+        [supplies, route, stockDrug],
+    );
+    const group = stockGroup({ route, ester: stockDrug });
+    const matchingPlans = plan.filter(p => stockGroup(p) === group);
+    const planLots = matchingPlans.map(p => lots.find(s => s.id === p.inventorySupplyId));
+    const firstLot = planLots[0];
+    const plannedId =
+        firstLot && planLots.every(s => s && specificationKey(s) === specificationKey(firstLot))
+            ? firstLot.id
+            : undefined;
+    const stockId =
+        stockChoice?.group === group ? stockChoice.id : eventToEdit ? eventToEdit.inventorySupplyId : plannedId;
+    const selectedId =
+        lots.some(s => s.id === stockId) ||
+        (stockId === eventToEdit?.inventorySupplyId && eventToEdit?.route === route && eventToEdit.ester === stockDrug)
+            ? stockId
+            : undefined;
+    const groupPatchCount = route === Route.patchApply && patchCount > 1 ? patchCount : undefined;
+    const quantity =
+        lastEditedField === 'raw' && stockDrug !== Ester.E2
+            ? Number(rawDose)
+            : Number(e2Dose) / (getToE2Factor(stockDrug) || 1);
+    const stockPreview = useMemo(() => {
+        if (!lots.length || route === Route.patchRemove) return;
+        const timeH = doseTimeFromInput(dateStr, eventToEdit?.timeH);
+        if (!Number.isFinite(timeH)) return;
+        const probe: DoseEvent = {
+            id: draftId,
+            route,
+            ester: stockDrug,
+            timeH,
+            doseMG: quantity > 0 ? quantity : 1,
+            extras: {
+                concentrationMGmL: eventToEdit?.extras.concentrationMGmL,
+                patchCount: groupPatchCount,
+                releaseRateUGPerDay: patchMode === 'rate' ? Number(patchRate) * patchCount : undefined,
+            },
+            inventorySupplyId: selectedId,
+        };
+        return previewStockUse(probe, supplies, events);
+    }, [
+        supplies,
+        lots,
+        route,
+        dateStr,
+        draftId,
+        stockDrug,
+        quantity,
+        groupPatchCount,
+        patchCount,
+        patchMode,
+        patchRate,
+        selectedId,
+        events,
+        eventToEdit,
+    ]);
 
     const slExtras = useMemo(() => {
         if (route !== Route.sublingual) return null;
@@ -242,10 +325,11 @@ const DoseForm: React.FC<DoseFormProps> = ({
             if (preset.route === Route.patchApply) {
                 const rate = preset.extras[ExtraKey.releaseRateUGPerDay];
                 setPatchMode(rate ? 'rate' : 'dose');
-                if (rate) setPatchRate(rate.toString());
+                if (rate) setPatchRate(String(rate / (preset.extras.patchCount ?? 1)));
             }
         }
         if (preset.route === Route.patchApply) {
+            setPatchCount(preset.extras.patchCount ?? 1);
             const wearH = preset.extras[ExtraKey.patchWearH];
             setPatchWearDays(
                 typeof wearH === 'number' && Number.isFinite(wearH) && wearH > 0 ? (wearH / 24).toString() : '',
@@ -282,9 +366,12 @@ const DoseForm: React.FC<DoseFormProps> = ({
                 isKnownEster(eventToEdit.ester) ? null : { route: eventToEdit.route, ester: eventToEdit.ester },
             );
 
+            setPatchCount(eventToEdit.extras.patchCount ?? 1);
             if (eventToEdit.route === Route.patchApply && eventToEdit.extras[ExtraKey.releaseRateUGPerDay]) {
                 setPatchMode('rate');
-                setPatchRate(eventToEdit.extras[ExtraKey.releaseRateUGPerDay].toString());
+                setPatchRate(
+                    String(eventToEdit.extras[ExtraKey.releaseRateUGPerDay] / (eventToEdit.extras.patchCount ?? 1)),
+                );
                 setE2Dose('');
                 setRawDose('');
             } else {
@@ -356,6 +443,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
             setE2Dose('');
             setPatchMode('rate');
             setPatchRate('');
+            setPatchCount(1);
             setPatchWearDays('');
             setSlTier(2);
             setGelSite(0);
@@ -486,9 +574,10 @@ const DoseForm: React.FC<DoseFormProps> = ({
             template.extras[ExtraKey.gelSite] = gelSite;
         }
         if (route === Route.patchApply && patchMode === 'rate') {
-            template.extras[ExtraKey.releaseRateUGPerDay] = parseFloat(patchRate) || 0;
+            template.extras[ExtraKey.releaseRateUGPerDay] = (parseFloat(patchRate) || 0) * patchCount;
         }
         if (route === Route.patchApply) {
+            if (patchCount > 1) template.extras.patchCount = patchCount;
             const wearDays = parseFloat(patchWearDays);
             if (Number.isFinite(wearDays) && wearDays > 0) {
                 template.extras[ExtraKey.patchWearH] = wearDays * 24;
@@ -520,7 +609,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
             isSavingRef.current = false;
             setIsSaving(false);
         };
-        let timeH = new Date(dateStr).getTime() / 3600000;
+        let timeH = doseTimeFromInput(dateStr, eventToEdit?.timeH);
         if (isNaN(timeH)) {
             timeH = new Date().getTime() / 3600000;
         }
@@ -529,7 +618,15 @@ const DoseForm: React.FC<DoseFormProps> = ({
         if (isNaN(e2Equivalent)) e2Equivalent = 0;
         let finalDose = 0;
 
-        const extras: any = {};
+        const extras: DoseEvent['extras'] = {};
+        if (
+            route === Route.injection &&
+            eventToEdit?.route === route &&
+            eventToEdit.ester === ester &&
+            eventToEdit.extras.concentrationMGmL !== undefined
+        ) {
+            extras.concentrationMGmL = eventToEdit.extras.concentrationMGmL;
+        }
         // An empty field asks for a dose; "greater than zero" is for a 0 typed.
         const doseMsg = (typed: string) =>
             typed.trim() === '' ? t('modal.dose.dose_required') : t('error.nonPositive');
@@ -548,7 +645,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
                 return;
             }
             finalDose = 0;
-            extras[ExtraKey.releaseRateUGPerDay] = rateVal;
+            extras[ExtraKey.releaseRateUGPerDay] = rateVal * patchCount;
         } else if (route === Route.patchApply && patchMode === 'dose') {
             const raw = parseFloat(rawDose);
             if (!rawDose || rawDose.trim() === '' || !Number.isFinite(raw) || raw <= 0) {
@@ -593,18 +690,15 @@ const DoseForm: React.FC<DoseFormProps> = ({
             }
         }
 
+        if (groupPatchCount) extras[ExtraKey.patchCount] = groupPatchCount;
         const newEvent: DoseEvent = {
-            id: eventToEdit?.id || uuidv4(),
+            id: draftId,
             route,
-            ester:
-                route === Route.patchRemove || route === Route.patchApply || route === Route.gel
-                    ? isTransmasc
-                        ? Ester.T
-                        : Ester.E2
-                    : ester,
+            ester: stockDrug,
             timeH,
             doseMG: cleanDoseMG(finalDose),
             extras,
+            ...(selectedId ? { inventorySupplyId: selectedId } : {}),
         };
 
         onSave(newEvent);
@@ -679,7 +773,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
         if (route === Route.patchApply && patchMode === 'dose' && cfg.requiresRate) {
             return { config: cfg, level: null, value: null, showRateHint: true as const };
         }
-        const rawVal = route === Route.patchApply ? parseFloat(patchRate) : parseFloat(e2Dose);
+        const rawVal = route === Route.patchApply ? parseFloat(patchRate) * patchCount : parseFloat(e2Dose);
         const value = Number.isFinite(rawVal) && rawVal > 0 ? rawVal : null;
         let level: DoseLevelKey | null = null;
         if (value !== null) {
@@ -691,7 +785,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
             else level = 'above';
         }
         return { config: cfg, level, value, showRateHint: false as const };
-    }, [route, patchMode, patchRate, e2Dose, ester, isTransmasc]);
+    }, [route, patchMode, patchRate, patchCount, e2Dose, ester, isTransmasc]);
 
     // Recent-use heads-up, based on doses already logged (not the still-unsaved
     // value being typed here). Covers CPA and injections too, which the static
@@ -711,7 +805,11 @@ const DoseForm: React.FC<DoseFormProps> = ({
         const what =
             ev.route === Route.patchRemove
                 ? t('route.patchRemove')
-                : doseOf(rate ? `${rate} µg/d` : `${trimDose(ev.doseMG)} mg`, drugLabel(ev.ester, t), t);
+                : doseOf(
+                      rate ? patchRateLabel(rate, ev.extras.patchCount, t) : `${trimDose(ev.doseMG)} mg`,
+                      drugLabel(ev.ester, t),
+                      t,
+                  );
         const when = new Date(ev.timeH * 3600000).toLocaleString(LOCALE_MAP[lang] || 'en-US', {
             month: 'short',
             day: 'numeric',
@@ -799,7 +897,11 @@ const DoseForm: React.FC<DoseFormProps> = ({
                                             <span className="block">{t(`route.${template.route}`)}</span>
                                             <span className="block">
                                                 {template.extras[ExtraKey.releaseRateUGPerDay]
-                                                    ? `${template.extras[ExtraKey.releaseRateUGPerDay]} µg/d`
+                                                    ? patchRateLabel(
+                                                          template.extras[ExtraKey.releaseRateUGPerDay],
+                                                          template.extras.patchCount,
+                                                          t,
+                                                      )
                                                     : `${trimDose(template.doseMG)} mg`}
                                             </span>
                                         </div>
@@ -1036,18 +1138,21 @@ const DoseForm: React.FC<DoseFormProps> = ({
                             )}
 
                             {route === Route.patchApply && (
-                                <PatchFields
-                                    patchMode={patchMode}
-                                    setPatchMode={setPatchMode}
-                                    patchRate={patchRate}
-                                    setPatchRate={setPatchRate}
-                                    rawDose={rawDose}
-                                    onRawChange={handleRawChange}
-                                    patchWearDays={patchWearDays}
-                                    setPatchWearDays={setPatchWearDays}
-                                    invalid={!!shownDoseError}
-                                    errorId={doseErrorId}
-                                />
+                                <div className="space-y-4">
+                                    <PatchFields
+                                        patchMode={patchMode}
+                                        setPatchMode={setPatchMode}
+                                        patchRate={patchRate}
+                                        setPatchRate={setPatchRate}
+                                        rawDose={rawDose}
+                                        onRawChange={handleRawChange}
+                                        patchWearDays={patchWearDays}
+                                        setPatchWearDays={setPatchWearDays}
+                                        invalid={!!shownDoseError}
+                                        errorId={doseErrorId}
+                                    />
+                                    <PatchCountField count={patchCount} onChange={setPatchCount} />
+                                </div>
                             )}
                         </div>
                         {shownDoseError && (
@@ -1232,6 +1337,47 @@ const DoseForm: React.FC<DoseFormProps> = ({
                             )}
 
                         {/* Recent-use heads-up — logged doses already running high */}
+                        {stockPreview && stockPreview.choices.length > 0 && (
+                            <div className="space-y-2">
+                                {stockPreview.choices.length > 1 || stockPreview.needsSpecification ? (
+                                    <CustomSelect
+                                        label={t('cost.spec')}
+                                        value={
+                                            stockPreview.choices.find(
+                                                s =>
+                                                    stockPreview.selected &&
+                                                    specificationKey(s) === specificationKey(stockPreview.selected),
+                                            )?.id ?? ''
+                                        }
+                                        onChange={v => setStockChoice({ group, id: v || undefined })}
+                                        options={[
+                                            { value: '', label: t('cost.later') },
+                                            ...stockPreview.choices.map(s => ({
+                                                value: s.id,
+                                                label: stockChoiceLabel(s, route, t),
+                                            })),
+                                        ]}
+                                    />
+                                ) : (
+                                    <p>
+                                        {t('cost.spec')} {stockChoiceLabel(stockPreview.choices[0], route, t)}
+                                    </p>
+                                )}
+                                {stockPreview.selected && (quantity > 0 || route === Route.patchApply) && (
+                                    <p className="text-sm text-[var(--text-muted)]">
+                                        {Number(stockPreview.parts.reduce((n, p) => n + p.units, 0).toFixed(6))}{' '}
+                                        {packUnit(stockPreview.selected.pack, t)}
+                                        {' · '}
+                                        {[...stockTotals(stockPreview.parts)]
+                                            .map(([c, n]) => stockMoney(n, c) + ' ' + c)
+                                            .join(' / ')}
+                                        {!stockUseComplete(stockPreview) &&
+                                            ' ' +
+                                                t(stockPreview.missingStock ? 'cost.missingStock' : 'cost.needsPrice')}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         {doseAdvisory && (
                             <div className="mt-2 pt-2 border-t-(length:--hairline) border-[var(--border)]">
                                 <DoseAdvisoryLine advisory={doseAdvisory} t={t} />

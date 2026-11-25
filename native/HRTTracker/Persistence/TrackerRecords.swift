@@ -19,11 +19,13 @@ struct MedicationPlan: Identifiable, Equatable, Sendable {
     var reminderMinutes: [Int]
     var remindersEnabled: Bool
     var anchorTimeH: Double?
+    var inventorySupplyId: String?
 
     init(
         id: String = UUID().uuidString.lowercased(), route: Route, ester: String,
         doseMG: Double, extras: [String: Double] = [:], everyDays: Double = 1, timesPerDay: Int = 1,
-        reminderMinutes: [Int] = [540], remindersEnabled: Bool = true, anchorTimeH: Double? = nil
+        reminderMinutes: [Int] = [540], remindersEnabled: Bool = true, anchorTimeH: Double? = nil,
+        inventorySupplyId: String? = nil
     ) {
         self.id = id
         self.route = route
@@ -35,6 +37,7 @@ struct MedicationPlan: Identifiable, Equatable, Sendable {
         self.reminderMinutes = reminderMinutes
         self.remindersEnabled = remindersEnabled
         self.anchorTimeH = anchorTimeH
+        self.inventorySupplyId = inventorySupplyId
     }
 
     var reminderMinute: Int {
@@ -89,6 +92,7 @@ final class DoseRecord {
     var timeH: Double = 0
     var doseMG: Double = 0
     var extrasData: Data?
+    var inventorySupplyId: String?
     var updatedAt: Double?
 
     init(mode: HRTMode, value: DoseEvent, updatedAt: Double?) {
@@ -101,7 +105,8 @@ final class DoseRecord {
         guard let route = Route(rawValue: routeRaw) else { return nil }
         return DoseEvent(
             id: uuid, route: route, timeH: timeH, doseMG: doseMG, ester: ester,
-            extras: decodeRecord([String: Double].self, from: extrasData) ?? [:], updatedAt: updatedAt
+            extras: decodeRecord([String: Double].self, from: extrasData) ?? [:], updatedAt: updatedAt,
+            inventorySupplyId: inventorySupplyId
         )
     }
 
@@ -111,6 +116,7 @@ final class DoseRecord {
         timeH = value.timeH
         doseMG = value.doseMG
         extrasData = encodeRecord(value.extras)
+        inventorySupplyId = value.inventorySupplyId
         self.updatedAt = updatedAt
     }
 }
@@ -157,6 +163,7 @@ final class MedicationPlanRecord {
     var reminderMinutesData: Data?
     var remindersEnabled: Bool = true
     var anchorTimeH: Double?
+    var inventorySupplyId: String?
     var ordinal: Int = 0
     var updatedAt: Double?
 
@@ -174,7 +181,7 @@ final class MedicationPlanRecord {
             extras: decodeRecord([String: Double].self, from: extrasData) ?? [:],
             everyDays: everyDays, timesPerDay: timesPerDay,
             reminderMinutes: decodeRecord([Int].self, from: reminderMinutesData) ?? [540],
-            remindersEnabled: remindersEnabled, anchorTimeH: anchorTimeH
+            remindersEnabled: remindersEnabled, anchorTimeH: anchorTimeH, inventorySupplyId: inventorySupplyId
         )
     }
 
@@ -188,6 +195,7 @@ final class MedicationPlanRecord {
         reminderMinutesData = encodeRecord(value.reminderMinutes)
         remindersEnabled = value.remindersEnabled
         anchorTimeH = value.anchorTimeH
+        inventorySupplyId = value.inventorySupplyId
         self.updatedAt = updatedAt
     }
 }

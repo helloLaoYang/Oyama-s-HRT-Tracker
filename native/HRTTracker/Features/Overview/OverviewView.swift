@@ -10,12 +10,14 @@ struct OverviewView: View {
     @State private var showDose = false
     @State private var showInfo = false
     @State private var earlyPlan: MedicationPlan?
+    @State private var stockPlan: MedicationPlan?
     @State private var loggedPlans: [String: String] = [:]
     @ScaledMetric(relativeTo: .largeTitle) private var mainValueSize: CGFloat = 42
     @ScaledMetric(relativeTo: .largeTitle) private var pairedValueSize: CGFloat = 36
 
     var body: some View {
         let request = timelineRequest
+        let inventory = InventorySnapshot(store: store)
         let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -23,7 +25,7 @@ struct OverviewView: View {
                     currentLevel(request: request, shareableTimeline: shareableTimeline)
                 }
                 todayPlan
-                InventoryAlertsView(store: store)
+                InventoryAlertsView(store: store, inventory: inventory)
                 Divider().overlay(TrackerTheme.separator)
                 if let timeline, !timeline.traces.isEmpty {
                     ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
@@ -53,6 +55,8 @@ struct OverviewView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityIdentifier("overview.forecast")
+                Divider().overlay(TrackerTheme.separator)
+                MedicationCostView(store: store, inventory: inventory)
             }
             .padding(.horizontal, 17)
             .padding(.vertical, 12)
@@ -81,6 +85,25 @@ struct OverviewView: View {
             }
         }
         .sheet(isPresented: $showDose) { DoseEditorView(store: store) }
+        .sheet(item: $stockPlan) { plan in
+            NavigationStack {
+                List {
+                    ForEach(InventorySpecifications(store.supplies).matching(plan)) { lot in
+                        Button(stockChoiceLabel(lot, for: plan.route)) {
+                            var linked = plan
+                            linked.inventorySupplyId = lot.id
+                            if store.savePlan(linked) { record(linked) }
+                            stockPlan = nil
+                        }
+                    }
+                    Button(inventoryText("Confirm later")) { record(plan); stockPlan = nil }
+                }
+                .navigationTitle(inventoryText("Choose specification"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { stockPlan = nil } } }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .sheet(item: $shareSnapshot) { snapshot in
             ConcentrationSharePreview(snapshot: snapshot)
         }
@@ -345,6 +368,15 @@ struct OverviewView: View {
     }
 
     private func complete(_ plan: MedicationPlan) {
+        let specifications = InventorySpecifications(store.supplies)
+        if specifications.selected(plan) == nil && !specifications.matching(plan).isEmpty {
+            stockPlan = plan
+        } else {
+            record(plan)
+        }
+    }
+
+    private func record(_ plan: MedicationPlan) {
         if let event = store.complete(plan) { loggedPlans[plan.id] = event.id }
     }
 }

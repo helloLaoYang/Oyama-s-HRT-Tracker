@@ -1,12 +1,12 @@
 import Foundation
 import HRTEngine
 
-enum MedicationPack: Codable, Equatable, Sendable {
+enum MedicationPack: Codable, Hashable, Sendable {
     case vial(ml: Double, mgPerMl: Double)
     case pill(mg: Double)
     case pump(mg: Double)
     case sachet(mg: Double)
-    case patch
+    case patch(rate: Double?)
     case bulk
 
     enum Kind: String, Codable, Sendable {
@@ -28,7 +28,7 @@ enum MedicationPack: Codable, Equatable, Sendable {
             case .pill: .pill(mg: pillStrength)
             case .pump: .pump(mg: 1.25)
             case .sachet: .sachet(mg: 1.5)
-            case .patch: .patch
+            case .patch: .patch(rate: nil)
             case .bulk: .bulk
             }
         }
@@ -54,6 +54,7 @@ enum MedicationPack: Codable, Equatable, Sendable {
     }
 
     var isValid: Bool {
+        if case let .patch(rate?) = self { return rate.isFinite && rate > 0 }
         if case let .vial(ml, mgPerMl) = self {
             guard ml.isFinite, mgPerMl.isFinite, ml > 0, mgPerMl > 0 else { return false }
         }
@@ -61,7 +62,7 @@ enum MedicationPack: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case kind, ml, mgPerMl, mg
+        case kind, ml, mgPerMl, mg, releaseRateUGPerDay
     }
 
     init(from decoder: Decoder) throws {
@@ -73,7 +74,7 @@ enum MedicationPack: Codable, Equatable, Sendable {
         case .pill: self = try .pill(mg: values.decode(Double.self, forKey: .mg))
         case .pump: self = try .pump(mg: values.decode(Double.self, forKey: .mg))
         case .sachet: self = try .sachet(mg: values.decode(Double.self, forKey: .mg))
-        case .patch: self = .patch
+        case .patch: self = .patch(rate: try values.decodeIfPresent(Double.self, forKey: .releaseRateUGPerDay))
         case .bulk: self = .bulk
         }
         guard isValid else {
@@ -90,7 +91,9 @@ enum MedicationPack: Codable, Equatable, Sendable {
             try values.encode(mgPerMl, forKey: .mgPerMl)
         case let .pill(mg), let .pump(mg), let .sachet(mg):
             try values.encode(mg, forKey: .mg)
-        case .patch, .bulk:
+        case let .patch(rate):
+            try values.encodeIfPresent(rate, forKey: .releaseRateUGPerDay)
+        case .bulk:
             break
         }
     }
@@ -104,6 +107,9 @@ struct MedicationSupply: Identifiable, Codable, Equatable, Sendable {
     var count: Double
     /// Epoch milliseconds from which medication records are deducted.
     var startedAt: Double
+    var purchase: StockPurchase?
+    var recounts: [StockRecount]?
+    var archivedAt: Double?
 
     init(id: String = UUID().uuidString.lowercased(), route: Route, ester: String,
          pack: MedicationPack, count: Double, startedAt: Double) {
@@ -120,7 +126,9 @@ struct MedicationSupply: Identifiable, Codable, Equatable, Sendable {
             !["__proto__", "constructor", "prototype"].contains(id) &&
             ester.range(of: #"^[A-Za-z0-9_]{1,24}$"#, options: .regularExpression) != nil &&
             pack.isValid && count.isFinite && count >= 0 && (count * pack.unitMG).isFinite &&
-            startedAt.isFinite && startedAt > 0
+            startedAt.isFinite && startedAt > 0 && (purchase?.isValid ?? true) &&
+            (recounts ?? []).allSatisfy { $0.at.isFinite && $0.at >= startedAt && $0.count >= 0 && ($0.count * pack.unitMG).isFinite } &&
+            (archivedAt.map { $0.isFinite && $0 >= startedAt } ?? true)
     }
 
     init(from decoder: Decoder) throws {
@@ -133,16 +141,78 @@ struct MedicationSupply: Identifiable, Codable, Equatable, Sendable {
             count: try values.decode(Double.self, forKey: .count),
             startedAt: try values.decode(Double.self, forKey: .startedAt)
         )
+        purchase = try values.decodeIfPresent(StockPurchase.self, forKey: .purchase)
+        recounts = try values.decodeIfPresent([StockRecount].self, forKey: .recounts)
+        archivedAt = try values.decodeIfPresent(Double.self, forKey: .archivedAt)
         guard isValid else {
             throw DecodingError.dataCorruptedError(forKey: .count, in: values, debugDescription: "Invalid inventory record")
         }
     }
 }
 
+struct InventorySpecification: Hashable {
+    let route: Route
+    let ester: String
+    let pack: MedicationPack
+}
+
+extension MedicationSupply {
+    var specification: InventorySpecification { InventorySpecification(route: route, ester: ester, pack: pack) }
+
+    func canSupply(_ doseRoute: Route, _ drug: String) -> Bool {
+        guard ester == drug else { return false }
+        if route == doseRoute { return true }
+        return pack.kind == .pill && [.oral, .sublingual].contains(route) && [.oral, .sublingual].contains(doseRoute)
+    }
+
+    // Only presentation data can identify a strength. Total administered mg can also represent a partial unit.
+    func matchesStrength(route: Route, extras: [String: Double]) -> Bool? {
+        switch pack {
+        case let .patch(rate?) where route == .patchApply:
+            guard let total = extras["releaseRateUGPerDay"], total > 0 else { return nil }
+            let perPatch = total / stockQuantity(route: route, doseMG: 0, extras: extras)
+            return abs(rate - perPatch) <= max(rate, perPatch) * 1e-9
+        case let .vial(_, concentration) where route == .injection:
+            guard let used = extras["concentrationMGmL"], used > 0 else { return nil }
+            return abs(concentration - used) <= max(concentration, used) * 1e-9
+        default: return nil
+        }
+    }
+}
+
+func automaticStock(_ choices: [MedicationSupply], route: Route, extras: [String: Double]) -> MedicationSupply? {
+    let sameRoute = choices.filter { $0.route == route }
+    let exact = sameRoute.filter { $0.matchesStrength(route: route, extras: extras) == true }
+    let candidates = exact.isEmpty ? sameRoute.filter { $0.matchesStrength(route: route, extras: extras) != false } : exact
+    return candidates.count == 1 ? candidates.first : nil
+}
+
+struct InventorySpecifications {
+    let byID: [String: MedicationSupply]
+    let active: [MedicationSupply]
+
+    init(_ supplies: [MedicationSupply]) {
+        byID = Dictionary(supplies.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var seen = Set<InventorySpecification>()
+        active = supplies.filter { $0.archivedAt == nil && seen.insert($0.specification).inserted }
+    }
+
+    func matching(_ plan: MedicationPlan) -> [MedicationSupply] {
+        active.filter { $0.canSupply(plan.route, plan.ester) && $0.matchesStrength(route: plan.route, extras: plan.extras) != false }
+    }
+
+    func selected(_ plan: MedicationPlan) -> MedicationSupply? {
+        if let id = plan.inventorySupplyId {
+            guard let supply = byID[id], supply.canSupply(plan.route, plan.ester),
+                  supply.matchesStrength(route: plan.route, extras: plan.extras) != false else { return nil }
+            return supply
+        }
+        return automaticStock(matching(plan), route: plan.route, extras: plan.extras)
+    }
+}
+
 struct InventoryStockStatus: Identifiable {
     let supply: MedicationSupply
-    /// Milligrams, or individual patches for a patch supply.
-    let used: Double
     let remaining: Double
     let dailyUse: Double?
     let runOutH: Double?
@@ -155,25 +225,15 @@ struct InventoryStockStatus: Identifiable {
         return (whole, max(0, remaining - whole * supply.pack.unitMG))
     }
 
-    init(supply: MedicationSupply, events: [DoseEvent], regimens: [MedicationPlan], nowH: Double) {
+    init(supply: MedicationSupply, remaining: Double, regimens: [MedicationPlan], nowH: Double) {
         self.supply = supply
-        let startH = supply.startedAt / 3_600_000
-        func quantity(doseMG: Double, extras: [String: Double]) -> Double {
-            guard supply.route == .patchApply else { return doseMG }
-            // Web records one event per patch. Native records may group several patches at one time.
-            return Double(max(1, extras["patchCount"].flatMap { Int(exactly: $0) } ?? 1))
-        }
-        used = events.lazy.filter {
-            $0.route == supply.route && $0.ester == supply.ester && $0.timeH >= startH && $0.timeH <= nowH
-        }.reduce(0) { $0 + quantity(doseMG: $1.doseMG, extras: $1.extras) }
-        let amountRemaining = max(0, supply.count * supply.pack.unitMG - used)
-        remaining = amountRemaining
-        let rate = regimens.lazy.filter { $0.route == supply.route && $0.ester == supply.ester }.reduce(0.0) {
-            $0 + quantity(doseMG: $1.doseMG, extras: $1.extras) * Double($1.dosesPerDay) / $1.everyDays
+        self.remaining = remaining
+        let rate = regimens.lazy.filter { supply.canSupply($0.route, $0.ester) }.reduce(0.0) {
+            $0 + stockQuantity(route: $1.route, doseMG: $1.doseMG, extras: $1.extras) * Double($1.dosesPerDay) / $1.everyDays
         }
         let perDay = rate.isFinite && rate > 0 ? rate : nil
         dailyUse = perDay
-        let projected = perDay.map { nowH + (amountRemaining / $0) * 24 }
+        let projected = perDay.map { nowH + (remaining / $0) * 24 }
         runOutH = projected.flatMap { $0.isFinite ? $0 : nil }
     }
 
@@ -233,7 +293,7 @@ enum InventoryRegimens {
                 let next = ordered.first { $0.timeH > nowH && similarAmount($0.doseMG, last.doseMG) }
                 let plan = MedicationPlan(
                     id: last.id, route: last.route, ester: last.ester, doseMG: last.doseMG,
-                    extras: last.extras, everyDays: intervalH / 24, remindersEnabled: false
+                    extras: last.extras, everyDays: intervalH / 24, remindersEnabled: false, inventorySupplyId: last.inventorySupplyId
                 )
                 return InferredRegimen(plan: plan, last: last.timeH, since: sinceH,
                     next: next?.timeH ?? last.timeH + intervalH, hormone: hormone(for: last.ester))
