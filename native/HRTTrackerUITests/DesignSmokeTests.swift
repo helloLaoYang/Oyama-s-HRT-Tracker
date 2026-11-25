@@ -16,7 +16,11 @@ final class DesignSmokeTests: XCTestCase {
         add.tap()
         XCTAssertTrue(app.navigationBars["添加药品"].waitForExistence(timeout: 6))
         let strength = app.textFields["inventory.strength"]
-        strength.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+        strength.tap()
+        strength.press(forDuration: 1.1)
+        let selectAll = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["全选", "Select All"])).firstMatch
+        XCTAssertTrue(selectAll.waitForExistence(timeout: 3), app.debugDescription)
+        selectAll.tap()
         strength.typeText("12.5")
         XCTAssertEqual(strength.value as? String, "12.5")
         app.buttons["完成"].firstMatch.tap()
