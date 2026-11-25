@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
     costStart,
+    groupStockPurchases,
     stockForecast,
+    stockGroup,
     stockLedger,
+    stockPurchaseDateLimit,
     stockSpecifications,
     stockTotals,
     stockUnitPrice,
@@ -16,6 +19,81 @@ import type { Supply } from '../src/utils/regimen';
 import { parsePurchase, priceDraft } from '../src/components/StockPurchaseFields';
 
 describe('medication cost', () => {
+    it('prices purchases in arrival order and matches a backdated purchase only after its date is corrected', () => {
+        const hour = 3_600_000;
+        const old: Supply = {
+            id: 'old',
+            route: Route.patchApply,
+            ester: Ester.E2,
+            startedAt: hour,
+            count: 1,
+            pack: { kind: 'patch', releaseRateUGPerDay: 50 },
+            purchase: { unitsPerPack: 1, packCount: 1, totalMinor: 400, currency: 'CNY' },
+        };
+        const refill: Supply = {
+            ...old,
+            id: 'refill',
+            count: 4,
+            startedAt: 6 * hour,
+            purchase: { unitsPerPack: 4, packCount: 1, totalMinor: 2400, currency: 'CNY' },
+            recounts: [{ at: 7 * hour, count: 3 }],
+        };
+        const otherStrength: Supply = { ...old, id: 'other', pack: { kind: 'patch', releaseRateUGPerDay: 100 } };
+        const lots = [refill, old, otherStrength];
+        const dose = (timeH: number, id: string) => ({
+            id,
+            timeH,
+            route: Route.patchApply,
+            ester: Ester.E2,
+            doseMG: 0,
+            extras: { releaseRateUGPerDay: 50 },
+            inventorySupplyId: old.id,
+        });
+        const events = [dose(2, 'first'), dose(5, 'gap'), dose(8, 'next')];
+        const before = stockLedger(lots, events, 9);
+        expect(before.uses.map(u => u.parts.map(p => [p.supply.id, p.cost]))).toEqual([
+            [['old', 4]],
+            [],
+            [['refill', 6]],
+        ]);
+        expect(before.uses[1].missingStock).toBe(true);
+        expect(stockPurchaseDateLimit(refill, 9 * hour)).toBe(7 * hour);
+        expect(stockPurchaseDateLimit({ ...refill, archivedAt: 6.5 * hour }, 9 * hour)).toBe(6.5 * hour);
+
+        const corrected = { ...refill, startedAt: 4 * hour };
+        const after = stockLedger([corrected, old, otherStrength], events, 9);
+        expect(after.uses[1].parts.map(p => [p.supply.id, p.cost])).toEqual([['refill', 6]]);
+        expect(after.uses[1].missingStock).toBe(false);
+        expect(after.remaining.get(refill.id)).toBe(2);
+        expect(after.remaining.get(otherStrength.id)).toBe(1);
+    });
+
+    it('groups dated lot history and sums only active batches of each specification', () => {
+        const base: Supply = {
+            id: 'first',
+            route: Route.patchApply,
+            ester: Ester.E2,
+            startedAt: 1,
+            count: 8,
+            pack: { kind: 'patch', releaseRateUGPerDay: 50 },
+        };
+        const lots = [
+            base,
+            { ...base, id: 'refill', startedAt: 3, count: 4 },
+            { ...base, id: 'archived', startedAt: 2, archivedAt: 6 },
+            { ...base, id: 'other-strength', startedAt: 4, pack: { kind: 'patch', releaseRateUGPerDay: 100 } as const },
+        ];
+        const forecast = stockForecast(lots, new Map(lots.map(s => [s.id, s.count])), [], 9);
+        const group = groupStockPurchases(forecast.lots).get(stockGroup(base));
+        expect(group?.active.map(s => s.supply.id)).toEqual(['other-strength', 'refill', 'first']);
+        expect(group?.archived.map(s => s.supply.id)).toEqual(['archived']);
+        expect(group?.balances.map(s => [s.supply.id, s.remaining])).toEqual([
+            ['other-strength', 8],
+            ['refill', 12],
+        ]);
+        expect(forecast.lots.find(s => s.supply.id === 'refill')?.remaining).toBe(4);
+    });
+
     it('displays unit prices to two decimal places and calculates from the full purchase price', () => {
         const price = stockUnitPrice({ currency: 'CNY', unitsPerPack: 8, packCount: 1, totalMinor: 1001 })!;
         expect(stockMoney(price, 'CNY', true)).toMatch(/1[.,]25(?:\D|$)/);

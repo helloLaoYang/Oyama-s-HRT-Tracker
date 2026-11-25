@@ -8,7 +8,7 @@ struct InventoryView: View {
     var body: some View {
         let inventory = InventorySnapshot(store: store)
         List {
-            if inventory.statuses.isEmpty {
+            if inventory.medications.isEmpty {
                 ContentUnavailableView {
                     Label(inventoryText("No inventory yet"), systemImage: "shippingbox")
                 } description: {
@@ -17,14 +17,24 @@ struct InventoryView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(TrackerTheme.background)
             } else {
-                ForEach(inventory.statuses) { status in
-                    Button { editing = InventoryEditorTarget(status: status) } label: {
-                        statusRow(status)
+                ForEach(inventory.medications) { medication in
+                    NavigationLink {
+                        InventoryMedicationView(store: store, medication: medication)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(medication.name)
+                            let remaining = inventory.totals(for: medication)
+                            Text(remaining.isEmpty
+                                 ? inventoryText("No stock remaining")
+                                 : remaining.map { "\(packageDetail($0.supply.pack)) · \(inventoryRemaining($0))" }.joined(separator: "\n"))
+                                .font(.footnote).foregroundStyle(TrackerTheme.muted)
+                                .lineLimit(2)
+                        }
+                        .padding(.vertical, 5)
                     }
-                    .buttonStyle(.plain)
                     .listRowSeparatorTint(TrackerTheme.separator)
                     .listRowBackground(TrackerTheme.background)
-                    .accessibilityIdentifier("inventory.supply.\(status.id)")
+                    .accessibilityIdentifier("inventory.medication.\(medication.id)")
                 }
             }
 
@@ -72,22 +82,95 @@ struct InventoryView: View {
     private var leadDayOptions: [Int] {
         Array(Set([7, 14, 30, store.supplyLeadDays])).sorted()
     }
+}
 
-    private func statusRow(_ status: InventoryStockStatus) -> some View {
-        let details = InventoryMedication(route: status.supply.route, ester: status.supply.ester)
-        let low = status.isLow(leadDays: store.supplyLeadDays, nowH: store.nowH)
+private struct InventoryMedicationView: View {
+    let store: TrackerStore
+    let medication: InventoryMedication
+    @State private var editing: InventoryEditorTarget?
+
+    var body: some View {
+        let inventory = InventorySnapshot(store: store)
+        let active = inventory.statuses.filter { InventoryMedication($0.supply) == medication }
+        let archived = inventory.archivedStatuses.filter { InventoryMedication($0.supply) == medication }
+        List {
+            Section(inventoryText("Remaining by specification")) {
+                let totals = inventory.totals(for: medication)
+                if totals.isEmpty {
+                    Text(inventoryText("No stock remaining")).foregroundStyle(TrackerTheme.muted)
+                }
+                ForEach(totals) { total in
+                    LabeledContent {
+                        Text(inventoryRemaining(total)).monospacedDigit()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(packageDetail(total.supply.pack))
+                            if total.dailyUse != nil {
+                                Text(inventoryRunOut(total, nowH: store.nowH, calendar: store.calendar))
+                                    .font(.footnote)
+                                    .foregroundStyle(total.isLow(leadDays: store.supplyLeadDays, nowH: store.nowH)
+                                                     ? TrackerTheme.accent : TrackerTheme.muted)
+                            }
+                        }
+                    }
+                }
+            }
+            Section(inventoryText("Purchases")) {
+                ForEach(active, content: purchaseRow)
+                Button { editing = InventoryEditorTarget(status: nil) } label: {
+                    Label(inventoryText("Add purchase"), systemImage: "plus").foregroundStyle(TrackerTheme.accent)
+                }
+                .accessibilityIdentifier("inventory.addPurchase")
+            }
+            if !archived.isEmpty {
+                Section {
+                    DisclosureGroup(inventoryText("Archived purchases")) {
+                        ForEach(archived, content: purchaseRow)
+                    }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(TrackerTheme.background.ignoresSafeArea())
+        .foregroundStyle(TrackerTheme.ink)
+        .navigationTitle(medication.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $editing) { target in
+            NavigationStack {
+                InventoryEditor(store: store, existing: target.status, regimens: inventory.regimens,
+                                priceFirst: target.status != nil, forMedication: medication)
+            }
+        }
+    }
+
+    private func purchaseRow(_ status: InventoryStockStatus) -> some View {
+        Button { editing = InventoryEditorTarget(status: status) } label: {
+            purchaseLabel(status)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("inventory.supply.\(status.id)")
+    }
+
+    private func purchaseLabel(_ status: InventoryStockStatus) -> some View {
+        let lot = status.supply
+        let date = inventoryPurchaseDate(lot.startedAt, calendar: store.calendar)
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(details.name).font(.body)
-                Text(stockSpecificationLabel(status.supply)).font(.footnote).foregroundStyle(TrackerTheme.muted)
-                Text(inventoryRunOut(status, nowH: store.nowH, calendar: store.calendar))
-                    .font(.footnote)
-                    .foregroundStyle(low ? TrackerTheme.accent : TrackerTheme.muted)
+                Text(packageDetail(lot.pack))
+                Text(inventoryText("Purchased \(date)"))
+                    .font(.footnote).foregroundStyle(TrackerTheme.muted)
+                Text(purchaseQuantity(lot)).font(.footnote).foregroundStyle(TrackerTheme.muted)
             }
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(inventoryText("\(inventoryRemaining(status)) remaining")).font(.subheadline.monospacedDigit())
-                Text(stockPriceLabel(status.supply)).font(.footnote).foregroundStyle(TrackerTheme.muted)
+                if lot.archivedAt == nil {
+                    Text(inventoryText("\(inventoryRemaining(status)) remaining")).font(.subheadline.monospacedDigit())
+                }
+                if let purchase = lot.purchase, let total = purchase.totalMinor {
+                    Text(stockMoney(Decimal(total) / Decimal(purchase.currency.scale), purchase.currency))
+                        .font(.subheadline.monospacedDigit())
+                }
+                Text(stockPriceLabel(lot)).font(.footnote).foregroundStyle(TrackerTheme.muted)
             }.multilineTextAlignment(.trailing)
             Image(systemName: "chevron.right")
                 .font(.caption)
@@ -112,7 +195,7 @@ struct InventoryAlertsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(low) { status in
                     NavigationLink {
-                        InventoryView(store: store)
+                        InventoryMedicationView(store: store, medication: InventoryMedication(status.supply))
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(alertText(status)).font(.subheadline)
@@ -139,12 +222,22 @@ struct InventoryAlertsView: View {
 struct InventorySnapshot {
     let regimens: [MedicationPlan]
     let statuses: [InventoryStockStatus]
+    let archivedStatuses: [InventoryStockStatus]
+    let medications: [InventoryMedication]
     let combinedStatuses: [InventoryStockStatus]
     let ledger: InventoryLedger
+    private let specificationTotals: [InventoryMedication: [InventoryStockStatus]]
+
+    func totals(for medication: InventoryMedication) -> [InventoryStockStatus] {
+        specificationTotals[medication, default: []]
+    }
 
     @MainActor
     init(store: TrackerStore) {
         let supplies = store.supplies
+        medications = Set(supplies.map(InventoryMedication.init)).sorted {
+            ($0.name, $0.id) < ($1.name, $1.id)
+        }
         let nowH = store.nowH
         let events = store.doses
         let regimens = InventoryRegimens.current(events: events, plans: store.plans, nowH: nowH)
@@ -159,11 +252,19 @@ struct InventorySnapshot {
             plansBySpec[supply.specification, default: []].append(plan)
             alertSupplies[supply.specification] = supply
         }
-        statuses = supplies.filter { $0.archivedAt == nil }.map {
+        let allStatuses = supplies.map {
             InventoryStockStatus(supply: $0, remaining: ledger.remaining[$0.id, default: 0],
                                  regimens: plansBySpec[$0.specification, default: []], nowH: nowH)
         }
+        statuses = allStatuses.filter { $0.supply.archivedAt == nil }
+        archivedStatuses = allStatuses.filter { $0.supply.archivedAt != nil }
         let bySpec = Dictionary(grouping: statuses) { $0.supply.specification }
+        let totals = bySpec.values.compactMap { lots -> InventoryStockStatus? in
+            guard let supply = lots.first?.supply else { return nil }
+            return InventoryStockStatus(supply: supply, remaining: lots.reduce(0) { $0 + $1.remaining },
+                                        regimens: plansBySpec[supply.specification, default: []], nowH: nowH)
+        }.sorted { (packageDetail($0.supply.pack), $0.id) < (packageDetail($1.supply.pack), $1.id) }
+        specificationTotals = Dictionary(grouping: totals) { InventoryMedication($0.supply) }
         combinedStatuses = alertSupplies.map { key, supply in
             InventoryStockStatus(supply: supply, remaining: bySpec[key, default: []].reduce(0) { $0 + $1.remaining },
                                  regimens: plansBySpec[key, default: []], nowH: nowH)
@@ -180,6 +281,15 @@ private struct InventoryEditorTarget: Identifiable {
 struct InventoryMedication: Hashable, Identifiable {
     let route: Route
     let ester: String
+
+    init(route: Route, ester: String) {
+        self.route = route
+        self.ester = ester
+    }
+
+    init(_ supply: MedicationSupply) {
+        self.init(route: supply.route, ester: supply.ester)
+    }
 
     var id: String { "\(route.rawValue)|\(ester)" }
 
@@ -225,6 +335,7 @@ struct InventoryEditor: View {
     let regimens: [MedicationPlan]
     let options: [InventoryMedication]
     let linkDoseID: String?
+    let fixedMedication: InventoryMedication?
 
     @State private var medication: InventoryMedication
     @State private var kind: MedicationPack.Kind
@@ -247,9 +358,11 @@ struct InventoryEditor: View {
 
     @MainActor
     init(store: TrackerStore, existing: InventoryStockStatus?, regimens: [MedicationPlan],
-         priceFirst: Bool = false, forDose dose: DoseEvent? = nil, linkDoseID: String? = nil) {
+         priceFirst: Bool = false, forDose dose: DoseEvent? = nil, linkDoseID: String? = nil,
+         forMedication: InventoryMedication? = nil) {
         self.store = store
         self.linkDoseID = linkDoseID
+        fixedMedication = forMedication
         self.existing = existing
         self.regimens = regimens
         var options = InventoryMedication.options(mode: store.mode, regimens: regimens)
@@ -260,13 +373,14 @@ struct InventoryEditor: View {
         if let requested, !options.contains(requested) { options.append(requested) }
         self.options = options
         let medication = existing.map { InventoryMedication(route: $0.supply.route, ester: $0.supply.ester) }
-            ?? requested ?? options.first ?? InventoryMedication(route: .oral, ester: "E2")
+            ?? forMedication ?? requested ?? options.first ?? InventoryMedication(route: .oral, ester: "E2")
         _medication = State(initialValue: medication)
         let recordedPatch = dose.flatMap { dose -> MedicationPack? in
             guard dose.route == .patchApply, let rate = dose.extras["releaseRateUGPerDay"], rate > 0 else { return nil }
             return .patch(rate: rate / stockQuantity(route: dose.route, doseMG: dose.doseMG, extras: dose.extras))
         }
-        let pack = existing?.supply.pack ?? anchor?.pack ?? recordedPatch
+        let recentPack = forMedication.flatMap { med in store.supplies.first { InventoryMedication($0) == med }?.pack }
+        let pack = existing?.supply.pack ?? anchor?.pack ?? recordedPatch ?? recentPack
             ?? Self.initialPack(MedicationPack.Kind.choices(for: medication.route)[0], medication: medication, regimens: regimens)
         _kind = State(initialValue: pack.kind)
         let fields = Self.packParameters(pack)
@@ -281,21 +395,24 @@ struct InventoryEditor: View {
         let purchase = existing?.supply.purchase
         let currency = purchase?.currency ?? store.supplies.compactMap(\.purchase?.currency).first
             ?? Locale.current.currency.flatMap { StockCurrency(rawValue: $0.identifier) } ?? .CNY
-        _editingPrice = State(initialValue: priceFirst)
+        _editingPrice = State(initialValue: priceFirst || existing?.supply.archivedAt != nil)
         _currency = State(initialValue: currency)
         _unitsPerPack = State(initialValue: purchase.map { Self.input($0.unitsPerPack) } ?? "")
         _packCount = State(initialValue: Self.input(purchase?.packCount ?? 1))
         _totalPrice = State(initialValue: purchase?.totalMinor.map { Self.input(Double($0) / Double(currency.scale)) } ?? "")
-        _start = State(initialValue: dose.map { Date(trackerHours: $0.timeH) } ?? store.now)
+        _start = State(initialValue: existing.map { Date(timeIntervalSince1970: $0.supply.startedAt / 1_000) }
+                       ?? dose.map { Date(trackerHours: $0.timeH) } ?? store.now)
     }
 
     var body: some View {
         Form {
             if let existing {
-                Picker(inventoryText("Adjust stock"), selection: $editingPrice) {
-                    Text(inventoryText("Recount")).tag(false)
-                    Text(inventoryText("Purchase price")).tag(true)
-                }.pickerStyle(.segmented)
+                if existing.supply.archivedAt == nil {
+                    Picker(inventoryText("Adjust stock"), selection: $editingPrice) {
+                        Text(inventoryText("Recount")).tag(false)
+                        Text(inventoryText("Purchase details")).tag(true)
+                    }.pickerStyle(.segmented)
+                }
                 Section {
                     LabeledContent(inventoryText("Medication"), value: medication.name)
                     LabeledContent(inventoryText("Package"), value: packageDetail(existing.supply.pack))
@@ -305,10 +422,14 @@ struct InventoryEditor: View {
                 }
             } else {
                 Section {
-                    Picker(inventoryText("Medication"), selection: $medication) {
-                        ForEach(options) { item in Text(item.name).tag(item) }
+                    if let fixedMedication {
+                        LabeledContent(inventoryText("Medication"), value: fixedMedication.name)
+                    } else {
+                        Picker(inventoryText("Medication"), selection: $medication) {
+                            ForEach(options) { item in Text(item.name).tag(item) }
+                        }
+                        .accessibilityIdentifier("inventory.medication")
                     }
-                    .accessibilityIdentifier("inventory.medication")
                     let known = Set(store.supplies.filter { $0.ester == medication.ester && $0.route == medication.route }.map(\.pack))
                     if !known.isEmpty {
                         Menu(inventoryText("Use existing specification")) {
@@ -344,15 +465,15 @@ struct InventoryEditor: View {
                     if kind == .vial {
                         field(inventoryText("Opened quantity (mg)"), value: $openedMG, field: .opened)
                     }
-                    if existing == nil {
-                        DatePicker(inventoryText("Stock starts"), selection: $start, in: ...store.now)
-                    }
                 } header: {
                     Text(existing == nil ? inventoryText("Quantity on hand") : inventoryText("Count what is left now"))
                 }
             }
             if existing == nil || editingPrice {
-                Section(inventoryText("Purchase price")) {
+                Section {
+                    DatePicker(inventoryText("Purchase date"), selection: $start, in: ...latestPurchaseDate)
+                        .environment(\.timeZone, store.calendar.timeZone)
+                        .accessibilityIdentifier("inventory.purchaseDate")
                     field(inventoryText("Package size (\(kind.unit)/\(kind.purchaseUnit))"), value: $unitsPerPack, field: .unitsPerPack)
                     field(inventoryText("Purchased quantity (\(kind.purchaseUnit))"), value: $packCount, field: .packCount)
                     Picker(inventoryText("Currency"), selection: $currency) {
@@ -362,9 +483,13 @@ struct InventoryEditor: View {
                     if let price = purchase?.unitPrice {
                         LabeledContent(inventoryText("Unit price"), value: "\(stockMoney(price, currency, unit: true))/\(kind.unit)")
                     }
+                } header: {
+                    Text(inventoryText("Purchase details"))
+                } footer: {
+                    Text(inventoryText("This purchase will be used from its recorded date."))
                 }
             }
-            if existing != nil {
+            if let existing, existing.supply.archivedAt == nil {
                 Section {
                     Button(role: .destructive) { confirmingDelete = true } label: {
                         Text(inventoryText("Remove from inventory"))
@@ -375,7 +500,8 @@ struct InventoryEditor: View {
         }
         .scrollContentBackground(.hidden)
         .background(TrackerTheme.background.ignoresSafeArea())
-        .navigationTitle(existing == nil ? inventoryText("Add stock") : inventoryText("Adjust stock"))
+        .navigationTitle(existing != nil ? inventoryText("Adjust stock")
+                         : inventoryText(fixedMedication == nil ? "Add stock" : "Add purchase"))
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: medication) { _, item in
             let choices = MedicationPack.Kind.choices(for: item.route)
@@ -427,8 +553,13 @@ struct InventoryEditor: View {
         if var supply = existing?.supply, editingPrice {
             guard let purchase else { return nil }
             supply.pack = pack
-            supply.purchase = purchase
-            return supply
+            if supply.purchase != nil || !unitsPerPack.isEmpty || packCount != "1" || purchase.totalMinor != nil {
+                supply.purchase = purchase
+            }
+            if start != Date(timeIntervalSince1970: supply.startedAt / 1_000) {
+                supply.startedAt = start.timeIntervalSince1970 * 1_000
+            }
+            return supply.isValid && start <= latestPurchaseDate ? supply : nil
         }
         guard let units = decimal(count), units >= 0 else { return nil }
         var total = units
@@ -450,6 +581,12 @@ struct InventoryEditor: View {
                                       count: total, startedAt: start.timeIntervalSince1970 * 1_000)
         supply.purchase = purchase
         return supply.isValid ? supply : nil
+    }
+
+    private var latestPurchaseDate: Date {
+        guard let supply = existing?.supply else { return store.now }
+        let upperBounds = (supply.recounts ?? []).map(\.at) + [supply.archivedAt].compactMap { $0 }
+        return upperBounds.map { Date(timeIntervalSince1970: $0 / 1_000) }.reduce(store.now, min)
     }
 
     private var purchase: StockPurchase? {
@@ -624,11 +761,16 @@ func stockPriceLabel(_ supply: MedicationSupply) -> String {
     return "\(stockMoney(price, purchase.currency, unit: true))/\(supply.pack.kind.unit)"
 }
 
-private func stockSpecificationLabel(_ supply: MedicationSupply) -> String {
-    let specification = packageDetail(supply.pack)
-    guard let purchase = supply.purchase else { return specification }
+private func purchaseQuantity(_ supply: MedicationSupply) -> String {
     let kind = supply.pack.kind
-    return "\(specification) · \(stockNumber(purchase.unitsPerPack)) \(kind.unit)/\(kind.purchaseUnit)"
+    guard let purchase = supply.purchase else { return "\(stockNumber(supply.count)) \(kind.unit)" }
+    return "\(stockNumber(purchase.unitsPerPack)) \(kind.unit)/\(kind.purchaseUnit) × \(stockNumber(purchase.packCount))"
+}
+
+func inventoryPurchaseDate(_ stamp: Double, calendar: Calendar) -> String {
+    Date(timeIntervalSince1970: stamp / 1_000)
+        .formatted(.dateTime.year().month().day().hour().minute()
+            .timeZone(calendar.timeZone).locale(AppLanguage.selection.locale ?? .autoupdatingCurrent))
 }
 
 func inventoryText(_ key: String.LocalizationValue) -> String {

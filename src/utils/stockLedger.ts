@@ -9,6 +9,7 @@ import {
     type StockCurrency,
     type StockPurchase,
     type Supply,
+    type SupplyStatus,
 } from './regimen';
 
 const HOUR = 3_600_000;
@@ -32,6 +33,47 @@ export const currencyScale = (currency: StockCurrency) => (currency === 'JPY' ? 
 
 export const specificationKey = (s: Supply) => stockGroup(s) + '|' + stockSpec(s.pack);
 type StockSelection = Pick<DoseEvent, 'route' | 'ester' | 'inventorySupplyId'> & { extras?: DoseEvent['extras'] };
+
+export function groupStockPurchases(lots: SupplyStatus[]) {
+    const groups = new Map<
+        string,
+        {
+            supply: Supply;
+            active: SupplyStatus[];
+            archived: SupplyStatus[];
+            balances: Pick<SupplyStatus, 'supply' | 'remaining'>[];
+        }
+    >();
+    const balancesBySpec = new Map<string, Pick<SupplyStatus, 'supply' | 'remaining'>>();
+    const latestFirst = [...lots].sort(
+        (a, b) => b.supply.startedAt - a.supply.startedAt || compareID(a.supply.id, b.supply.id),
+    );
+    for (const lot of latestFirst) {
+        const { supply } = lot;
+        const key = stockGroup(supply);
+        const group = groups.get(key) ?? { supply, active: [], archived: [], balances: [] };
+        groups.set(key, group);
+        if (supply.archivedAt !== undefined) {
+            group.archived.push(lot);
+            continue;
+        }
+        group.active.push(lot);
+        const spec = specificationKey(supply);
+        const balance = balancesBySpec.get(spec);
+        if (balance) balance.remaining += lot.remaining;
+        else {
+            const entry = { supply, remaining: lot.remaining };
+            balancesBySpec.set(spec, entry);
+            group.balances.push(entry);
+        }
+    }
+    return groups;
+}
+
+export function stockPurchaseDateLimit(supply: Supply, nowMs: number) {
+    const limit = Math.min(nowMs, supply.archivedAt ?? nowMs);
+    return (supply.recounts ?? []).reduce((earliest, recount) => Math.min(earliest, recount.at), limit);
+}
 
 export function recordedStrength(dose: StockSelection) {
     const extras = dose.extras ?? {};

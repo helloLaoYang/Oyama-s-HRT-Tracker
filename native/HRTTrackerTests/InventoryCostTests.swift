@@ -92,6 +92,65 @@ final class InventoryCostTests: XCTestCase {
     }
 
     @MainActor
+    func testCorrectingAPurchaseDatePricesAnEarlierDoseAndKeepsIndependentBatches() throws {
+        let config = ModelConfiguration(schema: TrackerStore.schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: TrackerStore.schema, configurations: [config])
+        let store = TrackerStore(context: container.mainContext)
+        let now = store.nowH
+        func milliseconds(hoursAgo: Double) -> Double { (now - hoursAgo) * 3_600_000 }
+        func purchase(id: String, rate: Double, count: Double, hoursAgo: Double, totalMinor: Int) -> MedicationSupply {
+            var lot = MedicationSupply(id: id, route: .patchApply, ester: "E2", pack: .patch(rate: rate),
+                                        count: count, startedAt: milliseconds(hoursAgo: hoursAgo))
+            lot.purchase = StockPurchase(unitsPerPack: count, packCount: 1, totalMinor: totalMinor, currency: .CNY)
+            return lot
+        }
+
+        let earlierDose = DoseEvent(id: "earlier-dose", route: .patchApply, timeH: now - 20, doseMG: 0, ester: "E2",
+                                    extras: ["releaseRateUGPerDay": 37.5])
+        let wrongStrength = purchase(id: "other-strength", rate: 25, count: 6, hoursAgo: 14, totalMinor: 1200)
+        XCTAssertTrue(store.saveSupply(wrongStrength))
+        XCTAssertTrue(store.saveDose(earlierDose))
+        let unmatched = try XCTUnwrap(InventorySnapshot(store: store).ledger.uses.first)
+        XCTAssertTrue(unmatched.missingStock)
+        XCTAssertTrue(unmatched.parts.isEmpty)
+
+        var first = purchase(id: "first-purchase", rate: 37.5, count: 2, hoursAgo: 12, totalMinor: 600)
+        first.recounts = [StockRecount(at: milliseconds(hoursAgo: 1), count: 1)]
+        let second = purchase(id: "second-purchase", rate: 37.5, count: 4, hoursAgo: 8, totalMinor: 1600)
+        XCTAssertTrue(store.saveSupply(first))
+        XCTAssertTrue(store.saveSupply(second))
+        let beforeCorrection = try XCTUnwrap(InventorySnapshot(store: store).ledger.uses.first)
+        XCTAssertTrue(beforeCorrection.missingStock)
+        XCTAssertTrue(beforeCorrection.parts.isEmpty)
+
+        let laterDose = DoseEvent(id: "later-dose", route: .patchApply, timeH: now - 3, doseMG: 0, ester: "E2",
+                                  extras: ["patchCount": 3, "releaseRateUGPerDay": 112.5], inventorySupplyId: second.id)
+        XCTAssertTrue(store.saveDose(laterDose))
+        first.startedAt = milliseconds(hoursAgo: 24)
+        XCTAssertTrue(store.saveSupply(first))
+
+        let reopened = TrackerStore(context: ModelContext(container))
+        let ledger = InventorySnapshot(store: reopened).ledger
+        let previous = try XCTUnwrap(ledger.uses.first { $0.id == earlierDose.id })
+        let recent = try XCTUnwrap(ledger.uses.first { $0.id == laterDose.id })
+        XCTAssertTrue(previous.complete)
+        XCTAssertEqual(previous.parts.map(\.supply.id), [first.id])
+        XCTAssertEqual(previous.parts.map(\.cost), [3])
+        XCTAssertEqual(recent.dose.inventorySupplyId, second.id)
+        XCTAssertEqual(recent.parts.map(\.supply.id), [first.id, second.id])
+        XCTAssertEqual(recent.parts.map(\.units), [1, 2])
+        XCTAssertEqual(recent.parts.map(\.cost), [3, 8])
+        XCTAssertEqual(reopened.supplies.first { $0.id == first.id }, first)
+        XCTAssertEqual(ledger.remaining, [first.id: 1, second.id: 2, wrongStrength.id: 6])
+
+        XCTAssertTrue(reopened.deleteSupply(wrongStrength.id))
+        let archived = try XCTUnwrap(reopened.supplies.first { $0.id == wrongStrength.id })
+        XCTAssertNotNil(archived.archivedAt)
+        XCTAssertEqual(archived.purchase, wrongStrength.purchase)
+        XCTAssertFalse(InventorySnapshot(store: reopened).statuses.contains { $0.id == archived.id })
+    }
+
+    @MainActor
     func testStoreKeepsDoseBindingsAndHistoricalCostsAfterRepricingAndArchiving() throws {
         let config = ModelConfiguration(schema: TrackerStore.schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: TrackerStore.schema, configurations: [config])

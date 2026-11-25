@@ -220,15 +220,7 @@ final class TrackerStore {
 
     @discardableResult
     func deleteSupply(_ id: String) -> Bool {
-        guard var supply = supplies.first(where: { $0.id == id }) else { return false }
-        let records = doses
-        let ledger = InventoryLedger(supplies: supplies, events: records, nowH: nowH)
-        let referenced = plans.contains { $0.inventorySupplyId == id } || records.contains { $0.inventorySupplyId == id } || ledger.uses.contains { use in
-            use.choices.contains { $0.id == id } || use.parts.contains { $0.supply.id == id }
-        }
-        if !referenced {
-            return trySave { supplyRecords.filter { $0.modeRaw == mode.rawValue && $0.uuid == id }.forEach { context.delete($0) } }
-        }
+        guard var supply = supplies.first(where: { $0.id == id }), supply.archivedAt == nil else { return false }
         supply.archivedAt = max(supply.startedAt, (isDemo ? now : Date()).timeIntervalSince1970 * 1_000)
         return saveSupply(supply)
     }

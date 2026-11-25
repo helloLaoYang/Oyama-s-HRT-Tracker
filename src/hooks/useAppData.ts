@@ -692,17 +692,13 @@ export const useAppData = (showDialog: ShowDialog, { withPrediction = false }: {
     };
     const deleteSupply = (id: string) => {
         const at = Date.now();
-        setSupplies(prev => {
-            const referenced =
-                plan.some(item => item.inventorySupplyId === id) ||
-                events.some(e => e.inventorySupplyId === id) ||
-                stockLedger(prev, events, at / 3_600_000).uses.some(
-                    u => u.choices.some(s => s.id === id) || u.parts.some(p => p.supply.id === id),
-                );
-            return referenced
-                ? prev.map(s => (s.id === id ? { ...s, archivedAt: Math.max(s.startedAt, at), updatedAt: at } : s))
-                : prev.filter(s => s.id !== id);
-        });
+        setSupplies(prev =>
+            prev.map(s =>
+                s.id === id && s.archivedAt === undefined
+                    ? { ...s, archivedAt: Math.max(s.startedAt, at), updatedAt: at }
+                    : s,
+            ),
+        );
     };
     const touchPlan = () => localStorage.setItem(keyFor(mode, 'plan-at'), String(Date.now()));
     const savePlanItem = (item: PlanItem) => {

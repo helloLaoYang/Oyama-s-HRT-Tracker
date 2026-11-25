@@ -54,14 +54,39 @@ final class DesignSmokeTests: XCTestCase {
         let inventoryLink = app.buttons["cost.inventory"]
         scroll(overview, until: inventoryLink)
         inventoryLink.tap()
-        app.buttons["inventory.add"].tap()
-        app.buttons["inventory.medication"].tap()
-        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "醋酸环丙孕酮")).firstMatch.tap()
+        let medication = app.buttons["inventory.medication.oral|CPA"]
+        XCTAssertTrue(medication.waitForExistence(timeout: 6))
+        medication.tap()
+        app.buttons["inventory.addPurchase"].tap()
+        XCTAssertTrue(app.navigationBars["新增购入"].waitForExistence(timeout: 6))
+        let secondStrength = app.textFields["inventory.strength"]
+        if secondStrength.value as? String != "6.25" {
+            secondStrength.tap()
+            secondStrength.press(forDuration: 1.1)
+            XCTAssertTrue(selectAll.waitForExistence(timeout: 3), app.debugDescription)
+            selectAll.tap()
+            secondStrength.typeText("6.25")
+            app.buttons["完成"].firstMatch.tap()
+        }
         let secondCount = app.textFields["inventory.count"]
         secondCount.tap()
         secondCount.typeText("8")
         app.buttons["完成"].firstMatch.tap()
         app.buttons["inventory.save"].tap()
+        let details = app.navigationBars["醋酸环丙孕酮 · 口服"]
+        XCTAssertTrue(details.waitForExistence(timeout: 6))
+        let batches = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "inventory.supply."))
+        XCTAssertEqual(batches.count, 2)
+        let firstBatch = batches.matching(NSPredicate(format: "label CONTAINS %@", "12.5 mg/片")).firstMatch
+        XCTAssertTrue(firstBatch.exists)
+        XCTAssertTrue(batches.matching(NSPredicate(format: "label CONTAINS %@", "6.25 mg/片")).firstMatch.exists)
+        screenshot("inventory-purchase-history", in: app)
+        firstBatch.tap()
+        XCTAssertTrue(element("inventory.purchaseDate", in: app).waitForExistence(timeout: 6))
+        app.buttons["盘点"].tap()
+        XCTAssertTrue(app.textFields["inventory.count"].exists)
+        app.navigationBars.firstMatch.buttons["取消"].tap()
+        details.buttons.firstMatch.tap()
         let inventory = app.navigationBars["药量库存"]
         XCTAssertTrue(inventory.waitForExistence(timeout: 6))
         inventory.buttons.firstMatch.tap()
@@ -87,9 +112,11 @@ final class DesignSmokeTests: XCTestCase {
         XCTAssertTrue(total.label.contains("1.00"), total.label)
         scroll(overview, until: inventoryLink)
         inventoryLink.tap()
+        medication.tap()
         let lot = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "inventory.supply.", "12.5 mg/片")).firstMatch
         XCTAssertTrue(lot.waitForExistence(timeout: 6))
         XCTAssertTrue(lot.label.contains("26 片"), lot.label)
+        details.buttons.firstMatch.tap()
         inventory.buttons.firstMatch.tap()
         let undo = app.buttons["撤销"]
         for _ in 0..<5 where !undo.isHittable { overview.swipeDown() }
@@ -180,6 +207,9 @@ final class DesignSmokeTests: XCTestCase {
         count.tap()
         count.typeText("1")
         app.buttons["inventory.save"].tap()
+        let medication = app.buttons["inventory.medication.patchApply|E2"]
+        XCTAssertTrue(medication.waitForExistence(timeout: 6))
+        medication.tap()
         let stock = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "inventory.supply.")).firstMatch
         XCTAssertTrue(stock.waitForExistence(timeout: 8))
         screenshot("17-medication-inventory", in: app)
