@@ -165,6 +165,11 @@ final class TrackerStore {
         if !isDemo { now = Date() }
     }
 
+    func refreshOverviewData() throws {
+        try reload()
+        refreshClock()
+    }
+
     var doses: [DoseEvent] {
         doseRecords.filter { $0.modeRaw == mode.rawValue }.compactMap(\.value).sorted { $0.timeH > $1.timeH }
     }

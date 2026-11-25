@@ -65,7 +65,11 @@ struct MedicationCostView: View {
         let complete = uses.filter(\.complete).count
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
-                HStack { title; Spacer(); periodPicker }
+                HStack(spacing: 8) {
+                    title.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    periodPicker.fixedSize()
+                }
                 VStack(alignment: .leading) { title; periodPicker }
             }
             VStack(alignment: .leading, spacing: 4) {
@@ -143,20 +147,8 @@ struct MedicationCostView: View {
     }
 
     private var periodPicker: some View {
-        HStack(spacing: 0) {
-            ForEach(MedicationCostRange.allCases, id: \.self) { choice in
-                Button {
-                    range = choice
-                } label: {
-                    Text(choice.title).font(.footnote).padding(.horizontal, 6).padding(.vertical, 5)
-                        .background(range == choice ? TrackerTheme.surface : .clear, in: RoundedRectangle(cornerRadius: 6))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityAddTraits(range == choice ? .isSelected : [])
-                .accessibilityIdentifier("cost.range.\(choice.rawValue)")
-            }
-        }.background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 10))
+        TrackerSegment(options: MedicationCostRange.allCases, selection: $range, compact: true,
+                       tableName: "Inventory", optionIdentifier: { "cost.range.\($0.rawValue)" }) { $0.title }
     }
 
     private func periodCaption(start: Date?, complete: Int, count: Int) -> String {
@@ -231,12 +223,12 @@ struct MedicationCostView: View {
 }
 
 private extension MedicationCostRange {
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .today: inventoryText("Today")
-        case .last7: inventoryText("7d")
-        case .last30: inventoryText("30d")
-        case .all: inventoryText("All")
+        case .today: "Today"
+        case .last7: "7d"
+        case .last30: "30d"
+        case .all: "All"
         }
     }
 }

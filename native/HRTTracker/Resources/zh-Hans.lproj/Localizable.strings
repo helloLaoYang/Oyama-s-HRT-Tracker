@@ -1,4 +1,5 @@
 "Cannot open tracker data" = "无法打开记录数据";
+"Could not refresh tracker data" = "无法刷新记录数据";
 "Close the app and try again." = "关闭 App 后重试。";
 "Overview" = "概览";
 "Records" = "记录";
@@ -47,6 +48,8 @@
 "No dose records yet" = "暂无用药记录";
 "No supported concentration model for these records." = "这些记录暂无可用的浓度模型。";
 "Regimen simulation" = "方案试算";
+"Simulation" = "试算";
+"Medication regimen simulation" = "用药方案试算";
 "About concentration estimates" = "关于浓度估算";
 "Concentrations are model estimates and may differ substantially from laboratory results." = "浓度为模型估算值，可能与实际化验结果有明显差异。";
 "Done" = "完成";
