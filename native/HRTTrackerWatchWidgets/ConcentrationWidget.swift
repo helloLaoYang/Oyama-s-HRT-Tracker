@@ -136,17 +136,20 @@ private struct ConcentrationWidgetView: View {
         switch family {
         case .accessoryCircular:
             ZStack {
-                AccessoryWidgetBackground()
+                Circle()
+                    .strokeBorder(.primary.opacity(0.45), lineWidth: 1.25)
+                    .padding(1)
                 VStack(spacing: 0) {
                     if let symbol {
                         Text(symbol)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.primary)
                             .widgetAccentable()
                     }
-                    numberText(number, font: .headline)
+                    numberText(number, font: .system(size: 19, design: .rounded), weight: .semibold)
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 5)
             }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 3) {
@@ -179,9 +182,9 @@ private struct ConcentrationWidgetView: View {
         }
     }
 
-    private func numberText(_ number: String, font: Font) -> some View {
-        Text(number)
-            .font(font.monospacedDigit().weight(.medium))
+    private func numberText(_ number: String, font: Font, weight: Font.Weight = .medium) -> some View {
+        Text(verbatim: number)
+            .font(font.monospacedDigit().weight(weight))
             .lineLimit(1)
             .minimumScaleFactor(0.55)
     }
