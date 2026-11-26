@@ -211,20 +211,9 @@ struct OverviewView: View {
                     }
                 }
             } else {
-                let cats = OverviewPixelCats(hasDoses: !request.events.isEmpty, hasLabs: !request.labs.isEmpty)
                 VStack(alignment: .leading, spacing: 4) {
                     estimateLabel(reading.title)
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            estimateNumber(reading, size: mainValueSize)
-                                .frame(minWidth: mainValueSize * 4.3, alignment: .leading)
-                            cats
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            estimateNumber(reading, size: mainValueSize)
-                            cats
-                        }
-                    }
+                    estimateNumber(reading, size: mainValueSize)
                 }
             }
             if let value {
