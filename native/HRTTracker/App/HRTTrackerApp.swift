@@ -69,10 +69,13 @@ private struct TrackerRoot: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var systemLocale
     @State private var selectedTab: TrackerTab = .overview
+    @State private var overviewPath: [PhoneWidgetRoute] = []
+    @State private var overviewNavigationID = UUID()
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack { OverviewView(store: store) }
+            OverviewNavigation(store: store, watchSync: watchSync, path: $overviewPath)
+                .id(overviewNavigationID)
                 .tabItem { tab(.overview) }
                 .tag(TrackerTab.overview)
                 .accessibilityIdentifier("tab.overview")
@@ -97,6 +100,13 @@ private struct TrackerRoot: View {
         .tint(TrackerTheme.accent)
         .preferredColorScheme(preferredScheme)
         .saturation(store.appearance == .mono ? 0 : 1)
+        .onOpenURL { url in
+            guard let route = PhoneWidgetRoute(url: url) else { return }
+            // Replace previously pushed, view-based destinations on the Overview tab.
+            overviewNavigationID = UUID()
+            overviewPath = route == .overview ? [] : [route]
+            selectedTab = .overview
+        }
         .task(id: ReminderInputs(
             enabled: store.remindersEnabled, mode: store.mode, plans: store.plans, doses: store.doses,
             day: store.calendar.startOfDay(for: store.now), language: language, active: scenePhase == .active
@@ -130,6 +140,28 @@ private struct TrackerRoot: View {
             Text(tab.title)
         } icon: {
             tab.icon
+        }
+    }
+}
+
+private struct OverviewNavigation: View {
+    let store: TrackerStore
+    let watchSync: PhoneWatchSync
+    @Binding var path: [PhoneWidgetRoute]
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            OverviewView(store: store)
+                .navigationDestination(for: PhoneWidgetRoute.self) { route in
+                    switch route {
+                    case .overview:
+                        EmptyView()
+                    case .estimate(let metric):
+                        OverviewWidgetDetail(watchSync: watchSync, metric: metric, presentation: .estimate)
+                    case .trend(let metric):
+                        OverviewWidgetDetail(watchSync: watchSync, metric: metric, presentation: .trend)
+                    }
+                }
         }
     }
 }

@@ -1,18 +1,23 @@
+import Combine
 import Foundation
 import OSLog
 import WatchConnectivity
+import WidgetKit
 
 @MainActor
-final class PhoneWatchSync: NSObject, WCSessionDelegate {
+final class PhoneWatchSync: NSObject, ObservableObject, WCSessionDelegate {
+    @Published private(set) var widgetSnapshot: PhoneWidgetSnapshot?
+
     private let store: TrackerStore
     private let session: WCSession?
     private var requestedInputs: PhoneWatchInputs?
-    private var lastSent: (inputs: PhoneWatchInputs, message: [String: Any])?
+    private var delivery: SnapshotDelivery?
     private var refreshTask: Task<Void, Never>?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "HRTTracker", category: "PhoneWatchSync")
 
     init(store: TrackerStore) {
         self.store = store
+        widgetSnapshot = store.isDemo ? nil : PhoneWidgetSnapshotCache.load()
         session = !store.isDemo && WCSession.isSupported() ? .default : nil
         super.init()
         session?.delegate = self
@@ -20,13 +25,11 @@ final class PhoneWatchSync: NSObject, WCSessionDelegate {
     }
 
     func refresh(resend: Bool = false) {
-        guard let session, session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else {
-            return
-        }
+        guard !store.isDemo else { return }
         let date = Date()
         let inputs = PhoneWatchInputs(store: store, at: date)
         if requestedInputs == inputs {
-            if resend, let lastSent, lastSent.inputs == inputs { publish(lastSent.message) }
+            if delivery?.inputs == inputs { deliverSnapshot(resend: resend) }
             return
         }
         requestedInputs = inputs
@@ -45,25 +48,42 @@ final class PhoneWatchSync: NSObject, WCSessionDelegate {
             let snapshot = WatchSnapshot(generatedAt: date, expiresAt: PhoneWatchInputs.expiration(after: date),
                                          planValidUntil: nextDay, primaryMetric: inputs.primaryMetric, series: series,
                                          occurrences: occurrences)
-            guard let message = WatchWire.message(snapshot, kind: WatchWire.snapshotKey) else {
-                requestedInputs = nil
-                return
-            }
-            if publish(message) { lastSent = (inputs, message) }
+            self.widgetSnapshot = PhoneWidgetSnapshot(snapshot)
+            self.delivery = SnapshotDelivery(inputs: inputs, snapshot: snapshot)
+            self.deliverSnapshot(resend: false)
         }
     }
 
-    @discardableResult
-    private func publish(_ message: [String: Any]) -> Bool {
-        guard let session, session.activationState == .activated else { return false }
-        do {
-            try session.updateApplicationContext(message)
-            return true
-        } catch {
-            requestedInputs = nil
-            logger.warning("Could not send the Watch snapshot.")
-            return false
+    private func deliverSnapshot(resend: Bool) {
+        guard var delivery, let widgetSnapshot else { return }
+        if !delivery.savedToWidget {
+            do {
+                try PhoneWidgetSnapshotCache.save(widgetSnapshot)
+                WidgetCenter.shared.reloadTimelines(ofKind: PhoneWidgetSnapshotCache.kind)
+                delivery.savedToWidget = true
+            } catch {
+                logger.warning("Could not save the iPhone widget snapshot.")
+            }
         }
+        if (resend || !delivery.sentToWatch), let session, session.activationState == .activated,
+           session.isPaired, session.isWatchAppInstalled,
+           let message = WatchWire.message(delivery.snapshot, kind: WatchWire.snapshotKey) {
+            do {
+                try session.updateApplicationContext(message)
+                delivery.sentToWatch = true
+            } catch {
+                delivery.sentToWatch = false
+                logger.warning("Could not send the Watch snapshot.")
+            }
+        }
+        self.delivery = delivery
+    }
+
+    private struct SnapshotDelivery {
+        let inputs: PhoneWatchInputs
+        let snapshot: WatchSnapshot
+        var savedToWidget = false
+        var sentToWatch = false
     }
 
     private func process(_ command: WatchDoseCommand) -> [String: Any] {
@@ -90,9 +110,7 @@ final class PhoneWatchSync: NSObject, WCSessionDelegate {
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
         Task { @MainActor [weak self] in
-            self?.requestedInputs = nil
-            self?.lastSent = nil
-            self?.refreshTask?.cancel()
+            self?.delivery?.sentToWatch = false
             self?.session?.activate()
         }
     }

@@ -30,10 +30,14 @@ targets:
       - path: HRTTracker
         excludes: [Info.plist]
       - WatchShared/WatchSnapshot.swift
+      - WatchShared/Localization
+      - WidgetShared
       - path: ../LICENSE
         buildPhase: resources
     dependencies:
       - package: HRTEngine
+      - target: HRTTrackerWidgets
+        embed: true
       - target: HRTTrackerWatch
         embed: true
     settings:
@@ -41,6 +45,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: HRTTracker/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WatchShared/Watch.entitlements
         INFOPLIST_KEY_CFBundleDisplayName: HRTrace
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -48,6 +53,28 @@ targets:
         SWIFT_VERSION: 5.0
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+  HRTTrackerWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: HRTTrackerWidgets
+        excludes: [Info.plist]
+      - WatchShared/WatchSnapshot.swift
+      - WatchShared/Localization
+      - WidgetShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellolaoyang.hrttracker.dev.widgets
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: HRTTrackerWidgets/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: HRTrace
+        CODE_SIGN_ENTITLEMENTS: WatchShared/Watch.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: 5.0
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SKIP_INSTALL: YES
   HRTTrackerWatch:
     templates: [WatchTarget]
     type: application
