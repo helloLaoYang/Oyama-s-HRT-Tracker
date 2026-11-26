@@ -172,6 +172,11 @@ private struct ConcentrationWidgetView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .foregroundStyle(.primary)
             .widgetAccentable()
+            .background {
+                ReadoutBackground(cornerRadius: 8)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 4)
+            }
         case .accessoryCorner:
             numberText(number, font: .headline)
                 .widgetLabel {
@@ -191,7 +196,6 @@ private struct ConcentrationWidgetView: View {
 }
 
 private struct RectangularReadout: View {
-    @Environment(\.widgetRenderingMode) private var renderingMode
     let symbol: String?
     let number: String
     let unit: String?
@@ -244,12 +248,21 @@ private struct RectangularReadout: View {
             .frame(width: 198.5 * scale)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                RoundedRectangle(cornerRadius: 10 * scale, style: .continuous)
-                    .fill(renderingMode == .fullColor
-                          ? Color(white: 0.31).opacity(0.38)
-                          : Color.primary.opacity(0.14))
+                ReadoutBackground(cornerRadius: 10 * scale)
             }
         }
+    }
+}
+
+private struct ReadoutBackground: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(renderingMode == .fullColor
+                  ? Color(white: 0.31).opacity(0.38)
+                  : Color.primary.opacity(0.14))
     }
 }
 
