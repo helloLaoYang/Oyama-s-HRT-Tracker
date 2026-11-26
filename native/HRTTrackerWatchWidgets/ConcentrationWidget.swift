@@ -144,12 +144,12 @@ private struct ConcentrationWidgetView: View {
                         Text(symbol)
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.primary)
-                            .widgetAccentable()
                     }
                     numberText(number, font: .system(size: 19, design: .rounded), weight: .semibold)
                         .foregroundStyle(.primary)
                 }
                 .padding(.horizontal, 5)
+                .widgetAccentable()
             }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 3) {
