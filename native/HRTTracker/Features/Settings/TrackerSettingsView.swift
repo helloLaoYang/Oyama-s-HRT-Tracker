@@ -10,11 +10,29 @@ struct TrackerSettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 TrackerHeader(title: "Settings", subtitle: "") { EmptyView() }
                 NavigationLink {
-                    GeneralTrackerSettings(store: store)
+                    BodyMeasurementsView(store: store)
                 } label: {
-                    row("General settings", description: "Weight, appearance, and projection", icon: "slider.horizontal.3")
+                    row("Body measurements", description: "Measurement entry and history", icon: "ruler")
                 }
-                .accessibilityIdentifier("settings.general")
+                .accessibilityIdentifier("settings.bodyMeasurements")
+                NavigationLink {
+                    ModelTrackerSettings(store: store)
+                } label: {
+                    row("HRT and projection", description: "HRT mode, age adjustment, and model parameters", icon: "slider.horizontal.3")
+                }
+                .accessibilityIdentifier("settings.hrt")
+                NavigationLink {
+                    MedicationTrackerSettings(store: store)
+                } label: {
+                    row("Medication management", description: "Medication plan and inventory", icon: "pills")
+                }
+                .accessibilityIdentifier("settings.medication")
+                NavigationLink {
+                    DisplayTrackerSettings(store: store)
+                } label: {
+                    row("Appearance and language", description: "Display theme and app language", icon: "sun.max")
+                }
+                .accessibilityIdentifier("settings.display")
                 NavigationLink {
                     TrackerDataSettings(store: store)
                 } label: {
@@ -46,19 +64,22 @@ struct TrackerSettingsView: View {
                 Text(title).font(.subheadline)
                 Text(description).font(.footnote).foregroundStyle(TrackerTheme.muted)
             }
-            Spacer()
-            Image(systemName: "chevron.right")
+            .fixedSize(horizontal: false, vertical: true)
+            .layoutPriority(1)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.forward")
                 .font(.caption)
                 .foregroundStyle(TrackerTheme.muted)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }
 }
 
-private struct GeneralTrackerSettings: View {
+private struct ModelTrackerSettings: View {
     @Bindable var store: TrackerStore
-    @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
 
     var body: some View {
         Form {
@@ -67,11 +88,14 @@ private struct GeneralTrackerSettings: View {
                     Text("Transfeminine").tag(HRTMode.transfem)
                     Text("Transmasculine").tag(HRTMode.transmasc)
                 }
-                LabeledContent("Weight (kg)") {
-                    TextField("Weight (kg)", value: $store.weight, format: .number.precision(.fractionLength(0...1)))
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
+                NavigationLink {
+                    BodyMetricHistoryView(store: store, metric: .weight)
+                } label: {
+                    LabeledContent("Weight used for estimates") {
+                        BodyMeasurementValue(metric: .weight, value: store.weight)
+                    }
                 }
+                .accessibilityIdentifier("settings.estimateWeight")
                 Toggle(isOn: $store.ageModelEnabled) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Age adjustment (Beta)")
@@ -96,6 +120,27 @@ private struct GeneralTrackerSettings: View {
                 }
                 .accessibilityIdentifier("settings.pkParameters")
             }
+            Section {
+                Toggle("Project using medication plan", isOn: $store.showPrediction)
+                    .accessibilityIdentifier("settings.prediction")
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("HRT and projection")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+    }
+}
+
+private struct MedicationTrackerSettings: View {
+    let store: TrackerStore
+
+    var body: some View {
+        Form {
+            Section {
+                NavigationLink("Medication plan") { MedicationPlansView(store: store) }
+                    .accessibilityIdentifier("settings.medicationPlan")
+            }
             Section("Inventory") {
                 NavigationLink { InventoryView(store: store) } label: {
                     LabeledContent("Medication inventory") {
@@ -105,6 +150,20 @@ private struct GeneralTrackerSettings: View {
                 }
                 .accessibilityIdentifier("settings.inventory")
             }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Medication management")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+    }
+}
+
+private struct DisplayTrackerSettings: View {
+    let store: TrackerStore
+    @AppStorage(AppLanguage.preferenceKey) private var language: AppLanguage = .system
+
+    var body: some View {
+        Form {
             Section {
                 NavigationLink {
                     AppearanceSettingsView(store: store)
@@ -118,13 +177,12 @@ private struct GeneralTrackerSettings: View {
                     LabeledContent("Language") { Text(verbatim: language.title) }
                 }
                 .accessibilityIdentifier("settings.language")
-                Toggle("Project using medication plan", isOn: $store.showPrediction)
-                    .accessibilityIdentifier("settings.prediction")
-                NavigationLink("Medication plan") { MedicationPlansView(store: store) }
             }
         }
-        .navigationTitle("General settings")
+        .formStyle(.grouped)
+        .navigationTitle("Appearance and language")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
     }
 }
 

@@ -9,7 +9,7 @@ import SwiftData
 final class TrackerStore {
     static let schema = Schema([
         DoseRecord.self, LabRecord.self, MedicationPlanRecord.self, DoseTemplateRecord.self,
-        MedicationSupplyRecord.self, TrackerProfileRecord.self
+        MedicationSupplyRecord.self, TrackerProfileRecord.self, BodyMeasurementRecord.self
     ])
 
     @ObservationIgnored private let context: ModelContext
@@ -22,6 +22,7 @@ final class TrackerStore {
     private var planRecords: [MedicationPlanRecord] = []
     private var templateRecords: [DoseTemplateRecord] = []
     private var supplyRecords: [MedicationSupplyRecord] = []
+    private var bodyMeasurementRecords: [BodyMeasurementRecord] = []
 
     init(context: ModelContext, demo: Bool = false) {
         self.context = context
@@ -35,8 +36,21 @@ final class TrackerStore {
             ))
             if let savedProfile = savedProfiles.first {
                 profile = savedProfile
+                if profile.bodyWeightMigrated != true {
+                    let legacy = BodyMeasurement.legacyWeight(
+                        profile.weight, timestamp: profile.weightUpdatedAt, importedAt: bodyClock
+                    )
+                    let record = legacy.map(BodyMeasurementRecord.init)
+                    if let record { context.insert(record) }
+                    profile.weight = BodyMeasurement.defaultWeight
+                    profile.weightUpdatedAt = nil
+                    profile.bodyWeightMigrated = true
+                    try context.save()
+                    if let record { bodyMeasurementRecords.append(record) }
+                }
             } else {
                 context.insert(profile)
+                profile.bodyWeightMigrated = true
                 if isDemo { seedDemo() }
                 try context.save()
                 try reload()
@@ -53,14 +67,86 @@ final class TrackerStore {
     }
 
     var weight: Double {
-        get { profile.weight }
-        set {
-            guard newValue.isFinite, (20...400).contains(newValue), newValue != profile.weight else { return }
-            updateProfile {
-                profile.weight = newValue
-                profile.weightUpdatedAt = stamp
+        if let latest = latestBodyMeasurement(.weight)?.current { return latest.value }
+        if profile.bodyWeightMigrated != true, BodyMetric.weight.validRange.contains(profile.weight) {
+            return profile.weight
+        }
+        return BodyMeasurement.defaultWeight
+    }
+
+    func bodyMeasurements(for metric: BodyMetric) -> [BodyMeasurement] {
+        bodyMeasurementRecords.lazy.filter { $0.metricRaw == metric.rawValue }
+            .compactMap(\.value).sorted(by: BodyMeasurement.latestFirst)
+    }
+
+    func latestBodyMeasurement(_ metric: BodyMetric) -> BodyMeasurement? {
+        bodyMeasurementRecords.lazy.filter { $0.metricRaw == metric.rawValue }
+            .compactMap(\.value).min(by: BodyMeasurement.latestFirst)
+    }
+
+    @discardableResult
+    func saveBodyMeasurements(_ values: [BodyMetric: Double], measuredAt: Date) -> Bool {
+        let now = bodyClock
+        guard !values.isEmpty, BodyMeasurementRevision.isValidDate(measuredAt), measuredAt <= now,
+              values.allSatisfy({ $0.key.validRange.contains($0.value) }) else { return false }
+        let savedAt = nextBodySavedAt(after: bodyMeasurementRecords.compactMap { $0.value?.createdAt }.max())
+        let records = BodyMetric.allCases.compactMap { metric in
+            values[metric].map {
+                BodyMeasurementRecord(BodyMeasurement(metric: metric, value: $0, measuredAt: measuredAt, savedAt: savedAt))
             }
         }
+        guard trySave(refresh: false, { for record in records { context.insert(record) } }) else { return false }
+        bodyMeasurementRecords.append(contentsOf: records)
+        return true
+    }
+
+    @discardableResult
+    func reviseBodyMeasurement(_ id: String, value: Double, measuredAt: Date?) -> Bool {
+        guard let record = bodyMeasurementRecords.first(where: { $0.uuid == id }),
+              let measurement = record.value, let current = measurement.current,
+              measurement.metric.validRange.contains(value),
+              measuredAt.map({ BodyMeasurementRevision.isValidDate($0) && $0 <= bodyClock }) ?? true else { return false }
+        if current.value == value, current.measuredAt == measuredAt { return true }
+        return appendBodyRevision(record, measurement: measurement, value: value, measuredAt: measuredAt)
+    }
+
+    @discardableResult
+    func restoreBodyMeasurement(_ id: String, revisionID: String) -> Bool {
+        guard let record = bodyMeasurementRecords.first(where: { $0.uuid == id }),
+              let measurement = record.value,
+              let revision = measurement.revisions.first(where: { $0.id == revisionID }) else { return false }
+        if measurement.current?.id == revisionID { return true }
+        return appendBodyRevision(record, measurement: measurement, value: revision.value, measuredAt: revision.measuredAt)
+    }
+
+    @discardableResult
+    func deleteBodyMeasurement(_ id: String) -> Bool {
+        guard let record = bodyMeasurementRecords.first(where: { $0.uuid == id }) else { return false }
+        guard trySave(refresh: false, { context.delete(record) }) else { return false }
+        bodyMeasurementRecords.removeAll { $0 === record }
+        return true
+    }
+
+    private var bodyClock: Date { isDemo ? now : Date() }
+
+    private func nextBodySavedAt(after previous: Date?) -> Date {
+        guard let previous else { return bodyClock }
+        // Keep edits and same-time measurements ordered even when the clock has not advanced.
+        return max(bodyClock, previous.addingTimeInterval(0.001))
+    }
+
+    private func appendBodyRevision(
+        _ record: BodyMeasurementRecord, measurement: BodyMeasurement, value: Double, measuredAt: Date?
+    ) -> Bool {
+        let revision = BodyMeasurementRevision(
+            id: UUID().uuidString, value: value, measuredAt: measuredAt,
+            savedAt: nextBodySavedAt(after: measurement.current?.savedAt)
+        )
+        guard trySave(refresh: false, { record.update(measurement.appending(revision)) }) else { return false }
+        if let index = bodyMeasurementRecords.firstIndex(where: { $0 === record }) {
+            bodyMeasurementRecords[index] = record
+        }
+        return true
     }
 
     var birthYear: Int? {
@@ -533,11 +619,13 @@ final class TrackerStore {
         let plans = try context.fetch(FetchDescriptor<MedicationPlanRecord>())
         let templates = try context.fetch(FetchDescriptor<DoseTemplateRecord>())
         let supplies = try context.fetch(FetchDescriptor<MedicationSupplyRecord>())
+        let bodyMeasurements = try context.fetch(FetchDescriptor<BodyMeasurementRecord>())
         doseRecords = doses
         labRecords = labs
         planRecords = plans
         templateRecords = templates
         supplyRecords = supplies
+        bodyMeasurementRecords = bodyMeasurements
     }
 
     private func trySave(refresh: Bool = true, _ change: () -> Void) -> Bool {
@@ -573,11 +661,12 @@ final class TrackerStore {
         var snapshot = BackupContents()
         snapshot.mode = mode
         snapshot.weight = weight
+        snapshot.bodyMeasurements = bodyMeasurementRecords.compactMap(\.value).sorted { $0.id < $1.id }
         snapshot.birthYear = birthYear
         snapshot.calibrationMethod = calibrationMethod
         snapshot.calibrationHistory = calibrationHistory
         snapshot.ageModelEnabled = ageModelEnabled
-        snapshot.weightUpdatedAt = profile.weightUpdatedAt
+        snapshot.weightUpdatedAt = latestBodyMeasurement(.weight)?.current.map { $0.savedAt.timeIntervalSince1970 * 1_000 }
         snapshot.birthYearUpdatedAt = profile.birthYearUpdatedAt
         snapshot.modelSettingsUpdatedAt = profile.modelSettingsUpdatedAt
         snapshot.pkOverrides = pkOverrides
@@ -622,8 +711,10 @@ final class TrackerStore {
         if let leadDays = contents.supplyLeadDays, leadDays != supplyLeadDays, profile.supplyLeadDays == nil {
             settings.append(label("Inventory warning period"))
         }
+        var counts = reconcileBackup(contents, apply: false)
+        _ = reconcileBodyBackup(contents, counts: &counts, apply: false)
         return BackupPreview(
-            counts: reconcileBackup(contents, apply: false),
+            counts: counts,
             ignoredCategories: contents.ignoredCategories.sorted(),
             settingsToImport: settings,
             contents: contents
@@ -633,11 +724,51 @@ final class TrackerStore {
     @discardableResult
     func importBackup(_ preview: BackupPreview) throws -> BackupCounts {
         var counts = BackupCounts()
+        var insertedBodyRecords: [BodyMeasurementRecord] = []
         try persist {
             counts = reconcileBackup(preview.contents, apply: true)
+            insertedBodyRecords = reconcileBodyBackup(preview.contents, counts: &counts, apply: true)
             importProfile(preview.contents)
         }
+        let cachedIDs = Set(bodyMeasurementRecords.map(\.uuid))
+        bodyMeasurementRecords.append(contentsOf: insertedBodyRecords.filter { !cachedIDs.contains($0.uuid) })
         return counts
+    }
+
+    private func reconcileBodyBackup(
+        _ backup: BackupContents, counts: inout BackupCounts, apply: Bool
+    ) -> [BodyMeasurementRecord] {
+        let incoming: [BodyMeasurement]
+        if let measurements = backup.bodyMeasurements {
+            incoming = measurements
+        } else if let weight = backup.weight,
+                  backup.weightUpdatedAt != nil || latestBodyMeasurement(.weight) == nil,
+                  let legacy = BodyMeasurement.legacyWeight(weight, timestamp: backup.weightUpdatedAt, importedAt: bodyClock) {
+            incoming = [legacy]
+        } else {
+            return []
+        }
+        let existing = Dictionary(bodyMeasurementRecords.map { ($0.uuid, $0) }, uniquingKeysWith: { first, _ in first })
+        var knownIDs = Set<String>()
+        var inserted: [BodyMeasurementRecord] = []
+        for measurement in incoming {
+            guard knownIDs.insert(measurement.id).inserted else { counts.skipped += 1; continue }
+            if let record = existing[measurement.id], let local = record.value {
+                guard local.metric == measurement.metric else { counts.invalid += 1; continue }
+                let merged = local.merging(measurement)
+                guard merged != local else { counts.skipped += 1; continue }
+                counts.updated += 1
+                if apply { record.update(merged) }
+            } else {
+                counts.added += 1
+                if apply {
+                    let record = BodyMeasurementRecord(measurement)
+                    context.insert(record)
+                    inserted.append(record)
+                }
+            }
+        }
+        return inserted
     }
 
     private func reconcileBackup(_ backup: BackupContents, apply: Bool) -> BackupCounts {
@@ -729,10 +860,6 @@ final class TrackerStore {
     }
 
     private func importProfile(_ backup: BackupContents) {
-        if let weight = backup.weight, shouldTake(backup.weightUpdatedAt, over: profile.weightUpdatedAt) {
-            profile.weight = weight
-            profile.weightUpdatedAt = backup.weightUpdatedAt ?? stamp
-        }
         if backup.includesBirthYear, shouldTake(backup.birthYearUpdatedAt, over: profile.birthYearUpdatedAt) {
             profile.birthYear = backup.birthYear
             profile.birthYearUpdatedAt = backup.birthYearUpdatedAt ?? stamp
@@ -794,6 +921,15 @@ final class TrackerStore {
         context.insert(MedicationPlanRecord(mode: .transfem, value: patchPlan, ordinal: 0, updatedAt: nil))
         context.insert(MedicationPlanRecord(mode: .transfem, value: cpaPlan, ordinal: 1, updatedAt: nil))
         context.insert(MedicationPlanRecord(mode: .transmasc, value: injectionPlan, ordinal: 0, updatedAt: nil))
+        let syntheticMeasurements: [(BodyMetric, Double, String)] = [
+            (.height, 172, "2026-11-11T08:00"), (.weight, 70, "2026-11-24T08:20"),
+            (.chest, 88.5, "2026-11-24T08:30"), (.waist, 73.2, "2026-11-24T08:30"),
+            (.hips, 94, "2026-11-22T08:10"), (.waist, 74.4, "2026-11-18T08:25"),
+        ]
+        for (metric, value, time) in syntheticMeasurements {
+            let date = Date(timeIntervalSince1970: hours(time) * 3_600)
+            context.insert(BodyMeasurementRecord(BodyMeasurement(metric: metric, value: value, measuredAt: date, savedAt: date)))
+        }
         profile.remindersEnabled = true
     }
 }

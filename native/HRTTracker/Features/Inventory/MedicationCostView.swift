@@ -101,8 +101,9 @@ struct MedicationCostView: View {
             .accessibilityIdentifier("cost.details")
             if expanded { detailRows(parts) }
             NavigationLink { InventoryView(store: store) } label: {
-                HStack { Text(inventoryText("Inventory")); Spacer(); Image(systemName: "chevron.right").font(.caption) }
-                    .frame(minHeight: 44).contentShape(Rectangle())
+                TrackerLinkLabel(title: Text(inventoryText("Inventory")))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }.accessibilityIdentifier("cost.inventory")
         }
         .buttonStyle(.plain)
