@@ -43,6 +43,7 @@ private struct ConcentrationEntry: TimelineEntry {
     let date: Date
     let metric: WatchMetric
     let value: Double?
+    var recentRangePosition: Double? = nil
 }
 
 private struct ConcentrationProvider: AppIntentTimelineProvider {
@@ -59,28 +60,41 @@ private struct ConcentrationProvider: AppIntentTimelineProvider {
             case .cpa: 6.1
             case .testosterone: 1024
             }
-            return ConcentrationEntry(date: now, metric: metric, value: value)
+            return ConcentrationEntry(date: now, metric: metric, value: value, recentRangePosition: 0.65)
         }
         let snapshot = WatchSnapshotCache.load()
         let metric = configuration.metric.resolve(primary: snapshot?.primaryMetric)
-        return ConcentrationEntry(date: now, metric: metric, value: snapshot?.current(for: metric, at: now)?.value)
+        return reading(for: metric, at: now, in: snapshot, family: context.family)
     }
 
     func timeline(for configuration: ConcentrationConfiguration, in context: Context) async -> Timeline<ConcentrationEntry> {
         let now = Date.now
         let snapshot = WatchSnapshotCache.load()
         let metric = configuration.metric.resolve(primary: snapshot?.primaryMetric)
-        let current = ConcentrationEntry(date: now, metric: metric, value: snapshot?.current(for: metric, at: now)?.value)
+        let current = reading(for: metric, at: now, in: snapshot, family: context.family)
         guard let snapshot, now < snapshot.expiresAt else {
             return Timeline(entries: [current], policy: .never)
         }
 
         let updates = snapshot.points(for: metric).compactMap { point -> ConcentrationEntry? in
             guard now < point.time, point.time < snapshot.expiresAt else { return nil }
-            return ConcentrationEntry(date: point.time, metric: metric, value: point.value)
+            return reading(for: metric, at: point.time, in: snapshot, family: context.family)
         }
         let expired = ConcentrationEntry(date: snapshot.expiresAt, metric: metric, value: nil)
         return Timeline(entries: [current] + updates + [expired], policy: .never)
+    }
+
+    private func reading(for metric: WatchMetric, at date: Date, in snapshot: WatchSnapshot?,
+                         family: WidgetFamily) -> ConcentrationEntry {
+        let value = snapshot?.current(for: metric, at: date)?.value
+        var entry = ConcentrationEntry(date: date, metric: metric, value: value)
+        if family == .accessoryCircular, let snapshot, let value {
+            let recent = snapshot.history(for: metric, at: date).map(\.value)
+            if let low = recent.min(), let high = recent.max(), low < high {
+                entry.recentRangePosition = (value - low) / (high - low)
+            }
+        }
+        return entry
     }
 
     func recommendations() -> [AppIntentRecommendation<ConcentrationConfiguration>] {
@@ -135,22 +149,24 @@ private struct ConcentrationWidgetView: View {
     private func layout(name: Text, symbol: String?, number: String, unit: String?) -> some View {
         switch family {
         case .accessoryCircular:
-            ZStack {
-                Circle()
-                    .strokeBorder(.primary.opacity(0.45), lineWidth: 1.25)
-                    .padding(1)
-                VStack(spacing: 0) {
-                    if let symbol {
-                        Text(symbol)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.primary)
-                    }
-                    numberText(number, font: .system(size: 19, design: .rounded), weight: .semibold)
-                        .foregroundStyle(.primary)
+            let position = isPrivate ? nil : entry.recentRangePosition
+            VStack(spacing: -2) {
+                numberText(number, font: .system(size: 19, design: .rounded), weight: .semibold)
+                if let symbol {
+                    Text(symbol)
+                        .font(.system(size: 9, weight: .semibold))
                 }
-                .padding(.horizontal, 5)
-                .widgetAccentable()
             }
+            .padding(.top, position == nil ? 0 : 7)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .top) {
+                if let position {
+                    RecentRangeArc(position: position)
+                        .accessibilityHidden(true)
+                }
+            }
+            .foregroundStyle(.primary)
+            .widgetAccentable()
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 3) {
                 name
@@ -187,6 +203,30 @@ private struct ConcentrationWidgetView: View {
             .font(font.monospacedDigit().weight(weight))
             .lineLimit(1)
             .minimumScaleFactor(0.55)
+    }
+}
+
+private struct RecentRangeArc: View {
+    let position: Double
+
+    var body: some View {
+        let center = CGPoint(x: 15, y: 15)
+        let radius: CGFloat = 13
+        let start = -150.0
+        let sweep = 120.0
+        let angle = Angle.degrees(start + sweep * position).radians
+        return Path { path in
+            path.addArc(center: center, radius: radius, startAngle: .degrees(start),
+                        endAngle: .degrees(start + sweep), clockwise: false)
+        }
+        .stroke(.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+        .overlay(alignment: .topLeading) {
+            Circle()
+                .fill(.primary)
+                .frame(width: 4, height: 4)
+                .position(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle))
+        }
+        .frame(width: 30, height: 10)
     }
 }
 
