@@ -260,6 +260,25 @@ final class MedicationSupplyRecord {
 }
 
 @Model
+final class BodyMeasurementRecord {
+    var uuid: String = ""
+    var metricRaw: String = ""
+    var content: Data?
+
+    init(_ measurement: BodyMeasurement) {
+        uuid = measurement.id
+        metricRaw = measurement.metric.rawValue
+        update(measurement)
+    }
+
+    var value: BodyMeasurement? { decodeRecord(BodyMeasurement.self, from: content) }
+
+    func update(_ measurement: BodyMeasurement) {
+        content = encodeRecord(measurement)
+    }
+}
+
+@Model
 final class TrackerProfileRecord {
     var modeRaw: String = "transfem"
     var weight: Double = 70
@@ -272,6 +291,7 @@ final class TrackerProfileRecord {
     var remindersEnabled: Bool = false
     var snoozeMinutes: Int = 15
     var weightUpdatedAt: Double?
+    var bodyWeightMigrated: Bool?
     var birthYearUpdatedAt: Double?
     var modelSettingsUpdatedAt: Double?
     var pkOverridesData: Data?

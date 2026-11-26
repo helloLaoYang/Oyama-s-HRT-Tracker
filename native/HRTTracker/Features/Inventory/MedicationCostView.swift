@@ -91,18 +91,25 @@ struct MedicationCostView: View {
                     .font(.footnote).foregroundStyle(TrackerTheme.muted)
             }
             pendingRows(uses: uses, parts: parts)
-            Button { expanded.toggle() } label: {
-                HStack {
-                    Text(inventoryText("Details by specification"))
-                    Spacer()
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption)
-                }.frame(minHeight: 44).contentShape(Rectangle())
+            Group {
+                Button { expanded.toggle() } label: {
+                    HStack {
+                        Text(inventoryText("Details by specification"))
+                        Spacer()
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("cost.details")
+                if expanded { detailRows(parts) }
             }
-            .accessibilityIdentifier("cost.details")
-            if expanded { detailRows(parts) }
+            .font(.footnote)
+            .foregroundStyle(TrackerTheme.muted)
             NavigationLink { InventoryView(store: store) } label: {
-                HStack { Text(inventoryText("Inventory")); Spacer(); Image(systemName: "chevron.right").font(.caption) }
-                    .frame(minHeight: 44).contentShape(Rectangle())
+                TrackerLinkLabel(title: Text(inventoryText("Inventory")))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }.accessibilityIdentifier("cost.inventory")
         }
         .buttonStyle(.plain)
@@ -200,7 +207,7 @@ struct MedicationCostView: View {
     @ViewBuilder
     private func detailRows(_ parts: [StockAllocation]) -> some View {
         let groups = Dictionary(grouping: parts) { CostSpecification($0.supply) }
-        if groups.isEmpty { Text(inventoryText("No matched stock in this period")).font(.footnote).foregroundStyle(TrackerTheme.muted) }
+        if groups.isEmpty { Text(inventoryText("No matched stock in this period")) }
         ForEach(groups.keys.sorted { ($0.medication.id, packageDetail($0.pack)) < ($1.medication.id, packageDetail($1.pack)) }, id: \.self) { spec in
             let items = groups[spec, default: []]
             let totals = stockCostTotals(items)
@@ -208,14 +215,13 @@ struct MedicationCostView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(spec.medication.name)
                     Text("\(packageDetail(spec.pack)) · \(stockNumber(items.reduce(0) { $0 + $1.units })) \(spec.pack.kind.unit)")
-                        .font(.footnote).foregroundStyle(TrackerTheme.muted)
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
                     ForEach(totals.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { currency in
                         Text("\(stockMoney(totals[currency, default: 0], currency)) \(currency.rawValue)").monospacedDigit()
                     }
-                    if items.contains(where: { $0.cost == nil }) { Text(inventoryText("Price needed")).font(.footnote) }
+                    if items.contains(where: { $0.cost == nil }) { Text(inventoryText("Price needed")) }
                 }
             }
         }

@@ -342,7 +342,7 @@ struct OverviewView: View {
             NavigationLink {
                 MedicationPlansView(store: store)
             } label: {
-                TrackerLinkLabel(title: "Medication plan")
+                TrackerLinkLabel(title: Text("Medication plan"))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("overview.plan")
@@ -355,17 +355,9 @@ struct OverviewView: View {
             NavigationLink {
                 ForecastView(store: store)
             } label: {
-                HStack {
-                    Text("Medication regimen simulation")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(TrackerTheme.muted)
-                        .accessibilityHidden(true)
-                }
-                .font(.subheadline)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                TrackerLinkLabel(title: Text("Medication regimen simulation"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("overview.forecast")

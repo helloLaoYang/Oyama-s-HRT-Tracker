@@ -208,11 +208,11 @@ struct TrackerSegment<Option: Hashable>: View {
 }
 
 struct TrackerLinkLabel: View {
-    let title: LocalizedStringKey
+    let title: Text
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(title)
+            title
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .accessibilityHidden(true)

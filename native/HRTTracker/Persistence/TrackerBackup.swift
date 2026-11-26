@@ -43,6 +43,7 @@ struct BackupContents {
     }
 
     var modes: [HRTMode: ModeRecords] = [:]
+    var bodyMeasurements: [BodyMeasurement]?
     var mode: HRTMode?
     var weight: Double?
     var birthYear: Int?
@@ -134,6 +135,17 @@ enum TrackerBackup {
         }
 
         var entryCount = 0
+        if native, let bodyMeasurements = object["bodyMeasurements"] {
+            let latestSave = Date().addingTimeInterval(60)
+            if let items = bodyMeasurements as? [Any] {
+                result.bodyMeasurements = parseRecords(items, invalid: &result.invalid) {
+                    parseBodyMeasurement($0, latestSave: latestSave)
+                }
+            } else {
+                result.bodyMeasurements = []
+                result.invalid += 1
+            }
+        }
         if let modes = object["modes"] as? [String: Any] {
             for mode in HRTMode.allCases {
                 guard let raw = modes[mode.rawValue] else { continue }
@@ -207,7 +219,7 @@ enum TrackerBackup {
             profile["pkParams"] = overrides.isEmpty ? NSNull() as Any : overrides
         }
         if let at = backup.pkParamsUpdatedAt { profile["pkParamsUpdatedAt"] = at }
-        return try JSONSerialization.data(withJSONObject: [
+        var document: [String: Any] = [
             "format": nativeFormat, "formatVersion": 1, "createdAt": ISO8601DateFormatter().string(from: date),
             "app": [
                 "bundleId": Bundle.main.bundleIdentifier ?? "com.hellolaoyang.hrttracker",
@@ -218,7 +230,13 @@ enum TrackerBackup {
                 "remindersEnabled": backup.remindersEnabled ?? false, "snoozeMinutes": backup.snoozeMinutes ?? 15,
                 "supplyLeadDays": backup.supplyLeadDays ?? 14,
             ],
-        ], options: [.prettyPrinted, .sortedKeys])
+        ]
+        if let bodyMeasurements = backup.bodyMeasurements {
+            let bodyEncoder = JSONEncoder()
+            bodyEncoder.dateEncodingStrategy = .millisecondsSince1970
+            document["bodyMeasurements"] = try JSONSerialization.jsonObject(with: bodyEncoder.encode(bodyMeasurements))
+        }
+        return try JSONSerialization.data(withJSONObject: document, options: [.prettyPrinted, .sortedKeys])
     }
 
     private static func readMode(
@@ -252,11 +270,28 @@ enum TrackerBackup {
         guard let items = raw as? [Any] else { invalid += 1; return [] }
         count += items.count
         guard count <= 20_000 else { return [] }
+        return parseRecords(items, invalid: &invalid, parse: parse)
+    }
+
+    private static func parseRecords<T>(
+        _ items: [Any], invalid: inout Int, parse: ([String: Any]) -> T?
+    ) -> [T] {
         return items.compactMap {
             if let item = $0 as? [String: Any], let value = parse(item) { return value }
             invalid += 1
             return nil
         }
+    }
+
+    private static func parseBodyMeasurement(_ raw: [String: Any], latestSave: Date) -> BodyMeasurement? {
+        guard id(raw["id"]) != nil, let revisions = raw["revisions"] as? [Any], revisions.count <= 20_000,
+              let data = try? JSONSerialization.data(withJSONObject: raw) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        guard let measurement = try? decoder.decode(BodyMeasurement.self, from: data),
+              let current = measurement.current, current.savedAt <= latestSave,
+              measurement.isValid, measurement.revisions.allSatisfy({ id($0.id) != nil }) else { return nil }
+        return measurement
     }
 
     private static func parseDose(_ raw: [String: Any]) -> DoseEvent? {
