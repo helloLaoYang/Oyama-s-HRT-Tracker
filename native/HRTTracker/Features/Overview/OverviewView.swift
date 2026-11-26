@@ -3,50 +3,109 @@ import SwiftUI
 
 struct OverviewView: View {
     let store: TrackerStore
-    let concentrationScrollRequest: Int
+    var concentrationScrollRequest = 0
     @State private var range: TrackerChartRange = .week
     @State private var timeline: TimelineModel?
     @State private var loadedRequest: TimelineRequest?
+    @State private var refreshTask: Task<Void, Never>?
+    @State private var refreshPhase: OverviewRefreshPhase = .pulling
+    @State private var showRefreshFailure = false
     @State private var shareSnapshot: ConcentrationShareSnapshot?
     @State private var showDose = false
     @State private var showInfo = false
     @State private var earlyPlan: MedicationPlan?
+    @State private var stockPlan: MedicationPlan?
     @State private var loggedPlans: [String: String] = [:]
     @ScaledMetric(relativeTo: .largeTitle) private var mainValueSize: CGFloat = 42
     @ScaledMetric(relativeTo: .largeTitle) private var pairedValueSize: CGFloat = 36
 
     var body: some View {
         let request = timelineRequest
+        let isRefreshing = refreshTask != nil
+        let inventory = InventorySnapshot(store: store)
         let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
         ScrollViewReader { proxy in
-            overviewContent(request: request, shareableTimeline: shareableTimeline)
-                .onChange(of: concentrationScrollRequest, initial: true) { _, request in
-                    guard request > 0 else { return }
-                    proxy.scrollTo("overview.concentration", anchor: .top)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if !request.events.isEmpty {
+                        currentLevel(request: request, shareableTimeline: shareableTimeline)
+                    }
+                    todayPlan
+                    InventoryAlertsView(store: store, inventory: inventory)
+                    Divider().overlay(TrackerTheme.separator)
+                    Group {
+                        if let timeline, !timeline.traces.isEmpty {
+                            ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
+                        } else if request.events.isEmpty {
+                            VStack(alignment: .leading, spacing: 7) {
+                                TrackerSectionTitle(title: "Hormone concentration over time")
+                                Text("No dose records yet")
+                                    .font(.footnote)
+                                    .foregroundStyle(TrackerTheme.muted)
+                                Button("Record dose") { showDose = true }
+                                    .font(.subheadline)
+                            }
+                        } else if loadedRequest != request {
+                            ProgressView().frame(maxWidth: .infinity, minHeight: 100)
+                        } else {
+                            Text("No supported concentration model for these records.")
+                                .font(.footnote)
+                                .foregroundStyle(TrackerTheme.muted)
+                        }
+                    }
+                    .id("overview.concentration")
+                    Divider().overlay(TrackerTheme.separator)
+                    DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
+                    Divider().overlay(TrackerTheme.separator)
+                    MedicationCostView(store: store, inventory: inventory)
+                    simulationSection
                 }
+                .padding(.horizontal, 17)
+                .padding(.vertical, 12)
+                .frame(maxWidth: 600)
+                .frame(maxWidth: .infinity)
+                .background {
+                    OverviewRefreshControl(phase: refreshPhase)
+                }
+            }
+            .onChange(of: concentrationScrollRequest, initial: true) { _, request in
+                guard request > 0 else { return }
+                proxy.scrollTo("overview.concentration", anchor: .top)
+            }
         }
+        .scrollBounceBehavior(.always, axes: .vertical)
+        .refreshable { await refreshOverview() }
+        .onDisappear { refreshTask?.cancel() }
         .background(TrackerTheme.background.ignoresSafeArea())
         .foregroundStyle(TrackerTheme.ink)
         .toolbar(.hidden, for: .navigationBar)
-        .task(id: request) {
-            if request.events.isEmpty {
-                timeline = nil
-                loadedRequest = request
-                return
-            }
-            if loadedRequest?.mode != request.mode { timeline = nil }
-            let calculation = Task.detached(priority: .userInitiated) { TimelineModel.calculate(request) }
-            let result = await withTaskCancellationHandler {
-                await calculation.value
-            } onCancel: {
-                calculation.cancel()
-            }
-            if !Task.isCancelled {
-                timeline = result
-                loadedRequest = request
-            }
+        .task(id: isRefreshing ? nil : request) {
+            guard refreshTask == nil, loadedRequest != request else { return }
+            await loadTimeline(request)
+        }
+        .alert("Could not refresh tracker data", isPresented: $showRefreshFailure) {
+            Button("OK", role: .cancel) {}
         }
         .sheet(isPresented: $showDose) { DoseEditorView(store: store) }
+        .sheet(item: $stockPlan) { plan in
+            NavigationStack {
+                List {
+                    ForEach(InventorySpecifications(store.supplies).matching(plan)) { lot in
+                        Button(stockChoiceLabel(lot, for: plan.route)) {
+                            var linked = plan
+                            linked.inventorySupplyId = lot.id
+                            if store.savePlan(linked) { record(linked) }
+                            stockPlan = nil
+                        }
+                    }
+                    Button(inventoryText("Confirm later")) { record(plan); stockPlan = nil }
+                }
+                .navigationTitle(inventoryText("Choose specification"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { stockPlan = nil } } }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .sheet(item: $shareSnapshot) { snapshot in
             ConcentrationSharePreview(snapshot: snapshot)
         }
@@ -72,51 +131,51 @@ struct OverviewView: View {
         }
     }
 
-    private func overviewContent(request: TimelineRequest, shareableTimeline: TimelineModel?) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if !request.events.isEmpty {
-                    currentLevel(request: request, shareableTimeline: shareableTimeline)
-                }
-                todayPlan
-                InventoryAlertsView(store: store)
-                Divider().overlay(TrackerTheme.separator)
-                Group {
-                    if let timeline, !timeline.traces.isEmpty {
-                        ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
-                    } else if request.events.isEmpty {
-                        VStack(alignment: .leading, spacing: 7) {
-                            TrackerSectionTitle(title: "Hormone concentration over time")
-                            Text("No dose records yet")
-                                .font(.footnote)
-                                .foregroundStyle(TrackerTheme.muted)
-                            Button("Record dose") { showDose = true }
-                                .font(.subheadline)
-                        }
-                    } else if loadedRequest != request {
-                        ProgressView().frame(maxWidth: .infinity, minHeight: 100)
-                    } else {
-                        Text("No supported concentration model for these records.")
-                            .font(.footnote)
-                            .foregroundStyle(TrackerTheme.muted)
-                    }
-                }
-                .id("overview.concentration")
-                Divider().overlay(TrackerTheme.separator)
-                DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
-                NavigationLink {
-                    ForecastView(store: store)
-                } label: {
-                    TrackerLinkLabel(title: "Regimen simulation")
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .accessibilityIdentifier("overview.forecast")
+    private func refreshOverview() async {
+        guard refreshTask == nil else { return }
+        let clock = ContinuousClock()
+        let earliestEnd = clock.now + .milliseconds(700)
+        // SwiftUI can cancel the refresh callback as the observed data updates.
+        // Keep the refresh task alive until it finishes or the overview disappears.
+        let task = Task {
+            guard !Task.isCancelled else { return }
+            do {
+                try store.refreshOverviewData()
+                await loadTimeline(timelineRequest)
+            } catch {
+                showRefreshFailure = true
             }
-            .padding(.horizontal, 17)
-            .padding(.vertical, 12)
-            .frame(maxWidth: 600)
-            .frame(maxWidth: .infinity)
+            try? await clock.sleep(until: earliestEnd)
+            guard !Task.isCancelled else { return }
+            refreshPhase = .finishing
+            try? await Task.sleep(for: .seconds(OverviewRefreshPhase.fadeOutDuration))
+        }
+        refreshTask = task
+        refreshPhase = .refreshing
+        await task.value
+        refreshPhase = .pulling
+        refreshTask = nil
+    }
+
+    private func loadTimeline(_ request: TimelineRequest) async {
+        if request.events.isEmpty {
+            timeline = nil
+            loadedRequest = request
+            return
+        }
+        if let loadedRequest, loadedRequest.mode != request.mode {
+            timeline = nil
+            self.loadedRequest = nil
+        }
+        let calculation = Task.detached(priority: .userInitiated) { TimelineModel.calculate(request) }
+        let result = await withTaskCancellationHandler {
+            await calculation.value
+        } onCancel: {
+            calculation.cancel()
+        }
+        if !Task.isCancelled, timelineRequest == request {
+            timeline = result
+            loadedRequest = request
         }
     }
 
@@ -293,10 +352,25 @@ struct OverviewView: View {
             NavigationLink {
                 MedicationPlansView(store: store)
             } label: {
-                TrackerLinkLabel(title: "Medication plan")
+                TrackerLinkLabel(title: Text("Medication plan"))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("overview.plan")
+        }
+    }
+
+    private var simulationSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TrackerSectionTitle(title: "Simulation")
+            NavigationLink {
+                ForecastView(store: store)
+            } label: {
+                TrackerLinkLabel(title: Text("Medication regimen simulation"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("overview.forecast")
         }
     }
 
@@ -359,6 +433,15 @@ struct OverviewView: View {
     }
 
     private func complete(_ plan: MedicationPlan) {
+        let specifications = InventorySpecifications(store.supplies)
+        if specifications.selected(plan) == nil && !specifications.matching(plan).isEmpty {
+            stockPlan = plan
+        } else {
+            record(plan)
+        }
+    }
+
+    private func record(_ plan: MedicationPlan) {
         if let event = store.complete(plan) { loggedPlans[plan.id] = event.id }
     }
 }

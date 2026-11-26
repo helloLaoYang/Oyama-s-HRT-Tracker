@@ -241,7 +241,8 @@ enum RouteParameters {
             clearance = base * ageFactor(birthYear, event.timeH, slope: log(1 / 0.75) / 52) * weightFactor
             kernel = estradiol(event, parameters: parameters, clearance: clearance, wear: wear)
         case .testosterone:
-            let base = parameters[event.route == .injection ? "t_kClearInj" : "t_kClear"]
+            let isDepotInjection = event.route == .injection || event.route == .sc
+            let base = parameters[isDepotInjection ? "t_kClearInj" : "t_kClear"]
             clearance = base * ageFactor(birthYear, event.timeH, slope: log(1821.0 / 1390) / 40) * weightFactor
             kernel = testosterone(event, parameters: parameters, wear: wear)
         }

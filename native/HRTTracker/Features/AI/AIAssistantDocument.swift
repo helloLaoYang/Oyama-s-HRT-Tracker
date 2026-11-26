@@ -144,6 +144,7 @@ struct AIAssistantDocumentView: View {
                     .accessibilityAddTraits(.isHeader)
                 ForEach(document.estimates.indices, id: \.self) { index in
                     row(document.estimates[index], document: document, showDay: true)
+                        .accessibilityIdentifier("ai.document.estimate.\(index)")
                 }
                 Text(aiDocumentLabel("Estimates are calculated from recorded doses and are separate from lab measurements."))
                     .font(.footnote)

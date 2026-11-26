@@ -5,7 +5,7 @@ import Testing
 struct GoldenTests {
     @Test func simulationMatchesTypeScript() throws {
         let reference = try GoldenFile.load()
-        #expect(reference.fixtures.count == 18)
+        #expect(reference.fixtures.count == 19)
 
         for fixture in reference.fixtures {
             let parameters = PKParameters(overrides: fixture.pk ?? [:])

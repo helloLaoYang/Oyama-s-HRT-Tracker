@@ -101,6 +101,8 @@ export function runSimulation(
         }
         return false;
     })();
+    // Dynamic SHBG uses the trajectory of swallowed estradiol.
+    const includeSwallowedE2 = options.swallowedE2 || dynamicShbgRequested;
     const sortedEvents = [...events].sort((a, b) => a.timeH - b.timeH);
     const precomputed = sortedEvents
         .filter(e => e.route !== Route.patchRemove)
@@ -216,7 +218,7 @@ export function runSimulation(
                 totalAmountMG_T += amount;
             } else {
                 totalAmountMG_E2 += amount;
-                if (options.swallowedE2) swallowedAmountMG_E2 += model.swallowedAmount(t);
+                if (includeSwallowedE2) swallowedAmountMG_E2 += model.swallowedAmount(t);
             }
         }
 
@@ -250,8 +252,7 @@ export function runSimulation(
         concPGmL_CPA.push(currentConc_CPA); // ng/mL
         concPGmL_BICA.push(currentConc_BICA); // ng/mL
         concNGdL_T.push(currentConc_T); // ng/dL
-        if (options.swallowedE2 || dynamicShbgRequested)
-            concPGmL_E2_swallowed.push((swallowedAmountMG_E2 * 1e9) / plasmaVolumeML_E2);
+        if (includeSwallowedE2) concPGmL_E2_swallowed.push((swallowedAmountMG_E2 * 1e9) / plasmaVolumeML_E2);
 
         if (i > 0) {
             const dt = t - allTimes[i - 1];
@@ -266,8 +267,6 @@ export function runSimulation(
         const b = bindEstradiol(c, shbgBaselineNM, DEFAULT_BINDING);
         return c * (1 - b.fractionShbg);
     });
-    // Dynamic SHBG is opt-in: it needs the swallowed share of estradiol, which
-    // is computed internally when requested even if not otherwise returned.
     const result: SimulationResult = {
         timeH,
         concPGmL,
@@ -280,7 +279,7 @@ export function runSimulation(
         concPGmL_E2_bioavailable,
         auc,
     };
-    if (options.swallowedE2 || dynamicShbgRequested) result.concPGmL_E2_swallowed = concPGmL_E2_swallowed;
+    if (includeSwallowedE2) result.concPGmL_E2_swallowed = concPGmL_E2_swallowed;
     if (dynamicShbgRequested) {
         try {
             const shbg = shbgCurve(result, DEFAULT_SHBG_MODEL);
@@ -298,11 +297,6 @@ export function runSimulation(
             // shbgCurve throws when swallowed share is missing; leave unset.
         }
     }
-    if (!options.swallowedE2 && !dynamicShbgRequested) {
-        // Keep the previous contract: swallowed share is only returned when asked.
-        delete result.concPGmL_E2_swallowed;
-    }
-
     // HPG axis (A3): opt-in dynamic R_HPG from the estradiol curve. Endogenous
     // testosterone is reported only when a baseline was supplied.
     const hpgRequested = (() => {

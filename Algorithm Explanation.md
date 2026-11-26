@@ -22,7 +22,7 @@ This document explains the algorithms used for each drug/route, key parameters a
   - 舌下双通路（快：口腔黏膜；慢：吞咽 = 口服）：**E2 快支 `_analytic2C`、慢支 `_analytic3C`（经雌酮库）；EV 快支 `_analytic3C`（水解）、慢支 `_analytic2C`**。E2 快支按自己的回落速率 `k3_fast`（`OralPK.kElimSL`，§6.4）下降，其余各支用 `k₃`。
   - 贴片：零阶输入在佩戴窗口内，移除后按 k₃ 衰减；或一阶“假库”（未填标称释放率时）。
 - **`runSimulation`**：先剔除未建模的药物，再把其余 `DoseEvent` 预编译为上述函数，遍历时间点，按 E2 / CPA / 睾酮三组线性叠加各事件的中心室药量，再以各自的分布容积换算为浓度；AUC 只对 E2 曲线用梯形法则积分（§7）。
-- **`shbg.ts`**（可选，默认关闭，应用不调用）：从总 E2 按质量作用算出游离 E2，SHBG 可以停在基线（恒定游离分数），也可以随用药变化；`runSimulation` 只在传入 `{ swallowedE2: true }` 时另外返回其中被吞下的那部分 E2 曲线供它使用（§18）。
+- **`shbg.ts`** estimates free estradiol by mass-action binding. Enable dynamic SHBG with `{ dynamicShbg: true }` in `runSimulation`. Use `{ swallowedE2: true }` to request the swallowed estradiol curve for custom post-processing (§18).
 
 **单位与换算**
 - 剂量 `doseMG` 按**所记录化合物（酯）的 mg** 存储，**不是** E2 等效量（见 `DoseEvent.doseMG` 的注释）。记录表单可以输入酯 mg 或 E2 等效 mg，保存时一律换算回酯 mg。中心室药量的计算单位也是 mg。
@@ -159,7 +159,7 @@ E2、未酯化 T 与 CPA 为 1.0。分子量取自 `EsterInfo`：E2 272.38、EB 
 
 ### 4.1 路由与参数
 - **模型**：单室一阶吸收 + 清除，`F` 为经皮可达的系统暴露分数。
-- **吸收速率 `k₁`**：在 flip-flop 动力学下（`k₁ ≪ k₃`），末端衰减速率由吸收主导，故 `k₁` 取自说明书报告的凝胶表观消除半衰期（~36 h）：`k₁ = ln(2)/36 ≈ 0.0193 h⁻¹`。注意 36 h 出自 **EstroGel** 说明书（"about 36 hours following administration of 1.25 g EstroGel"，NDA 021166），此前本文档与代码注释均误标为 Divigel；Divigel 说明书写的是 "about 10 hours"（NDA 022038）。两份说明书确有分歧（产品、剂型、涂抹部位皆不同），36 h 属于二选一而非共识值。`k₁` 不影响暴露量（AUC = F·D/k₃ 与 `k₁` 无关），只决定 Tmax 与峰谷形状。
+- **吸收速率 `k₁`**：在 flip-flop 动力学下（`k₁ ≪ k₃`），末端衰减速率由吸收主导，故 `k₁` 取自说明书报告的凝胶表观消除半衰期（~36 h）：`k₁ = ln(2)/36 ≈ 0.0193 h⁻¹`。注意 36 h 出自 **EstroGel** 说明书（"about 36 hours following administration of 1.25 g EstroGel"，NDA 021166），此前本文档与代码注释均误标为 Divigel；Divigel 说明书写的是 "about 10 hours"（NDA 022038）。两份说明书确有分歧（产品、剂型、涂抹部位皆不同），36 h 属于二选一而非共识值。`k₁` 不影响暴露量（`AUC₀–∞ = F·D/(k₃·Vd)` 与 `k₁` 无关，浓度单位换算见 §5），只决定 Tmax 与峰谷形状。
 - **`F`（生物利用率）按涂抹部位**：手臂/大腿 ≈ 5%，阴囊/生殖器部位 ≈ 25%（约 5×，外推自阴囊贴片给药数据 Premoli et al. 2005，因缺乏阴囊凝胶给药的直接人体研究）。
   - 手臂/大腿的 5% 由**说明书自身的稳态血药浓度反推**得出，而非引用任何现成百分比：美国的雌二醇凝胶说明书根本未给出百分比（Divigel NDA 022038、EstroGel NDA 021166 对吸收只有定性描述）。Divigel 0.25/0.5/1.0 mg/day 的 Cavg 为 9.8/21/30.5 pg/mL，EstroGel 0.75 mg/day 为 28.3 pg/mL；本模型在 65-70 kg 下需 F = 0.039-0.058（均值 0.050）才能复现。说明书数值未做基线校正，故属上限，真值可能更接近 0.04。
   - **不应引用 Järvinen et al. 1999 来支撑这个数**：其"61% 片剂 / 109% 贴片"是**相对**生物利用率，无法确定绝对分数。不过贴片一侧可佐证量级：1.09 × 50 µg/day ÷ 1.5 mg 应用量 ≈ 3.6%。
@@ -186,7 +186,7 @@ E2、未酯化 T 与 CPA 为 1.0。分子量取自 `EsterInfo`：E2 272.38、EB 
   `e2_oral_bio = 0.03`（口服首过后系统暴露，E2 与 EV 近似相同量级；`OralPK.bioavailability` 保留同值，运行时读 `e2_oral_bio`，可在 PK 参数页修改）。  
   `F = e2_oral_bio × toE2Factor`，`k₃ = e2_kClear = 0.41 h⁻¹`。
 - **模型结果**（70 kg）：口服 E2 1 mg 约 10.3 h 达峰，峰值约 17 pg/mL（加入雌酮库之前为约 2.8 h、69 pg/mL），之后按约 14.4 h 的半衰期下降；2 mg/天稳态时一天内约 31-54 pg/mL，均值约 43.5 pg/mL（此前谷值不足 1 pg/mL，均值不变）。
-- 总暴露不随速率改变：无论 `kAbsE2`、`kE1Pool` 取何值，AUC = F·D/k₃。
+- For a single dose, the concentration AUC from dosing to infinity is `F × doseMG × 10⁹ / (k₃ × Vd_mL)` in pg·h/mL. Changing `kAbsE2` or `kE1Pool` changes the curve shape. The exact concentration AUC depends on the dose, formation fraction, clearance rate, and volume of distribution.
 - 上游 Swift 版 `PKcore` 没有这一库，所以 `tests/routes.test.ts` 与上游曲线的逐点对照中，口服与舌下只保留 EV。
 - 口服 CPA 走同一路由但参数完全不同，见 §13。
 
@@ -497,7 +497,7 @@ Doll 2022 另报告 0-8 h 的 AUC 为口服的 1.8 倍（总浓度）；按 issu
 - 与已发表数据的已知差距，记录在 `tests/literature.test.ts` 的 `it.fails` 中，修好时测试会提醒（70 kg）：
   - 舌下 E2 1 mg（Standard 档，θ = 0.11）峰值约 350 pg/mL，约为 Doll 2022 LC-MS/MS 实测 144 pg/mL 的 2.4 倍（`kElimSL` 之前为 509 pg/mL、3.5 倍，即 issue #22 的反馈）。该研究未写含服时长，队列偏重（据 issue #22 的转述，平均 BMI 33），测试的 70 kg 没有计入这一点；而 1 h 采样的 RIA 研究（Price 1997、Pines 1998）每 mg 约 440-450 pg/mL，高于模型。峰值的高低仍未定，留待带时间的化验结果（§6.4）。
   - 口服 E2 1 mg 在 8 h 时约 16 pg/mL，不到 Doll 2022 的 35 pg/mL 的一半；1 mg/天稳态的峰时约 8.5 h，Angeliq 说明书约 2 h（§5.2）。
-  - 每周 73.9 mg TE（Xyosted 的平均剂量）的谷值约 237 ng/dL，谷均比约 0.43，说明书为 436 ng/dL、0.79。肌注的 Azmiro 说明书（单次 200 mg TC 约 72 h 达峰）同样比模型（约 2 天达峰、约 1430 ng/dL）平缓，所以注射途径解释不了这一差距；储库速率留待带时间的化验结果再调整（§14）。
+- The subcutaneous TE model peaks about 45 hours after the week-12 dose. The Xyosted label reports a median of 11.9 hours. The model trough is about 344 ng/dL against the label mean of 436 ng/dL (§14). [Xyosted label, Table 3](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=8a3d204c-be26-49e0-8599-0ac12a272e81)
 - 尚未单独记为测试的偏差：CPA 只有单剂量数据，低剂量可能偏低（§13）；睾酮注射的形成分数按 70 kg 标定，Aveed 说明书的体重分组提示实际水平可能是模型的约 1.15-1.25 倍（按新的 `CL ∝ BW^0.75` 换算；旧的 `1/体重` 换算给出 1.3-1.4 倍，见 §14）。
 
 ---
@@ -536,7 +536,7 @@ Doll 2022 另报告 0-8 h 的 AUC 为口服的 1.8 倍（总浓度）；按 issu
   - 贡献寿命（`computeMaxLifetimeH`）：取事件最小的非零速率常数 `k_min`（`k1_fast`、`k1_slow`、`k2`、`k2_slow`、`k3`；口服 CPA 为 `ka` 与 β），`maxLifetimeH = ceil(13.816 / k_min)`（13.816 ≈ ln 1e6，即 e^{−k_min·τ} < 1e‑6）；贴片为 `wearH + ceil(13.816 / k3)`，`wearH` 按这一事件本身解析，一直佩戴的贴片始终计算。超过寿命的事件不再求值。
   - 逐点按药物分组累加药量：CPA 一组，睾酮各形式一组，其余（雌二醇各形式）一组；分别换算为 E2 pg/mL、CPA ng/mL、总睾酮 ng/dL（§0）。
   - **AUC**：对 E2 浓度梯形法累计（§7）。
-  - 传入 `{ swallowedE2: true }` 时，另把每个 E2 事件中被吞下的部分（口服全部，舌下的慢支）单独累加为 `concPGmL_E2_swallowed`，供 §18 的 SHBG 子模型使用；不传时不计算也不返回，其余输出不受影响。
+  - Either `{ swallowedE2: true }` or `{ dynamicShbg: true }` returns `concPGmL_E2_swallowed` for the SHBG submodel (§18). The series includes oral estradiol and the swallowed branch of each sublingual dose.
 
 ---
 
@@ -619,7 +619,7 @@ Doll 2022 另报告 0-8 h 的 AUC 为口服的 1.8 倍（总浓度）；按 issu
 - **局限**：群体稳态近似，未解析 LH/FSH 动力学；必须锚定个体首次血检 $T_0$；抗雄激素的额外降低因子为近似；GnRH 激动剂/拮抗剂的压制未单独建模（按抗雄激素处理）。UI 存储 $T_0$、血检录入、开关与轨迹视图留待后续 issue（tag @SmirnovaOyama）。
 
 ## 14) 睾酮（跨男模式）
-- **范围**：`T_ESTERS` 包括 T（未酯化，用于凝胶/贴片）、TC、TE、TU。`runSimulation` 把它们单独累加为总睾酮曲线 `concNGdL_T`（ng/dL）。跨男模式下，单次记录表单只提供注射（TC/TE/TU）与凝胶（T）；计划与预测页的药物列表另含 T 贴片。口服、舌下睾酮与未酯化 T 注射不建模（`resolveParams` 返回零参数）。
+- **Scope**. The engine models intramuscular and subcutaneous TC, TE, and TU, oral TU, nasal testosterone, testosterone gel and patches, and pellets. `runSimulation` sums their contributions in the total testosterone series `concNGdL_T` (ng/dL).
 - **剂量与 F**：剂量同样按酯 mg 存储；`getToE2Factor` 对睾酮酯返回 MW(T)/MW(酯)（TC 0.6990、TE 0.7200、TU 0.6315、T 1.0），各路由的 `F` 都乘以它。
 - **注射**：两库吸收 + 水解，快/慢库各一个 `_analytic3C`（`T_DepotPK`、`T_EsterPK`；不乘 `depotK1Corr`）。TU 只有一个库：`Frac_fast = 0`，快库不分到剂量，两库的 k₁ 也相同。
 
@@ -629,7 +629,7 @@ Doll 2022 另报告 0-8 h 的 AUC 为口服的 1.8 倍（总浓度）；按 issu
 | TE | 0.40 | 0.035 | 19.80 | 0.008 | 86.64 | 0.20 | 3.47 |
 | TU | 0 | ln2/1200 ≈ 0.000578 | 1200（50 天） | ln2/1200 ≈ 0.000578 | 1200（50 天） | 0.036 | 19.25 |
 
-- 注射的 `k3 = t_kClearInj = 0.035 h⁻¹`（t½ ≈ 19.8 h，flip‑flop 下的有效值）；形成分数 `t_ff_TC` / `t_ff_TE` / `t_ff_TU` 默认均为 **0.043**，`F = t_ff × toT 因子`。
+- Both injection routes use the apparent depot-model clearance `k3 = t_kClearInj = 0.035 h⁻¹` (half-life ≈ 19.8 h at the reference weight). The table lists intramuscular rates. Subcutaneous absorption uses half each listed `k1`, with the same hydrolysis rates. The default formation fractions `t_ff_TC`, `t_ff_TE`, and `t_ff_TU` are **0.043**, and `F = t_ff ×` the testosterone mass fraction.
 - **形成分数的标定**（`DEFAULT_PK_PARAMS.t_ff_*` 注释，70 kg）：两份不同酯的说明书给出同一个值。Xyosted（庚酸睾酮皮下注射，每周）第 12 周 Cavg 553 ng/dL，试验中剂量经滴定，平均 73.9 mg/周，0.043 在该剂量下给出 555 ng/dL；Aveed（十一酸睾酮 750 mg，第 0、4 周后每 10 周）第三针后 Cavg 495 ng/dL，0.043 给出 503 ng/dL。于是 100 mg/周 TC 或 TE 的平均值约 730-750 ng/dL。旧值 0.025 使 100 mg/周约为 430 ng/dL，约为两份说明书的 0.6 倍。Azmiro（环戊丙酸睾酮 200 mg 肌注）说明书的数值更低，但它做了基线校正，而该剂量会抑制自身睾酮，低估了剂量的贡献，`tests/literature.test.ts` 只把它作为下限。
 - **70 kg 可能偏低**：Aveed 说明书还按体重分组，65-100 kg 组 Cavg 568 ng/dL，100 kg 及以上组 426 ng/dL，两者之比 568/426 = 1.333。旧的 `1/体重` 模型（本 PR 之前）在两组平均体重约 85 与 113 kg 时给出 113/85 = 1.329，与此相符；改为 `CL ∝ (BW/70)^0.75` 后，同一对体重只给出 (113/85)^0.75 ≈ 1.238，要得到 1.333 需约 85 与 125 kg。因此按体重分组标定时，70 kg 的修正也随体重指数变小：旧模型为 (113/70) ≈ 1.61，新模型为 (113/70)^0.75 ≈ 1.43；形成分数相应约为 0.049-0.054，即 70 kg 的人实际水平可能约为模型的 1.15-1.25 倍，而不是旧估计的 1.3-1.4 倍。Spratt et al. 2017（每周皮下注射的跨性别男性，平均约 73.6 mg/周，注射后 3-4 天平均 702 ng/dL，模型在第 3.5 天约 600 ng/dL）指向同一方向。在有带时间的化验结果之前，与凝胶一样保持 70 kg。
 - **TU 的曲线形状**（`T_DepotPK` 注释）：Nebido 说明书给出首次 1000 mg 后第 7 天达峰、释放半衰期 90 ± 40 天、每 10 周 1000 mg 稳态峰约 37 nmol/L 与谷约 16 nmol/L（谷峰比 0.43）。取说明书范围下端的 50 天释放半衰期可得到这一谷峰比（模型约 0.42）。单靠 50 天释放的一阶库（第二步仍取 0.20 h⁻¹）模型约在第 5 天达峰，所以把第二步 k₂ 放慢到约等于注射清除率（0.036 h⁻¹，`t_kClearInj` 为 0.035 h⁻¹），使峰移到第 7 天（说明书与 Aveed 的中位数），水平变化不到 2%。这一步代表说明书数据中延缓上升的过程，是拟合出来的，不是单独测得的水解速率。旧参数（两库，k₂ = 0.20）约第 3.2 天达峰，稳态谷峰比约 0.17。

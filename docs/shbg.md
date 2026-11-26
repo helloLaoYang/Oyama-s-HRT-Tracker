@@ -1,10 +1,10 @@
 # SHBG and free estradiol (optional model)
 
-Status: opt-in post-processing model. `logic.ts` default simulation output is
-unchanged. `runSimulation()` gains an optional `swallowedE2` flag (default
-`false`) used only by this model. Nothing in the UI enables it. Callers use
-`freeEstradiol()` explicitly with `{ shbg: 'constant' | 'dynamic' }`. The
-validation harness is in `tests/shbgScenarios.test.ts`.
+Enable the dynamic model with `runSimulation(events, weight, birthYear, { dynamicShbg: true })`.
+This returns dynamic SHBG, free estradiol, and the swallowed estradiol series.
+Use `{ swallowedE2: true }` to supply that series to `shbgCurve()` or
+`freeEstradiol()` for custom post-processing. The validation harness is in
+`tests/shbgScenarios.test.ts`.
 
 ## 1. What the existing model does
 
@@ -16,11 +16,10 @@ $$
 C_{\mathrm{E2,total}}(t) = \frac{A_{\mathrm{central}}(t)}{V_d}.
 $$
 
-There is no SHBG, albumin, free fraction, or protein-binding calculation in
-the default output. `e2_kClear` is an apparent first-order elimination
-constant applied to the whole central amount. The model therefore implies a
-constant free fraction; the new layer below makes that assumption explicit
-and, optionally, dynamic.
+The default free estradiol series uses binding at a fixed SHBG baseline.
+The optional dynamic series uses a time-varying SHBG concentration in the same
+binding calculation. The total estradiol model applies `e2_kClear`, an apparent
+first-order elimination constant, to the whole central amount.
 
 ## 2. Model
 
@@ -63,8 +62,8 @@ Science (Aly 2020); see `Algorithm Explanation.md` §18.3.
 ### 2.3 API
 
 - `bindEstradiol(totalPgML, shbgNM, params?)` → `{ freePgML, fractionFree, fractionShbg, fractionAlbumin }`.
-- `shbgCurve(sim, model?)` → SHBG nmol/L on the simulation grid; requires
-  `runSimulation(events, weight, birthYear, { swallowedE2: true })`.
+- `shbgCurve(sim, model?)` returns SHBG in nmol/L on the simulation grid. It
+  requires the swallowed estradiol series, which either simulation flag provides.
 - `freeEstradiol(sim, { shbg: 'constant' | 'dynamic', model?, binding? })`
   → `{ shbgNM, freePgML, fractionFree }`.
 - `exposureOver(timeH, values, fromH, toH)` → `{ auc, cmax, cmin }`.

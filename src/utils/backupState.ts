@@ -246,6 +246,14 @@ export const writeTombstonesToStorage = (
     storage.setItem(modeKeyFor(owner, mode, 'deletions'), JSON.stringify(pruneTombstones(next, now)));
 };
 
+/** Identifiers shared by complete backups, legacy event imports and stock references. */
+export const FORBIDDEN_RECORD_IDS: ReadonlySet<string> = new Set([
+    ...Object.getOwnPropertyNames(Object.prototype),
+    'prototype',
+]);
+export const isRecordId = (value: unknown): value is string =>
+    typeof value === 'string' && value !== '' && !FORBIDDEN_RECORD_IDS.has(value);
+
 export const sanitizeImportedEvents = (raw: any): DoseEvent[] => {
     if (!Array.isArray(raw)) throw new Error('Invalid format');
     if (raw.length > MAX_IMPORT_ENTRIES) throw new Error('Too many entries');
@@ -268,6 +276,7 @@ export const sanitizeImportedEvents = (raw: any): DoseEvent[] => {
                 doseMG: Number.isFinite(doseNum) ? cleanDoseMG(Math.min(DOSE_MG_MAX, Math.max(0, doseNum))) : 0,
                 ester: validEster,
                 extras: sanitizedExtras,
+                ...(isRecordId(item.inventorySupplyId) ? { inventorySupplyId: item.inventorySupplyId } : {}),
                 updatedAt: keepStamp(item),
             } as DoseEvent;
         })
