@@ -30,7 +30,7 @@ struct LabEditorView: View {
     }
 
     private var assays: [String] {
-        let available = ["", "lcms", "immuno", "chemi"]
+        let available = TrackerRecordValidation.labAssays
         if let raw = lab?.assay, !available.contains(raw) { return available + [raw] }
         return available
     }
@@ -106,7 +106,7 @@ struct LabEditorView: View {
     private func save() {
         let normalized = amount.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: Locale.current.decimalSeparator ?? ".", with: ".")
-        guard let value = Double(normalized), value.isFinite, value > 0 else {
+        guard let value = Double(normalized), TrackerRecordValidation.labValueIsValid(value) else {
             formError = LabText.localized("Enter a measured value greater than zero.")
             return
         }
@@ -137,7 +137,7 @@ enum LabText {
     }
 
     static func units(_ mode: HRTMode) -> [String] {
-        mode == .transfem ? ["pg/ml", "pmol/l"] : ["ng/dl", "nmol/l"]
+        TrackerRecordValidation.labUnits(mode)
     }
 
     static func unitText(_ unit: String) -> String {

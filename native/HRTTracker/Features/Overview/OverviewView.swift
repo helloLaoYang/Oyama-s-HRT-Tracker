@@ -3,6 +3,7 @@ import SwiftUI
 
 struct OverviewView: View {
     let store: TrackerStore
+    var concentrationScrollRequest = 0
     @State private var range: TrackerChartRange = .week
     @State private var timeline: TimelineModel?
     @State private var loadedRequest: TimelineRequest?
@@ -23,44 +24,53 @@ struct OverviewView: View {
         let isRefreshing = refreshTask != nil
         let inventory = InventorySnapshot(store: store)
         let shareableTimeline = loadedRequest == request && timeline?.traces.isEmpty == false ? timeline : nil
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if !request.events.isEmpty {
-                    currentLevel(request: request, shareableTimeline: shareableTimeline)
-                }
-                todayPlan
-                InventoryAlertsView(store: store, inventory: inventory)
-                Divider().overlay(TrackerTheme.separator)
-                if let timeline, !timeline.traces.isEmpty {
-                    ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
-                } else if request.events.isEmpty {
-                    VStack(alignment: .leading, spacing: 7) {
-                        TrackerSectionTitle(title: "Hormone concentration over time")
-                        Text("No dose records yet")
-                            .font(.footnote)
-                            .foregroundStyle(TrackerTheme.muted)
-                        Button("Record dose") { showDose = true }
-                            .font(.subheadline)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if !request.events.isEmpty {
+                        currentLevel(request: request, shareableTimeline: shareableTimeline)
                     }
-                } else if loadedRequest != request {
-                    ProgressView().frame(maxWidth: .infinity, minHeight: 100)
-                } else {
-                    Text("No supported concentration model for these records.")
-                        .font(.footnote)
-                        .foregroundStyle(TrackerTheme.muted)
+                    todayPlan
+                    InventoryAlertsView(store: store, inventory: inventory)
+                    Divider().overlay(TrackerTheme.separator)
+                    Group {
+                        if let timeline, !timeline.traces.isEmpty {
+                            ConcentrationTimeline(model: timeline, calendar: store.calendar, range: $range)
+                        } else if request.events.isEmpty {
+                            VStack(alignment: .leading, spacing: 7) {
+                                TrackerSectionTitle(title: "Hormone concentration over time")
+                                Text("No dose records yet")
+                                    .font(.footnote)
+                                    .foregroundStyle(TrackerTheme.muted)
+                                Button("Record dose") { showDose = true }
+                                    .font(.subheadline)
+                            }
+                        } else if loadedRequest != request {
+                            ProgressView().frame(maxWidth: .infinity, minHeight: 100)
+                        } else {
+                            Text("No supported concentration model for these records.")
+                                .font(.footnote)
+                                .foregroundStyle(TrackerTheme.muted)
+                        }
+                    }
+                    .id("overview.concentration")
+                    Divider().overlay(TrackerTheme.separator)
+                    DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
+                    Divider().overlay(TrackerTheme.separator)
+                    MedicationCostView(store: store, inventory: inventory)
+                    simulationSection
                 }
-                Divider().overlay(TrackerTheme.separator)
-                DoseHeatmap(doses: store.doses, now: store.now, calendar: store.calendar)
-                Divider().overlay(TrackerTheme.separator)
-                MedicationCostView(store: store, inventory: inventory)
-                simulationSection
+                .padding(.horizontal, 17)
+                .padding(.vertical, 12)
+                .frame(maxWidth: 600)
+                .frame(maxWidth: .infinity)
+                .background {
+                    OverviewRefreshControl(phase: refreshPhase)
+                }
             }
-            .padding(.horizontal, 17)
-            .padding(.vertical, 12)
-            .frame(maxWidth: 600)
-            .frame(maxWidth: .infinity)
-            .background {
-                OverviewRefreshControl(phase: refreshPhase)
+            .onChange(of: concentrationScrollRequest, initial: true) { _, request in
+                guard request > 0 else { return }
+                proxy.scrollTo("overview.concentration", anchor: .top)
             }
         }
         .scrollBounceBehavior(.always, axes: .vertical)

@@ -396,6 +396,71 @@ final class TrackerStore {
     @discardableResult
     func clearLabs() -> Bool { deleteLabs(labs.map(\.id)) }
 
+    func applyRecordChange(_ change: TrackerRecordChange, mode: HRTMode) -> TrackerRecordChangeResult {
+        guard mode == self.mode else { return .conflict }
+        let latest = isDemo ? now : Date()
+        switch change {
+        case .addDose(let value):
+            return applyDoseChange(value, original: nil, mode: mode, latest: latest)
+        case .editDose(let original, let updated):
+            return applyDoseChange(updated, original: original, mode: mode, latest: latest)
+        case .addLab(let value):
+            return applyLabChange(value, original: nil, mode: mode, latest: latest)
+        case .editLab(let original, let updated):
+            return applyLabChange(updated, original: original, mode: mode, latest: latest)
+        }
+    }
+
+    private func applyDoseChange(_ value: DoseEvent, original: DoseEvent?, mode: HRTMode,
+                                 latest: Date) -> TrackerRecordChangeResult {
+        let id = value.id
+        guard !id.lowercased().hasPrefix(Self.plannedDosePrefix),
+              original.map({ $0.id == id && !id.isEmpty }) ?? (UUID(uuidString: id) != nil),
+              TrackerRecordValidation.isHistorical(value.timeH, through: latest),
+              TrackerRecordValidation.isValidDose(value, mode: mode, original: original) else { return .invalid }
+
+        let modeRaw = mode.rawValue
+        var query = FetchDescriptor<DoseRecord>(predicate: #Predicate { $0.modeRaw == modeRaw && $0.uuid == id })
+        query.fetchLimit = 2
+        guard let records = try? context.fetch(query) else { return .failed }
+        guard records.count <= 1 else { return .conflict }
+        if let record = records.first {
+            guard let current = record.value else { return .conflict }
+            var intended = value
+            intended.updatedAt = current.updatedAt
+            if current == intended { return .alreadySaved }
+            guard current == original else { return .conflict }
+            return trySave { record.update(value, updatedAt: stamp) } ? .saved : .failed
+        }
+        guard original == nil else { return .conflict }
+        return trySave { context.insert(DoseRecord(mode: mode, value: value, updatedAt: stamp)) } ? .saved : .failed
+    }
+
+    private func applyLabChange(_ value: LabResult, original: LabResult?, mode: HRTMode,
+                                latest: Date) -> TrackerRecordChangeResult {
+        let id = value.id
+        guard original.map({ $0.id == id && !id.isEmpty }) ?? (UUID(uuidString: id) != nil),
+              TrackerRecordValidation.isHistorical(value.timeH, through: latest),
+              TrackerRecordValidation.isValidLab(value, mode: mode, original: original) else { return .invalid }
+
+        let modeRaw = mode.rawValue
+        var query = FetchDescriptor<LabRecord>(predicate: #Predicate { $0.modeRaw == modeRaw && $0.uuid == id })
+        query.fetchLimit = 2
+        guard let records = try? context.fetch(query) else { return .failed }
+        guard records.count <= 1 else { return .conflict }
+        if let record = records.first {
+            let current = record.value
+            var intended = value
+            intended.updatedAt = current.updatedAt
+            intended.unit = value.unit.lowercased()
+            if current == intended { return .alreadySaved }
+            guard current == original else { return .conflict }
+            return trySave { record.update(value, updatedAt: stamp) } ? .saved : .failed
+        }
+        guard original == nil else { return .conflict }
+        return trySave { context.insert(LabRecord(mode: mode, value: value, updatedAt: stamp)) } ? .saved : .failed
+    }
+
     @discardableResult
     func savePlan(_ plan: MedicationPlan) -> Bool {
         guard plan.everyDays.isFinite, (1...180).contains(plan.everyDays), (1...8).contains(plan.timesPerDay),

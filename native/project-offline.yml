@@ -1,0 +1,20 @@
+include:
+  - project.yml
+packages:
+  CoreAIModels:
+    url: https://github.com/apple/coreai-models
+    revision: ca2aecf0bf9f4f04ee2107af059b42dd309e9723
+targets:
+  HRTTracker:
+    deploymentTarget: "27.0"
+    sources:
+      - path: OfflineModels/Qwen3-8B-abliterated
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: CoreAIModels
+        product: CoreAILM
+  HRTTrackerTests:
+    deploymentTarget: "27.0"
+  HRTTrackerUITests:
+    deploymentTarget: "27.0"

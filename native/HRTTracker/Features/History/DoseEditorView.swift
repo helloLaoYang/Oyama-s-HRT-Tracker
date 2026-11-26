@@ -90,10 +90,13 @@ struct DoseEditorView: View {
         let hold = extras[HistoryText.thetaKey].map {
             HRTEngine.sublingualHoldMinutes(fromTheta: $0, parameters: store.pkParameters)
         }
-        _sublingualTier = State(initialValue: hold == nil
-            ? Tier(rawValue: Self.boundedIndex(extras[HistoryText.tierKey], through: 3, default: 2)) ?? .standard : .custom)
+        let tier = Self.boundedIndex(extras[HistoryText.tierKey],
+                                     through: TrackerRecordValidation.sublingualTiers.upperBound, default: 2)
+        _sublingualTier = State(initialValue: hold == nil ? Tier(rawValue: tier) ?? .standard : .custom)
         _holdMinutes = State(initialValue: hold.map(Self.inputText) ?? "10")
-        _gelSite = State(initialValue: GelSite(rawValue: Self.boundedIndex(extras[HistoryText.siteKey], through: 2, default: 0)) ?? .arm)
+        let site = Self.boundedIndex(extras[HistoryText.siteKey],
+                                     through: TrackerRecordValidation.gelSites.upperBound, default: 0)
+        _gelSite = State(initialValue: GelSite(rawValue: site) ?? .arm)
     }
 
     var body: some View {
@@ -246,7 +249,7 @@ struct DoseEditorView: View {
     }
 
     private var availableDrugs: [String] {
-        let drugs = Self.drugs(for: route, mode: store.mode)
+        let drugs = TrackerRecordValidation.drugs(for: route, mode: store.mode)
         return drugs.contains(ester) ? drugs : drugs + [ester]
     }
 
@@ -275,7 +278,7 @@ struct DoseEditorView: View {
         } else {
             numberField("Dose per patch (mg)", value: $patchMG, id: "dose.patchMG")
         }
-        Stepper(value: $patchCount, in: 1...10) {
+        Stepper(value: $patchCount, in: TrackerRecordValidation.patchCounts) {
             LabeledContent(HistoryText.localized("Patches"), value: String(patchCount))
         }
         .accessibilityIdentifier("dose.patchCount")
@@ -332,7 +335,7 @@ struct DoseEditorView: View {
                     }
                 }
                 Button {
-                    guard let dose = calculatedAmount, dose > 0, dose <= 10_000 else {
+                    guard let dose = calculatedAmount, TrackerRecordValidation.doseAmountIsValid(dose) else {
                         formError = HistoryText.localized("Enter a valid dose before adding a shortcut.")
                         return
                     }
@@ -429,7 +432,7 @@ struct DoseEditorView: View {
     private func selectRoute(_ selected: Route) {
         guard selected != route else { return }
         route = selected
-        let drugs = Self.drugs(for: selected, mode: store.mode)
+        let drugs = TrackerRecordValidation.drugs(for: selected, mode: store.mode)
         if !drugs.contains(ester) {
             ester = drugs[0]
             setRaw("")
@@ -449,9 +452,13 @@ struct DoseEditorView: View {
             sublingualTier = .custom
             holdMinutes = Self.inputText(HRTEngine.sublingualHoldMinutes(fromTheta: theta, parameters: store.pkParameters))
         } else {
-            sublingualTier = Tier(rawValue: Self.boundedIndex(template.extras[HistoryText.tierKey], through: 3, default: 2)) ?? .standard
+            let tier = Self.boundedIndex(template.extras[HistoryText.tierKey],
+                                         through: TrackerRecordValidation.sublingualTiers.upperBound, default: 2)
+            sublingualTier = Tier(rawValue: tier) ?? .standard
         }
-        gelSite = GelSite(rawValue: Self.boundedIndex(template.extras[HistoryText.siteKey], through: 2, default: 0)) ?? .arm
+        let site = Self.boundedIndex(template.extras[HistoryText.siteKey],
+                                     through: TrackerRecordValidation.gelSites.upperBound, default: 0)
+        gelSite = GelSite(rawValue: site) ?? .arm
         setRaw(Self.inputText(template.doseMG))
     }
 
@@ -463,29 +470,31 @@ struct DoseEditorView: View {
         }
         var dose = 0.0
         if route == .patchApply {
-            guard let perPatch = Self.number(patchBasis == .rate ? patchRate : patchMG), perPatch > 0,
-                  perPatch * Double(patchCount) <= 10_000 else { return invalidDose() }
-            let total = perPatch * Double(patchCount)
-            if patchBasis == .rate { extras[HistoryText.rateKey] = total } else { dose = total }
-            if patchCount > 1 { extras[HistoryText.countKey] = Double(patchCount) }
+            guard let perPatch = Self.number(patchBasis == .rate ? patchRate : patchMG),
+                  let patch = TrackerRecordValidation.patchDose(perPatch: perPatch, count: patchCount,
+                                                                isReleaseRate: patchBasis == .rate)
+            else { return invalidDose() }
+            dose = patch.amount
+            extras.merge(patch.extras) { _, value in value }
             if !wearDays.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                guard let wear = Self.number(wearDays), wear > 0, (wear * 24).isFinite else {
+                guard let wear = Self.number(wearDays), let hours = TrackerRecordValidation.patchWearHours(days: wear) else {
                     formError = HistoryText.localized("Enter a positive wear duration or leave it blank.")
                     return nil
                 }
-                extras[HistoryText.wearKey] = wear * 24
+                extras[HistoryText.wearKey] = hours
             }
         } else {
-            guard let amount = calculatedAmount, amount > 0, amount <= 10_000 else { return invalidDose() }
+            guard let amount = calculatedAmount, TrackerRecordValidation.doseAmountIsValid(amount) else { return invalidDose() }
             dose = amount
         }
         if route == .sublingual {
             if sublingualTier == .custom {
-                guard let minutes = Self.number(holdMinutes), minutes >= 1 else {
+                guard let minutes = Self.number(holdMinutes),
+                      let theta = TrackerRecordValidation.sublingualTheta(minutes: minutes, parameters: store.pkParameters) else {
                     formError = HistoryText.localized("Enter a hold time of at least 1 minute.")
                     return nil
                 }
-                extras[HistoryText.thetaKey] = HRTEngine.sublingualTheta(fromHoldMinutes: minutes, parameters: store.pkParameters)
+                extras[HistoryText.thetaKey] = theta
             } else {
                 extras[HistoryText.tierKey] = Double(sublingualTier.rawValue)
             }
@@ -557,23 +566,6 @@ struct DoseEditorView: View {
     private static let routeOrder: [Route] = [
         .injection, .oral, .sublingual, .gel, .patchApply, .patchRemove, .nasal, .sc, .pellet
     ]
-
-    private static func drugs(for route: Route, mode: HRTMode) -> [String] {
-        if mode == .transmasc {
-            switch route {
-            case .injection: return ["TC", "TE", "TU"]
-            case .oral, .sublingual: return ["TU"]
-            case .sc: return ["T", "TC", "TE"]
-            default: return ["T"]
-            }
-        }
-        switch route {
-        case .injection: return ["EB", "EV", "EC", "EN", "EU", "LEUP", "TRIP"]
-        case .oral: return ["E2", "EV", "CPA", "SPIRO", "BICA", "MPA", "RLX"]
-        case .sublingual: return ["E2", "EV"]
-        default: return ["E2"]
-        }
-    }
 
     private static func factor(_ ester: String) -> Double { HistoryText.equivalents[ester] ?? 1 }
 

@@ -1,0 +1,17 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRTrace 使用麦克风在设备上将你主动录制的语音转换为助手输入。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
