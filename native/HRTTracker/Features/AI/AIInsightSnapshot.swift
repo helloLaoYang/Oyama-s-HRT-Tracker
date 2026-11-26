@@ -31,6 +31,41 @@ struct AIInsightSnapshot: Sendable {
     var capturedInterval: ClosedRange<Date>? = nil
     var capturedTimeZoneID: String? = nil
 
+    func facts(matching question: String) -> [AIInsightFact] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = capturedTimeZoneID.flatMap(TimeZone.init(identifier:)) ?? .current
+        let retrieval = AIRecordRetrieval(question: question)
+        let sources = retrieval.sources(in: self, calendar: calendar)
+        let matched = sources.compactMap { source -> AIInsightFact? in
+            if let existing = facts.first(where: { $0.source == source }) { return existing }
+            switch source {
+            case .dose(let id):
+                guard let dose = doses.first(where: { $0.id == id }) else { return nil }
+                let detail = Self.doseText(dose, calendar: calendar)
+                return AIInsightFact(id: "dose-" + id, text: aiDataLabel("Dose record: \(detail)"), source: source)
+            case .lab(let id):
+                guard let lab = labs.first(where: { $0.id == id }) else { return nil }
+                let detail = Self.labText(lab, mode: mode, calendar: calendar)
+                return AIInsightFact(id: "lab-" + id, text: aiDataLabel("Lab measurement: \(detail)"), source: source)
+            case .curve:
+                return nil
+            }
+        }
+        if retrieval.hasExplicitDates {
+            let overview = facts.filter { $0.source == nil }
+            if matched.isEmpty {
+                let noMatch = AIInsightFact(
+                    id: "no-matching-date-records",
+                    text: aiDataLabel("No matching records for the requested dates were found in the selected period."),
+                    source: nil
+                )
+                return [noMatch] + overview
+            }
+            return matched + overview
+        }
+        return matched + facts.filter { fact in !matched.contains { $0.id == fact.id } }
+    }
+
     @MainActor
     static func capture(store: TrackerStore, range: AIRange) async -> Self {
         let mode = store.mode

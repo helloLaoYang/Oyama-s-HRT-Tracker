@@ -1,0 +1,292 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "AI could not draft this correction. You can enter the new value below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 未能生成修正草稿。你可以在下方输入新值。"
+          }
+        }
+      }
+    },
+    "AI draft": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 草稿"
+          }
+        }
+      }
+    },
+    "After": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改后"
+          }
+        }
+      }
+    },
+    "Before": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改前"
+          }
+        }
+      }
+    },
+    "Choose a record": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一条记录"
+          }
+        }
+      }
+    },
+    "Confirm and save": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认并保存"
+          }
+        }
+      }
+    },
+    "Correct a record": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正记录"
+          }
+        }
+      }
+    },
+    "Correction saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存修正"
+          }
+        }
+      }
+    },
+    "Could not save the correction.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存修正。"
+          }
+        }
+      }
+    },
+    "Describe the correction": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述要修正的内容"
+          }
+        }
+      }
+    },
+    "Draft ready. Check the proposed value before saving.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿已生成，请核对数值后保存。"
+          }
+        }
+      }
+    },
+    "Draft with AI": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 生成草稿"
+          }
+        }
+      }
+    },
+    "Enter a different valid value without digit grouping.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入一个不同的有效数值，不使用千位分隔符。"
+          }
+        }
+      }
+    },
+    "Enter a short correction with one explicit number.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请简短描述修正内容，并提供一个明确的数值。"
+          }
+        }
+      }
+    },
+    "New value": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新值"
+          }
+        }
+      }
+    },
+    "No records in this period can be corrected here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此时间范围内没有可在此修正的记录。"
+          }
+        }
+      }
+    },
+    "Original value restored": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已恢复原值"
+          }
+        }
+      }
+    },
+    "Preparing draft…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在生成草稿…"
+          }
+        }
+      }
+    },
+    "Record": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录"
+          }
+        }
+      }
+    },
+    "Review change": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核对变更"
+          }
+        }
+      }
+    },
+    "State one replacement number in the record’s existing unit, or enter the value below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按记录的原有单位写出一个新数值，或直接在下方输入。"
+          }
+        }
+      }
+    },
+    "The record changed. Close this sheet and reopen it before trying again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录已变更。请关闭并重新打开此页面后再试。"
+          }
+        }
+      }
+    },
+    "This value is already saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录已经是这个数值"
+          }
+        }
+      }
+    },
+    "Undo correction": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销修正"
+          }
+        }
+      }
+    },
+    "mg per patch": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mg／贴"
+          }
+        }
+      }
+    },
+    "µg/day per patch": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "µg/天／贴"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

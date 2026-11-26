@@ -8,9 +8,10 @@ import FoundationModels
 
 actor AIOfflineModel {
     static let shared = AIOfflineModel()
-    static let modelDirectoryName = "Qwen2.5-1.5B-Instruct"
+    static let modelDirectoryName = "Qwen3-8B-abliterated"
+    static let modelID = "huihui-ai/" + modelDirectoryName
     static let contextLimit = 4_096
-    static let outputLimit = 256
+    static let outputLimit = 768
 
     struct Metrics: Sendable {
         let generatedTokens: Int
@@ -67,7 +68,7 @@ actor AIOfflineModel {
         let tokenizerURL = url.appending(path: "tokenizer", directoryHint: .isDirectory)
         guard let data = try? Data(contentsOf: metadataURL),
               let manifest = try? JSONDecoder().decode(ModelManifest.self, from: data),
-              manifest.kind == "llm", manifest.source.modelID == "Qwen/\(modelDirectoryName)",
+              manifest.kind == "llm", manifest.source.modelID == modelID,
               manifest.language.embeddedTokenizer,
               manifest.assets.main == URL(fileURLWithPath: manifest.assets.main).lastPathComponent,
               manager.fileExists(atPath: url.appending(path: manifest.assets.main).path),
@@ -118,12 +119,11 @@ actor AIOfflineModel {
         throw Failure.unavailable
     }
 
-    func generate(instructions: String, prompt: String, recentTurns: [AIChatTurn],
+    func generate(prompt: String, recentTurns: [AIChatTurn],
                   onUpdate: @MainActor @Sendable (String) throws -> Void = { _ in }) async throws -> Result {
         #if os(iOS) && !targetEnvironment(simulator) && canImport(CoreAI) && canImport(CoreAILanguageModels)
         if #available(iOS 27, *) {
-            return try await generateUsingCoreAI(instructions: instructions, prompt: prompt,
-                                                 recentTurns: recentTurns, onUpdate: onUpdate)
+            return try await generateUsingCoreAI(prompt: prompt, recentTurns: recentTurns, onUpdate: onUpdate)
         }
         #endif
         throw Failure.unavailable
@@ -146,7 +146,7 @@ actor AIOfflineModel {
     }
 
     @available(iOS 27, *)
-    private func generateUsingCoreAI(instructions: String, prompt: String, recentTurns: [AIChatTurn],
+    private func generateUsingCoreAI(prompt: String, recentTurns: [AIChatTurn],
                                      onUpdate: @MainActor @Sendable (String) throws -> Void) async throws -> Result {
         guard !isGenerating else { throw Failure.busy }
         isGenerating = true
@@ -162,9 +162,7 @@ actor AIOfflineModel {
         try Task.checkCancellation()
         let loadSeconds = wasPrepared ? 0 : Self.seconds(from: start, to: .now)
 
-        var entries: [Transcript.Entry] = [
-            .instructions(.init(segments: [.text(.init(content: instructions))], toolDefinitions: []))
-        ]
+        var entries: [Transcript.Entry] = []
         for turn in recentTurns {
             entries.append(.prompt(.init(segments: [.text(.init(content: turn.question))])))
             entries.append(.response(.init(metadata: [:], segments: [.text(.init(content: turn.answer))])))
@@ -173,7 +171,11 @@ actor AIOfflineModel {
         let generationStart = ContinuousClock.now
         let stream = session.streamResponse(
             to: Prompt(prompt),
-            options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: Self.outputLimit)
+            options: GenerationOptions(
+                samplingMode: .random(probabilityThreshold: 0.95),
+                temperature: 0.6,
+                maximumResponseTokens: Self.outputLimit
+            )
         )
         var firstText: ContinuousClock.Instant?
         var answer = ""

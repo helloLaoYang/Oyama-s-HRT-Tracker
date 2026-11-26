@@ -1,6 +1,27 @@
 import Foundation
 
 enum AIAssistantReplyGuard {
+    typealias Update = @MainActor @Sendable (String) throws -> Void
+
+    @MainActor
+    static func completedReply(
+        using generate: (Update) async throws -> String,
+        onUpdate: @escaping @MainActor @Sendable (String) -> Void
+    ) async throws -> String {
+        let response: String
+        do {
+            response = try await generate { snapshot in
+                try Task.checkCancellation()
+                onUpdate(try streamText(snapshot))
+            }
+        } catch StreamStop.roleBoundary(let prefix) {
+            response = prefix
+        }
+        try Task.checkCancellation()
+        guard let answer = finalText(response) else { throw AIOfflineModel.Failure.emptyResponse }
+        return answer
+    }
+
     enum StreamStop: Error {
         case roleBoundary(prefix: String)
     }
@@ -21,6 +42,7 @@ enum AIAssistantReplyGuard {
     }
 
     static func finalText(_ response: String) -> String? {
+        let response = response.trimmingCharacters(in: .whitespacesAndNewlines)
         let text = response[..<(roleBoundary(in: response)?.start ?? response.endIndex)]
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? nil : text
@@ -48,11 +70,12 @@ enum AIAssistantReplyGuard {
             }
             if fence == nil, !line.isEmpty {
                 let value = line.lowercased()
-                let partial = includingPartialLastLine && end == response.endIndex
+                let isLastLine = end == response.endIndex
+                let partial = includingPartialLastLine && isLastLine
                 if markers.contains(where: { value.hasPrefix($0) }) {
                     return (start, true)
                 }
-                if partial, markers.contains(where: { $0.hasPrefix(value) }) {
+                if isLastLine, partial || value.hasPrefix("<|"), markers.contains(where: { $0.hasPrefix(value) }) {
                     return (start, false)
                 }
                 for role in roles {

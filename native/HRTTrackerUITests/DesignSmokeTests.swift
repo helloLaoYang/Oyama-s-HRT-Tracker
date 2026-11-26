@@ -149,6 +149,9 @@ final class DesignSmokeTests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(range.waitForExistence(timeout: 8))
         XCTAssertTrue(memory.isHittable)
+        XCTAssertTrue(app.buttons["ai.includeRecords"].isHittable)
+        XCTAssertTrue(app.buttons["ai.command.correction"].isHittable)
+        XCTAssertTrue(element("ai.input", in: app).isHittable)
         XCTAssertTrue(element("ai.history.invalidReply", in: app).exists)
         XCTAssertFalse(rawRoleText.exists)
         let rangeY = range.frame.minY

@@ -8,7 +8,7 @@ targets:
   HRTTracker:
     deploymentTarget: "27.0"
     sources:
-      - path: OfflineModels/Qwen2.5-1.5B-Instruct
+      - path: OfflineModels/Qwen3-8B-abliterated
         type: folder
         buildPhase: resources
     dependencies:

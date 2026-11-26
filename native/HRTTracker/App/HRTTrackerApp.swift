@@ -82,7 +82,6 @@ private struct TrackerRoot: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedTab: TrackerTab = .overview
     @State private var keyboardVisible = false
-    @State private var assistantReady = false
     @State private var showsAssistant = false
     @State private var opensCurveAfterAssistant = false
     @State private var concentrationScrollRequest = 0
@@ -103,7 +102,7 @@ private struct TrackerRoot: View {
                 .tag(TrackerTab.history)
                 .accessibilityIdentifier("tab.history")
 
-            if assistantReady {
+            if hasAssistant {
                 Color.clear
                     .accessibilityHidden(usesInlineAssistant)
                     .tabItem {
@@ -128,7 +127,7 @@ private struct TrackerRoot: View {
         }
         .id(language)
         .overlay(alignment: .bottom) {
-            if assistantReady, usesInlineAssistant, !keyboardVisible {
+            if hasAssistant, usesInlineAssistant, !keyboardVisible {
                 assistantButton
                     .offset(y: 3)
             }
@@ -148,26 +147,16 @@ private struct TrackerRoot: View {
         .tint(TrackerTheme.accent)
         .preferredColorScheme(preferredScheme)
         .saturation(store.appearance == .mono ? 0 : 1)
+        #if DEBUG && targetEnvironment(simulator)
         .task {
-            #if DEBUG && targetEnvironment(simulator)
-            if isAssistantUITest {
-                guard !assistantReady else { return }
+            if isAssistantUITest, conversation.turns.isEmpty {
                 try? conversation.append(AIChatTurn(
                     date: .now, mode: store.mode, question: "旧问题",
                     answer: "User: 旧问题\nAssistant: User: 你是谁", sources: []
                 ))
-                assistantReady = true
-                return
-            }
-            #endif
-            guard !assistantReady, AIOfflineModel.isSupported else { return }
-            do {
-                try await AIOfflineModel.shared.prepare()
-                assistantReady = !Task.isCancelled
-            } catch {
-                assistantReady = false
             }
         }
+        #endif
         .task(id: ReminderInputs(
             enabled: store.remindersEnabled, mode: store.mode, plans: store.plans, doses: store.doses,
             day: store.calendar.startOfDay(for: store.now), language: language, active: scenePhase == .active
@@ -188,12 +177,19 @@ private struct TrackerRoot: View {
         }
     }
 
+    private var hasAssistant: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        if isAssistantUITest { return true }
+        #endif
+        return AIOfflineModel.isSupported
+    }
+
     private var assistantSheet: AIAssistantView {
         #if DEBUG && targetEnvironment(simulator)
         if isAssistantUITest {
             return AIAssistantView(
-                store: store, conversation: conversation,
-                generateReply: { [assistantTestReplies] _, _, _, update in
+                store: store, conversation: conversation, prepareModel: {},
+                generateReply: { [assistantTestReplies] _, _, update in
                     try await assistantTestReplies.generate(onUpdate: update)
                 },
                 showCurve: openCurveFromAssistant
@@ -220,7 +216,7 @@ private struct TrackerRoot: View {
     private var tabSelection: Binding<TrackerTab> {
         Binding(get: { selectedTab }, set: { tab in
             if tab == .assistant {
-                showsAssistant = assistantReady
+                showsAssistant = hasAssistant
             } else {
                 selectedTab = tab
             }

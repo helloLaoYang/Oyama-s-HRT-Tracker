@@ -59,6 +59,35 @@
         }
       }
     },
+    "Dose record: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用药记录：%@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medikationseintrag: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prise enregistrée : %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投薬記録：%@"
+          }
+        }
+      }
+    },
     "Earlier discussion topics: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -142,6 +171,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "500文字以内でメモリを入力してください。"
+          }
+        }
+      }
+    },
+    "Lab measurement: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "化验实测：%@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemessener Laborwert: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesure en laboratoire : %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検査の実測値：%@"
           }
         }
       }
@@ -287,6 +345,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "この期間の投薬記録や実測検査結果はありません。"
+          }
+        }
+      }
+    },
+    "No matching records for the requested dates were found in the selected period.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在所选时段内，未找到符合所问日期的记录。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im ausgewählten Zeitraum wurden für die angefragten Daten keine passenden Einträge gefunden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun enregistrement correspondant aux dates demandées n’a été trouvé dans la période sélectionnée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した期間内で、指定された日付に該当する記録は見つかりませんでした。"
           }
         }
       }

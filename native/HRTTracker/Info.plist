@@ -4,5 +4,7 @@
 <dict>
     <key>HRTFeedbackEndpointURL</key>
     <string>$(HRT_FEEDBACK_ENDPOINT_URL)</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>HRTrace uses the microphone to turn speech you record into on-device text for the assistant.</string>
 </dict>
 </plist>

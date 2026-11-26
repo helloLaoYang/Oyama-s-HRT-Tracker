@@ -129,6 +129,42 @@ final class AIConversationTests: XCTestCase {
     }
 
     @MainActor
+    func testFollowUpKeepsCompletedTurnsInOrderAndExcludesIncompleteTurns() throws {
+        let store = AIConversationStore(inMemory: true)
+        let date = Date(timeIntervalSince1970: 0)
+        let opening = AIChatTurn(date: date, mode: .transfem, question: "测试", answer: "我在。", sources: [])
+        let namedSample = AIChatTurn(date: date, mode: .transfem, question: "把这次化验称为晨间样本。",
+                                     answer: "好的，晨间样本。", sources: [])
+        let unanswered = AIChatTurn(date: date, mode: .transfem, question: "这个名字是什么？",
+                                    answer: " \n", sources: [])
+        let emptyQuestion = AIChatTurn(date: date, mode: .transfem, question: "\n ", answer: "不能带入上下文。", sources: [])
+        let otherMode = AIChatTurn(date: date, mode: .transmasc, question: "另一个追踪模式", answer: "不带入本轮。", sources: [])
+        for turn in [opening, otherMode, unanswered, namedSample, emptyQuestion] { try store.append(turn) }
+
+        let currentQuestion = "我刚才给样本起的名字是什么？"
+        let context = try store.context(mode: .transfem, modelLimit: 4_096, reservedTokens: 768,
+                                        baseInput: currentQuestion)
+
+        XCTAssertEqual(context.recentTurns, [opening, namedSample])
+        XCTAssertTrue(context.summary.isEmpty)
+        XCTAssertEqual(store.turns, [opening, otherMode, unanswered, namedSample, emptyQuestion])
+    }
+
+    @MainActor
+    func testContextBudgetMeasuresUTF8AndReservesReplyCapacity() throws {
+        let store = AIConversationStore(inMemory: true)
+        let fits = String(repeating: "中", count: 19)
+        let atLimit = fits + "中"
+
+        XCTAssertNoThrow(try store.context(mode: .transfem, modelLimit: 128, reservedTokens: 36, baseInput: fits))
+        XCTAssertThrowsError(try store.context(mode: .transfem, modelLimit: 128, reservedTokens: 36, baseInput: atLimit)) {
+            guard case AIConversationError.contextTooLong = $0 else {
+                return XCTFail("Expected the context to exceed the input budget, got \($0)")
+            }
+        }
+    }
+
+    @MainActor
     func testLegacyRoleScriptDoesNotRepeatInModelHistory() throws {
         let store = AIConversationStore(inMemory: true)
         let valid = AIChatTurn(date: .now, mode: .transfem, question: "你好", answer: "你好！", sources: [])

@@ -3,12 +3,13 @@ import SwiftUI
 
 @MainActor
 struct AIAssistantView: View {
-    typealias ReplyUpdate = @MainActor @Sendable (String) throws -> Void
-    typealias GenerateReply = @Sendable (String, String, [AIChatTurn], ReplyUpdate) async throws -> String
+    typealias ReplyUpdate = AIAssistantReplyGuard.Update
+    typealias GenerateReply = @Sendable (String, [AIChatTurn], ReplyUpdate) async throws -> String
 
     let store: TrackerStore
     let conversation: AIConversationStore
     let showCurve: () -> Void
+    private let prepareModel: @Sendable () async throws -> Void
     private let generateReply: GenerateReply
 
     @Environment(\.dismiss) private var dismiss
@@ -25,18 +26,43 @@ struct AIAssistantView: View {
     @State private var runningID: UUID?
     @State private var failure: Failure?
     @State private var showClearConfirmation = false
+    @State private var includesRecords = false
+    @State private var assistantTool: AssistantTool?
+    @State private var modelState: ModelState = .preparing
+    @State private var preparationAttempt = 0
+
+    private static let maximumQuestionLength = 500
+
+    private enum ModelState {
+        case preparing, ready, failed(String)
+    }
+
+    private enum AssistantTool: Identifiable {
+        case photo, voice
+        case correction(AIInsightSnapshot)
+
+        var id: String {
+            switch self {
+            case .photo: "photo"
+            case .voice: "voice"
+            case .correction: "correction"
+            }
+        }
+    }
 
     init(
         store: TrackerStore, conversation: AIConversationStore,
-        generateReply: @escaping GenerateReply = { instructions, prompt, recentTurns, onUpdate in
+        prepareModel: @escaping @Sendable () async throws -> Void = { try await AIOfflineModel.shared.prepare() },
+        generateReply: @escaping GenerateReply = { prompt, recentTurns, onUpdate in
             try await AIOfflineModel.shared.generate(
-                instructions: instructions, prompt: prompt, recentTurns: recentTurns, onUpdate: onUpdate
+                prompt: prompt, recentTurns: recentTurns, onUpdate: onUpdate
             ).text
         },
         showCurve: @escaping () -> Void
     ) {
         self.store = store
         self.conversation = conversation
+        self.prepareModel = prepareModel
         self.generateReply = generateReply
         self.showCurve = showCurve
     }
@@ -94,12 +120,20 @@ struct AIAssistantView: View {
     }
 
     private var isWorking: Bool { runningID != nil }
+    private var isModelReady: Bool {
+        if case .ready = modelState { return true }
+        return false
+    }
 
     private var canSendQuestion: Bool {
-        !isWorking && !conversation.storageUnavailable && snapshot != nil && !draft.isEmpty
+        isModelReady && !isWorking && !conversation.storageUnavailable && (!includesRecords || snapshot != nil)
+            && !draft.isEmpty
     }
 
     private var draft: String { question.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var remainingInputLength: Int {
+        Self.maximumQuestionLength - draft.count - (draft.isEmpty ? 0 : 2)
+    }
 
     var body: some View {
         NavigationStack {
@@ -155,6 +189,15 @@ struct AIAssistantView: View {
             }
         }
         .tint(TrackerTheme.accent)
+        .task(id: preparationAttempt) {
+            modelState = .preparing
+            do {
+                try await prepareModel()
+                if !Task.isCancelled { modelState = .ready }
+            } catch {
+                if !Task.isCancelled { modelState = .failed(error.localizedDescription) }
+            }
+        }
         .task(id: snapshotKey) {
             let key = snapshotKey
             let refreshed = await AIInsightSnapshot.capture(store: store, range: key.range)
@@ -171,6 +214,18 @@ struct AIAssistantView: View {
             stop()
             failure = nil
             sheet = nil
+            assistantTool = nil
+            includesRecords = false
+        }
+        .sheet(item: $assistantTool) { tool in
+            switch tool {
+            case .photo:
+                AIAssistantPhotoInput(maximumTextLength: remainingInputLength, onInsert: insertInput)
+            case .voice:
+                AIAssistantVoiceInput(maximumTextLength: remainingInputLength, onInsert: insertInput)
+            case .correction(let snapshot):
+                AIRecordCorrectionView(store: store, snapshot: snapshot, generateReply: generateReply)
+            }
         }
         .sheet(item: $sheet) { detail in
             AIAssistantRecordDetail(reference: detail.reference, store: store)
@@ -215,6 +270,20 @@ struct AIAssistantView: View {
         HStack(spacing: 8) {
             rangeMenu
                 .frame(minHeight: 44)
+            Button {
+                includesRecords.toggle()
+            } label: {
+                Label(assistantLabel("Records"), systemImage: includesRecords ? "tray.full.fill" : "tray")
+                    .font(.footnote)
+                    .foregroundStyle(includesRecords ? TrackerTheme.accent : TrackerTheme.muted)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .disabled(isWorking)
+            .accessibilityLabel(assistantLabel("Include current records"))
+            .accessibilityValue(includesRecords ? assistantLabel("On") : assistantLabel("Off"))
+            .accessibilityIdentifier("ai.includeRecords")
             Spacer(minLength: 0)
             NavigationLink {
                 AIAssistantMemoryView(conversation: conversation, mode: store.mode)
@@ -250,6 +319,7 @@ struct AIAssistantView: View {
             if conversation.turns.isEmpty, liveReply == nil {
                 VStack(alignment: .leading, spacing: 8) {
                     status(assistantLabel("Chat stays on this device"), icon: "lock")
+                    status(AIOfflineModel.modelDirectoryName, icon: "chip")
                     Text(assistantLabel("Ask about your records or a general topic."))
                         .font(.subheadline)
                         .foregroundStyle(TrackerTheme.muted)
@@ -280,12 +350,20 @@ struct AIAssistantView: View {
                                 AIAssistantGeneratedImage(data: image)
                             }
                             if turn.mode == store.mode {
-                                ForEach(Array(turn.sources.enumerated()), id: \.offset) { _, source in
-                                    Button { show(source) } label: {
-                                        Label(sourceTitle(source), systemImage: "arrow.up.right")
-                                            .font(.footnote)
+                                if !turn.sources.isEmpty {
+                                    DisclosureGroup(assistantLabel("Related records")) {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            ForEach(Array(turn.sources.enumerated()), id: \.offset) { _, source in
+                                                Button { show(source) } label: {
+                                                    Label(sourceTitle(source), systemImage: "arrow.up.right")
+                                                }
+                                                .buttonStyle(.borderless)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.top, 6)
                                     }
-                                    .buttonStyle(.borderless)
+                                    .font(.footnote)
                                 }
                             } else if !turn.sources.isEmpty {
                                 Text(assistantLabel("This source is no longer available for the current mode."))
@@ -301,7 +379,7 @@ struct AIAssistantView: View {
                 if liveReply.text.isEmpty {
                     ProgressView(assistantLabel("Preparing a reply…"))
                 } else {
-                    Text(verbatim: AIAssistantRequest.displayedStreamText(liveReply.text))
+                    Text(verbatim: liveReply.text)
                         .textSelection(.enabled)
                         .accessibilityIdentifier("ai.streaming.answer")
                 }
@@ -344,6 +422,18 @@ struct AIAssistantView: View {
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: 8) {
+            switch modelState {
+            case .preparing:
+                ProgressView(assistantLabel("Preparing the local model…"))
+                    .font(.footnote)
+            case .failed(let message):
+                HStack(spacing: 8) {
+                    status(message, icon: "exclamationmark.circle")
+                    replyAction("Retry", identifier: "ai.model.retry") { preparationAttempt += 1 }
+                }
+            case .ready:
+                EmptyView()
+            }
             if conversation.storageUnavailable {
                 status(assistantLabel("Local chat storage is unavailable."), icon: "exclamationmark.circle")
             }
@@ -372,14 +462,27 @@ struct AIAssistantView: View {
                 HStack(spacing: 4) {
                     documentCommand(.recap)
                     documentCommand(.visit)
+                    Button {
+                        if let snapshot { openTool(.correction(snapshot)) }
+                    } label: {
+                        composerToolLabel(assistantLabel("Correct a record"), icon: "pencil.line")
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(snapshot == nil)
+                    .accessibilityIdentifier("ai.command.correction")
                 }
             }
             .scrollIndicators(.hidden)
             .foregroundStyle(TrackerTheme.accent)
             .disabled(isWorking)
+            if includesRecords {
+                status(assistantLabel("Current records included"), icon: "tray.full")
+                    .padding(.horizontal, 6)
+            }
             HStack(alignment: .bottom, spacing: 6) {
+                inputMenu
                 TextField(assistantLabel("Ask a question"), text: $question, axis: .vertical)
-                    .lineLimit(3...4)
+                    .lineLimit(2...4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 3)
                     .padding(.bottom, 8)
@@ -402,6 +505,40 @@ struct AIAssistantView: View {
         .background(TrackerTheme.subtle, in: RoundedRectangle(cornerRadius: 18))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ai.composer")
+    }
+
+    private var inputMenu: some View {
+        Menu {
+            Button { openTool(.photo) } label: {
+                Label(assistantLabel("Read photo text"), systemImage: "text.viewfinder")
+            }
+            Button { openTool(.voice) } label: {
+                Label(assistantLabel("Transcribe voice"), systemImage: "waveform")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.subheadline.weight(.medium))
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .accessibilityLabel(assistantLabel("Add input"))
+        .accessibilityIdentifier("ai.input")
+        .disabled(isWorking || conversation.storageUnavailable || remainingInputLength <= 0)
+    }
+
+    private func openTool(_ tool: AssistantTool) {
+        isQuestionFocused = false
+        assistantTool = tool
+    }
+
+    private func insertInput(_ text: String) {
+        let insertion = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !insertion.isEmpty else { return }
+        guard insertion.count <= remainingInputLength else {
+            failure = Failure(message: assistantLabel("Keep the question to 500 characters or fewer."))
+            return
+        }
+        question = draft.isEmpty ? insertion : draft + "\n\n" + insertion
     }
 
     private func composerButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -496,30 +633,29 @@ struct AIAssistantView: View {
     }
 
     private func prepareQuestion() {
-        guard let snapshot, !isWorking, !conversation.storageUnavailable else { return }
+        guard canSendQuestion else { return }
         isQuestionFocused = false
         failure = nil
-        guard !draft.isEmpty else { return }
-        if draft.count > 500 {
+        guard draft.count <= Self.maximumQuestionLength else {
             failure = Failure(message: assistantLabel("Keep the question to 500 characters or fewer."))
             return
         }
-        let request = AIAssistantRequest(purpose: .question, question: draft, snapshot: snapshot)
+        let currentSnapshot = snapshot ?? AIInsightSnapshot(mode: store.mode, range: range, facts: [], doses: [], labs: [])
+        let request = AIAssistantRequest(question: draft, snapshot: currentSnapshot, includesRecords: includesRecords)
 
         do {
             let context = try conversation.context(
-                mode: snapshot.mode, modelLimit: AIOfflineModel.contextLimit,
-                reservedTokens: AIOfflineModel.outputLimit,
-                baseInput: try request.instructions(context: nil) + request.prompt
+                mode: currentSnapshot.mode, modelLimit: AIOfflineModel.contextLimit,
+                reservedTokens: AIOfflineModel.outputLimit, baseInput: try request.modelPrompt(context: nil)
             )
-            run(request, instructions: try request.instructions(context: context), recentTurns: context.recentTurns)
+            run(request, modelPrompt: try request.modelPrompt(context: context), recentTurns: context.recentTurns)
         } catch {
             failure = Failure(message: assistantLabel("Could not prepare this request. Shorten it and try again."))
         }
     }
 
-    private func run(_ request: AIAssistantRequest, instructions: String, recentTurns: [AIChatTurn]) {
-        let prompt = request.prompt
+    private func run(_ request: AIAssistantRequest, modelPrompt: String, recentTurns: [AIChatTurn]) {
+        let prompt = request.question
         runningID = request.id
         liveReply = LiveReply(question: prompt)
         requestTask = Task {
@@ -531,29 +667,17 @@ struct AIAssistantView: View {
                 }
             }
             do {
-                let response: String
-                do {
-                    response = try await generateReply(instructions, prompt, recentTurns) { text in
-                        guard runningID == request.id else { return }
-                        liveReply?.text = try AIAssistantReplyGuard.streamText(text)
-                    }
-                } catch AIAssistantReplyGuard.StreamStop.roleBoundary(let prefix) {
-                    response = prefix
+                let answer = try await AIAssistantReplyGuard.completedReply { onUpdate in
+                    try await generateReply(modelPrompt, recentTurns, onUpdate)
+                } onUpdate: { text in
+                    guard runningID == request.id else { return }
+                    liveReply?.text = text
                 }
-                try Task.checkCancellation()
                 guard runningID == request.id, request.snapshot.mode == store.mode else { return }
-                guard let answer = AIAssistantReplyGuard.finalText(response) else {
-                    throw AIAssistantRequest.InvalidReply.selection
-                }
-                let selection = try request.streamSelection(from: answer)
-                var sources: [AIRecordReference] = []
-                for source in selection.facts.compactMap(\.source) where !sources.contains(source) {
-                    sources.append(source)
-                }
                 do {
                     try conversation.append(AIChatTurn(
                         date: store.now, mode: request.snapshot.mode, question: prompt,
-                        answer: selection.answer, sources: sources
+                        answer: answer, sources: request.recordSources
                     ))
                     question = ""
                 } catch {
