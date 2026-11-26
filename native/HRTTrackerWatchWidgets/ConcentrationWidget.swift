@@ -43,7 +43,7 @@ private struct ConcentrationEntry: TimelineEntry {
     let date: Date
     let metric: WatchMetric
     let value: Double?
-    var recentRangePosition: Double? = nil
+    var legacyClockDate: Date?
 }
 
 private struct ConcentrationProvider: AppIntentTimelineProvider {
@@ -60,41 +60,45 @@ private struct ConcentrationProvider: AppIntentTimelineProvider {
             case .cpa: 6.1
             case .testosterone: 1024
             }
-            return ConcentrationEntry(date: now, metric: metric, value: value, recentRangePosition: 0.65)
+            return ConcentrationEntry(date: now, metric: metric, value: value, legacyClockDate: now)
         }
         let snapshot = WatchSnapshotCache.load()
         let metric = configuration.metric.resolve(primary: snapshot?.primaryMetric)
-        return reading(for: metric, at: now, in: snapshot, family: context.family)
+        return ConcentrationEntry(date: now, metric: metric, value: snapshot?.current(for: metric, at: now)?.value,
+                                  legacyClockDate: now)
     }
 
     func timeline(for configuration: ConcentrationConfiguration, in context: Context) async -> Timeline<ConcentrationEntry> {
         let now = Date.now
         let snapshot = WatchSnapshotCache.load()
         let metric = configuration.metric.resolve(primary: snapshot?.primaryMetric)
-        let current = reading(for: metric, at: now, in: snapshot, family: context.family)
+        if #unavailable(watchOS 11), context.family == .accessoryRectangular {
+            // watchOS 10 cannot archive a live currentDate text. Supply minute ticks for this family only.
+            let nextMinute = floor(now.timeIntervalSinceReferenceDate / 60) * 60 + 60
+            let ticks = (0..<60).map { Date(timeIntervalSinceReferenceDate: nextMinute + Double($0) * 60) }
+            let horizon = Date(timeIntervalSinceReferenceDate: nextMinute + 3600)
+            var dates = Set([now, horizon] + ticks)
+            if let snapshot, now < snapshot.expiresAt {
+                dates.insert(snapshot.expiresAt)
+                dates.formUnion(snapshot.points(for: metric).map(\.time).filter { $0 > now && $0 < snapshot.expiresAt })
+            }
+            let entries = dates.sorted().map { date in
+                ConcentrationEntry(date: date, metric: metric, value: snapshot?.current(for: metric, at: date)?.value,
+                                   legacyClockDate: date < horizon ? date : nil)
+            }
+            return Timeline(entries: entries, policy: .after(horizon.addingTimeInterval(-900)))
+        }
+        let current = ConcentrationEntry(date: now, metric: metric, value: snapshot?.current(for: metric, at: now)?.value)
         guard let snapshot, now < snapshot.expiresAt else {
             return Timeline(entries: [current], policy: .never)
         }
 
         let updates = snapshot.points(for: metric).compactMap { point -> ConcentrationEntry? in
             guard now < point.time, point.time < snapshot.expiresAt else { return nil }
-            return reading(for: metric, at: point.time, in: snapshot, family: context.family)
+            return ConcentrationEntry(date: point.time, metric: metric, value: point.value)
         }
         let expired = ConcentrationEntry(date: snapshot.expiresAt, metric: metric, value: nil)
         return Timeline(entries: [current] + updates + [expired], policy: .never)
-    }
-
-    private func reading(for metric: WatchMetric, at date: Date, in snapshot: WatchSnapshot?,
-                         family: WidgetFamily) -> ConcentrationEntry {
-        let value = snapshot?.current(for: metric, at: date)?.value
-        var entry = ConcentrationEntry(date: date, metric: metric, value: value)
-        if family == .accessoryCircular, let snapshot, let value {
-            let recent = snapshot.history(for: metric, at: date).map(\.value)
-            if let low = recent.min(), let high = recent.max(), low < high {
-                entry.recentRangePosition = (value - low) / (high - low)
-            }
-        }
-        return entry
     }
 
     func recommendations() -> [AppIntentRecommendation<ConcentrationConfiguration>] {
@@ -119,11 +123,11 @@ private struct ConcentrationWidgetView: View {
     var body: some View {
         Group {
             if isPrivate {
-                layout(name: Text("Concentration", tableName: "WatchWidgets"), symbol: nil, number: "—", unit: nil)
+                layout(symbol: nil, number: "—", unit: nil)
                     .unredacted()
             } else {
                 layout(
-                    name: Text(entry.metric.title), symbol: entry.metric.symbol, number: reading,
+                    symbol: entry.metric.symbol, number: reading,
                     unit: entry.value == nil ? nil : entry.metric.unit
                 )
             }
@@ -146,48 +150,28 @@ private struct ConcentrationWidgetView: View {
     }
 
     @ViewBuilder
-    private func layout(name: Text, symbol: String?, number: String, unit: String?) -> some View {
+    private func layout(symbol: String?, number: String, unit: String?) -> some View {
         switch family {
+        case .accessoryRectangular:
+            RectangularReadout(symbol: symbol, number: number, unit: unit, legacyClockDate: entry.legacyClockDate)
         case .accessoryCircular:
-            let position = isPrivate ? nil : entry.recentRangePosition
-            VStack(spacing: -2) {
-                numberText(number, font: .system(size: 19, design: .rounded), weight: .semibold)
+            VStack(alignment: .leading, spacing: -1) {
                 if let symbol {
-                    Text(symbol)
-                        .font(.system(size: 9, weight: .semibold))
+                    Text(verbatim: symbol)
+                        .font(.system(size: 8, weight: .semibold))
+                }
+                numberText(number, font: .system(size: 16, design: .rounded), weight: .semibold)
+                if let unit {
+                    Text(verbatim: unit)
+                        .font(.system(size: 7.5, weight: .medium))
                 }
             }
-            .padding(.top, position == nil ? 0 : 7)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .top) {
-                if let position {
-                    RecentRangeArc(position: position)
-                        .accessibilityHidden(true)
-                }
-            }
+            .lineLimit(1)
+            .padding(.leading, 9)
+            .padding(.trailing, 5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .foregroundStyle(.primary)
             .widgetAccentable()
-        case .accessoryRectangular:
-            VStack(alignment: .leading, spacing: 3) {
-                name
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .widgetAccentable()
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    numberText(number, font: .title2)
-                        .layoutPriority(1)
-                    if let unit {
-                        Text(unit)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         case .accessoryCorner:
             numberText(number, font: .headline)
                 .widgetLabel {
@@ -206,27 +190,66 @@ private struct ConcentrationWidgetView: View {
     }
 }
 
-private struct RecentRangeArc: View {
-    let position: Double
+private struct RectangularReadout: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    let symbol: String?
+    let number: String
+    let unit: String?
+    let legacyClockDate: Date?
+
+    @ViewBuilder private var clock: some View {
+        let format = Date.FormatStyle().hour(.defaultDigits(amPM: .omitted)).minute()
+        if #available(watchOS 11, *) {
+            Text(.currentDate, format: format)
+        } else if let legacyClockDate {
+            Text(legacyClockDate, format: format)
+        }
+    }
 
     var body: some View {
-        let center = CGPoint(x: 15, y: 15)
-        let radius: CGFloat = 13
-        let start = -150.0
-        let sweep = 120.0
-        let angle = Angle.degrees(start + sweep * position).radians
-        return Path { path in
-            path.addArc(center: center, radius: radius, startAngle: .degrees(start),
-                        endAngle: .degrees(start + sweep), clockwise: false)
+        GeometryReader { bounds in
+            // Scale both columns together. The face already supplies the vertical space around the slot.
+            let scale = min(bounds.size.width / 198.5, bounds.size.height / 65)
+            ZStack(alignment: .leading) {
+                if let symbol {
+                    Text(verbatim: symbol)
+                        .font(.system(size: 11 * scale, weight: .semibold))
+                        .offset(y: -21.3 * scale)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 6 * scale) {
+                    Text(verbatim: number)
+                        .font(.system(size: 24.5 * scale, weight: .semibold).monospacedDigit())
+                        .tracking(0.4 * scale)
+                        .minimumScaleFactor(0.65)
+                    Spacer(minLength: 0)
+                    clock
+                        .font(.system(size: 27.1 * scale).monospacedDigit())
+                        .tracking(-0.55 * scale)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 76 * scale, alignment: .trailing)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                if let unit {
+                    Text(verbatim: unit)
+                        .font(.system(size: 8.7 * scale, weight: .medium))
+                        .opacity(0.82)
+                        .offset(y: 20.5 * scale)
+                }
+            }
+            .lineLimit(1)
+            .foregroundStyle(.primary)
+            .widgetAccentable()
+            .padding(.leading, 16.5 * scale)
+            .padding(.trailing, 11.5 * scale)
+            .frame(width: 198.5 * scale)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                RoundedRectangle(cornerRadius: 10 * scale, style: .continuous)
+                    .fill(renderingMode == .fullColor
+                          ? Color(white: 0.31).opacity(0.38)
+                          : Color.primary.opacity(0.14))
+            }
         }
-        .stroke(.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-        .overlay(alignment: .topLeading) {
-            Circle()
-                .fill(.primary)
-                .frame(width: 4, height: 4)
-                .position(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle))
-        }
-        .frame(width: 30, height: 10)
     }
 }
 
