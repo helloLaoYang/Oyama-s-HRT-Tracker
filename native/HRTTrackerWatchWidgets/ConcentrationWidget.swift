@@ -155,28 +155,27 @@ private struct ConcentrationWidgetView: View {
         case .accessoryRectangular:
             RectangularReadout(symbol: symbol, number: number, unit: unit, legacyClockDate: entry.legacyClockDate)
         case .accessoryCircular:
-            VStack(alignment: .leading, spacing: -1) {
+            VStack(alignment: .leading, spacing: 0) {
                 if let symbol {
-                    Text(verbatim: symbol)
-                        .font(.system(size: 8, weight: .semibold))
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(verbatim: symbol)
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundStyle(Color(red: 223 / 255, green: 143 / 255, blue: 116 / 255))
+                        if let unit {
+                            Text(verbatim: unit)
+                                .font(.system(size: 7.5, weight: .medium))
+                        }
+                    }
+                    .minimumScaleFactor(0.85)
+                    .widgetAccentable()
                 }
-                numberText(number, font: .system(size: 16, design: .rounded), weight: .semibold)
-                if let unit {
-                    Text(verbatim: unit)
-                        .font(.system(size: 7.5, weight: .medium))
-                }
+                numberText(number, font: .system(size: 20, design: .rounded))
             }
             .lineLimit(1)
-            .padding(.leading, 9)
-            .padding(.trailing, 5)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(.horizontal, 5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .foregroundStyle(.primary)
-            .widgetAccentable()
-            .background {
-                ReadoutBackground(cornerRadius: 8)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 4)
-            }
+            .background { AccessoryWidgetBackground() }
         case .accessoryCorner:
             numberText(number, font: .headline)
                 .widgetLabel {
