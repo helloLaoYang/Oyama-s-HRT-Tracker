@@ -1,0 +1,5 @@
+"Last 24 hours" = "過去24時間";
+"24 hours ago" = "24時間前";
+"No concentration estimate yet." = "濃度の推定値がまだありません。";
+"No concentration history is available for this metric." = "この指標の濃度推移はありません。";
+"Waiting for an updated estimate." = "推定値の更新を待っています。";
