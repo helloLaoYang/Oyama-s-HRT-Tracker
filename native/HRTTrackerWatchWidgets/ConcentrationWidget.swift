@@ -175,7 +175,6 @@ private struct ConcentrationWidgetView: View {
             .padding(.horizontal, 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .foregroundStyle(.primary)
-            .background { AccessoryWidgetBackground() }
         case .accessoryCorner:
             numberText(number, font: .headline)
                 .widgetLabel {
